@@ -1,9 +1,0 @@
-Simple steps to install:
-
-0. set your ${WIEN_GUTZ_ROOT} directory in .bashrc.
-1. tar -xzf SRC_CG_MPI.3.1.6.3.tar.gz
-2. make 
-3. make install
-
-Note:
-Excutable files will be copied to your ${WIEN_GUTZ_ROOT} directory.
