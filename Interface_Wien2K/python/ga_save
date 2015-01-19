@@ -1,0 +1,162 @@
+#!/bin/csh -f 
+#
+unalias rm
+
+set name     = $0
+set name     = $name:t 		#name of this script-file
+set file     = `pwd`
+set file     = $file:t		#tail of file-names
+set savedir  = "."
+set savefile = ""
+unset force
+unset new
+unset silent
+unset minimum
+
+#---> path- and file-names
+#
+if ($#argv == 0) goto help
+while ($#argv)
+  switch ($1)
+  case -[H|h]
+    goto help
+    breaksw
+  case -[D|d]
+    shift
+    set savedir = $1
+    set new
+    shift
+    breaksw
+  case -[T|t]
+    shift
+    set file = $1
+    shift
+    breaksw
+  case -[F|f]
+    set force
+    set new
+    shift
+    breaksw
+  case -[S|s]
+    set silent
+    set new
+    shift
+    breaksw
+  case -[A|a]
+    set new
+    shift
+    breaksw
+  case -[M|m]
+    set minimum
+    shift
+    breaksw
+  default: 
+    set savefile = $1
+    shift
+    breaksw
+  endsw
+end
+
+if ($?new) goto new
+echo 'Fallback to compatibility mode with "old" save_lapw'
+foreach i (clmsum clmup clmdn dmatup dmatdn dmatud vorbup vorbdn struct vrespsum vrespup vrespdn eeceup eecedn r2v r2vdn)
+  if (! -z $file.$i && -e $file.$i ) 	cp $file.$i $savefile.$i		
+end
+  if (-e $file.scf )	mv $file.scf $savefile.scf 
+  if (-e $file.broyd1) 	rm $file.broyd*
+ 
+echo 'broyden files deleted, clm*, dmat*, vorb*, vresp*, eece*, scf and struct files saved under' $savefile 
+exit (0)
+
+
+new:
+if !($?silent) echo "New version of save_lapw selected"
+
+if ( $savedir != "" ) then
+    if !(-d $savedir) then
+	mkdir -p $savedir
+    endif
+endif
+
+if !($?silent) then
+    echo ""
+    echo "Starting save:"
+endif
+
+foreach i ($file.struct $file.clmsum $file.clmup $file.clmdn $file.dmatup $file.dmatdn $file.dmatud $file.eeceup $file.eecedn $file.vorbup $file.vorbdn $file.vrespsum $file.vrespup $file.vrespdn $file.kgen $file.klist $file.in* $file.nmat_only $file.r2v $file.r2vdn GL*INP params.dat)
+    if ($savefile == "") then
+	set to = $i
+    else
+	set to = $savefile.$i:e
+    endif
+    if (-e $savedir/$to)  then
+	if !($?force) goto exists
+    endif
+    if !($?silent) echo "   $i -> $savedir/$to"
+    if (! -z $i && -e $i) cp $i $savedir/$to
+end
+
+if !($?minimum) then
+  foreach i ($file.dayfile $file.scf $file.scf2 $file.scf2up $file.scf2dn *OUT GL*MEE GLP_FJAC.DAT dmft1_info.out $file.outputdmf1.0 $file.outputdmf2.0 GUTZ.LOG)
+      if ($savefile == "") then
+          set to = $i
+      else
+          set to = $savefile.$i:e
+      endif
+      if (-e $savedir/$to)  then
+          if !($?force) goto exists
+      endif
+      if !($?silent) echo "   $i -> $savedir/$to"
+      if (! -z $i && -e $i) cp $i $savedir/$to
+  end
+endif
+
+if (-e $file.scf )	rm $file.scf 
+if (-e $file.broyd1) 	rm $file.broyd*
+ 
+if !($?silent) then
+    echo ""
+    echo 'broyden files deleted, clm*, dmat*, vorb*, vresp*, eece*, scf, struct and input files saved under' $savedir/$to:r
+    echo ""
+endif
+exit(0)
+
+exists:
+cat<<EOF
+$savedir/$to already exists. Quitting save
+
+EOF
+exit(1)
+
+help:
+cat << theend 
+
+PROGRAM:	$0
+
+PURPOSE:	saving (and clearing) an scf calculation of WIEN+GA
+		to be called within the case-directory
+		saves the struct clmsum and scf files, deletes broyden files.
+
+		If a save directory or save _all_ input files is specified, 
+		also all input files and klist and kgen files will be
+		saved. Specifying only a save directory without a
+		save_file_name will cause save_lapw to save the
+		abovementioned files under their generic name.
+
+		NOTE: To use restore_lapw you have to utilize the 
+		      new scheme!
+
+USAGE:		$name [FLAGS] [head_of_save_filename]
+
+FLAGS:
+-h           ->	help
+-a           -> save _all_ input files as well (new scheme)
+-f           -> force save_lapw to overwrite previous saves
+-d directory -> save calculation in directory specified
+-s           -> silent operation
+-t           -> title of the job file
+-m           -> minimum of the job files to be recalculated.
+theend
+
+exit(1)
+ 

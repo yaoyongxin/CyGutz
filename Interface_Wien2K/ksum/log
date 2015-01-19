@@ -1,0 +1,117 @@
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c reallocate.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c modules.f
+/lib/cpp -P  -C -traditional -DMPI mod_mpi.F mod_mpi.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c mod_mpi.f
+rm mod_mpi.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c gtfnam2.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c w_atpar.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c angle.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c abcd.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c atpar.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c dvbes1.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c gbase.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c GMPI.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c gasa.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c UTIL.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c SPARSE.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c WAREHOUSE.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c GGREENFUN.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c BANDSTRU.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c FOCKSTATE.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c CORRORB.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c LOCALHAMIL.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c PROJECTOR.f
+mpif90 -FR   -O3  -FR -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback  -c GUTZ.f
+GUTZ.f(1791): error #6363: The intrinsic data types of the arguments must be the same.   [MAX]
+        DO I=1,NBANDS-1; MAXOFFDIAG=MAX(MAXOFFDIAG,MAXVAL(ABS(KSWT(I+1:,I)))); ENDDO
+---------------------------------------------------^
+GUTZ.f(1791): error #6404: This name does not have a type, and must have an explicit type.   [MAX]
+        DO I=1,NBANDS-1; MAXOFFDIAG=MAX(MAXOFFDIAG,MAXVAL(ABS(KSWT(I+1:,I)))); ENDDO
+------------------------------------^
+GUTZ.f(1795): error #6633: The type of the actual argument differs from the type of the dummy argument.   [MAXOFFDIAG]
+      CALL DMAX1_ALL_MPI(MAXOFFDIAG)
+-------------------------^
+GUTZ.f(1906): error #7002: Error in opening the compiled module file.  Check INCLUDE paths.   [GUTZ]
+      USE gprec; USE GUTZ
+---------------------^
+GUTZ.f(1916): error #6404: This name does not have a type, and must have an explicit type.   [GL]
+      GL%ITER1=GL%ITER1+1
+------^
+GUTZ.f(1916): error #6460: This is not a field name that is defined in the encompassing structure.   [ITER1]
+      GL%ITER1=GL%ITER1+1
+---------^
+GUTZ.f(1917): error #6404: This name does not have a type, and must have an explicit type.   [WH]
+      WH%X=X
+------^
+GUTZ.f(1917): error #6460: This is not a field name that is defined in the encompassing structure.   [X]
+      WH%X=X
+---------^
+GUTZ.f(1917): error #6366: The shapes of the array expressions do not conform.   [X]
+      WH%X=X
+---------^
+GUTZ.f(1918): error #6404: This name does not have a type, and must have an explicit type.   [GP]
+      IF(GP%MYRANK.EQ.GP%MASTER)WRITE(GL%IO,'("************",2X,A5,2X,"************")')'WH%X'
+---------^
+GUTZ.f(1918): error #6460: This is not a field name that is defined in the encompassing structure.   [MYRANK]
+      IF(GP%MYRANK.EQ.GP%MASTER)WRITE(GL%IO,'("************",2X,A5,2X,"************")')'WH%X'
+------------^
+GUTZ.f(1918): error #6460: This is not a field name that is defined in the encompassing structure.   [MASTER]
+      IF(GP%MYRANK.EQ.GP%MASTER)WRITE(GL%IO,'("************",2X,A5,2X,"************")')'WH%X'
+-------------------------^
+GUTZ.f(1918): error #6460: This is not a field name that is defined in the encompassing structure.   [IO]
+      IF(GP%MYRANK.EQ.GP%MASTER)WRITE(GL%IO,'("************",2X,A5,2X,"************")')'WH%X'
+-----------------------------------------^
+GUTZ.f(1921): error #6460: This is not a field name that is defined in the encompassing structure.   [R]
+      CALL MAP_WH_BND_R(WH%R  ,BND%R  ,.FALSE.)
+---------------------------^
+GUTZ.f(1921): error #6404: This name does not have a type, and must have an explicit type.   [BND]
+      CALL MAP_WH_BND_R(WH%R  ,BND%R  ,.FALSE.)
+-------------------------------^
+GUTZ.f(1922): error #6460: This is not a field name that is defined in the encompassing structure.   [LA1]
+      CALL MAP_WH_BND_R(WH%LA1,BND%LA1,.FALSE.)
+---------------------------^
+GUTZ.f(1926): error #6460: This is not a field name that is defined in the encompassing structure.   [LGREEN]
+      CALL CALC_BAND_ALL(GL%LGREEN==0)
+----------------------------^
+GUTZ.f(1927): error #6460: This is not a field name that is defined in the encompassing structure.   [LPSICOMP]
+      IF(GL%LPSICOMP.GT.0)THEN
+------------^
+GUTZ.f(1931): error #6460: This is not a field name that is defined in the encompassing structure.   [LSCF]
+      IF(GL%LSCF.EQ.2)THEN
+------------^
+GUTZ.f(1936): error #6460: This is not a field name that is defined in the encompassing structure.   [ISO]
+        CALL GUTZ_FERMI(BND%ISO,BND%ISPIN)
+----------------------------^
+GUTZ.f(1936): error #6460: This is not a field name that is defined in the encompassing structure.   [ISPIN]
+        CALL GUTZ_FERMI(BND%ISO,BND%ISPIN)
+------------------------------------^
+GUTZ.f(1942): error #6460: This is not a field name that is defined in the encompassing structure.   [EF]
+      CALL CALC_GF_FULL(BND%EF,1) ! GC
+----------------------------^
+GUTZ.f(1945): error #6460: This is not a field name that is defined in the encompassing structure.   [NSPIN]
+      IF(BND%NSPIN==2)THEN
+-------------^
+GUTZ.f(1946): error #6460: This is not a field name that is defined in the encompassing structure.   [MUP_DN]
+        IF(GP%MYRANK.EQ.GP%MASTER)WRITE(GL%IO,'(" TOTAL MAGNETIC MOMENT: ",F8.3)')BND%MUP_DN
+--------------------------------------------------------------------------------------^
+GUTZ.f(1949): error #6460: This is not a field name that is defined in the encompassing structure.   [NKS]
+      CALL MAP_WH_BND_R(WH%NKS,BND%NKS,.FALSE.)
+---------------------------^
+GUTZ.f(1955): error #6460: This is not a field name that is defined in the encompassing structure.   [NC]
+      CALL MAP_WH_BND_R(WH%NC,BND%NC,.FALSE.)
+---------------------------^
+GUTZ.f(1957): error #6460: This is not a field name that is defined in the encompassing structure.   [DIMX1]
+      FVEC(1:WH%DIMX1 )=WH%X(1:WH%DIMX1)-X(1:WH%DIMX1)
+----------------^
+GUTZ.f(1957): error #6514: A substring must be of type CHARACTER.   [X]
+      FVEC(1:WH%DIMX1 )=WH%X(1:WH%DIMX1)-X(1:WH%DIMX1)
+---------------------------^
+GUTZ.f(1957): error #6335: An array name is invalid in this context.   [X]
+      FVEC(1:WH%DIMX1 )=WH%X(1:WH%DIMX1)-X(1:WH%DIMX1)
+-----------------------------------------^
+GUTZ.f(1957): error #6514: A substring must be of type CHARACTER.   [X]
+      FVEC(1:WH%DIMX1 )=WH%X(1:WH%DIMX1)-X(1:WH%DIMX1)
+-----------------------------------------^
+GUTZ.f(1981): catastrophic error: Too many errors, exiting
+compilation aborted for GUTZ.f (code 1)
+make: *** [GUTZ.o] Error 1

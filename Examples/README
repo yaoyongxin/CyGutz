@@ -74,6 +74,7 @@ Examples
              a) GL.INP:     Main INPUT FILE
              b) BNDU_0.INP: <Psi_KS|Local Orbital>
              c) Ce.kgen:    k-point generation files for the linear tetrahedron method.
+
  
 ./Wien2K+GA
 1. Ce_SOC_NJ_F03: LDA+GA self-consistent run with GA parameters same as that in ./CyGutz/Ce_SOC_NJ_F03
