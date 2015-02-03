@@ -79,4 +79,4 @@ Examples
 ./Wien2K+GA
 1. Ce_SOC_NJ_F03: LDA+GA self-consistent run with GA parameters same as that in ./CyGutz/Ce_SOC_NJ_F03
    
-
+2. Ce_SOC_CF_N_F02: LDA+GA self-consistent run with spin-orbit interaction and crystal filed.
