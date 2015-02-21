@@ -1,5 +1,5 @@
 LSCF     = 1    # Always regenerate variational setup files (GLXXX.VSP) and run self-consistently. 
-LGPRJ    = 1    # Using N and Sz to setup \Phi.
+LGPRJ    = 1    # Using N and J to setup \Phi.
 LDC      = 12   # Std DC, fixed in the Gutzwiller loop and updated in the charge loop.
 LSOLVER  = 1    # {R,lambda}
 BNDISO   = 2    # Treat as the case with spin-orbit interaction
