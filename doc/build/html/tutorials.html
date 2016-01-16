@@ -1,0 +1,402 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Tutorial &mdash; CyGutz_user_guide 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CyGutz_user_guide 1.0.0 documentation" href="index.html" />
+    <link rel="next" title="CyGutz tools" href="tools.html" />
+    <link rel="prev" title="Installation" href="install.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tools.html" title="CyGutz tools"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="install.html" title="Installation"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-1_1D_1_band_Hubbard_Model">
+<span id="single-band-hubbard-model"></span><h2>Single Band Hubbard Model<a class="headerlink" href="#module-1_1D_1_band_Hubbard_Model" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="1_1D_1_band_Hubbard_Model.tutorial_1_1D_1_band_Hubbard_Model">
+<code class="descclassname">1_1D_1_band_Hubbard_Model.</code><code class="descname">tutorial_1_1D_1_band_Hubbard_Model</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/1_1D_1_band_Hubbard_Model.html#tutorial_1_1D_1_band_Hubbard_Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#1_1D_1_band_Hubbard_Model.tutorial_1_1D_1_band_Hubbard_Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>A 1-dim 1-band Hubbard model interface for CyGutz.
+To run this example</p>
+<ol class="arabic">
+<li><p class="first">goto some working directory</p>
+</li>
+<li><p class="first">type:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python add_path/examples/1_1D_1_band_Hubbard_Model.py
+</pre></div>
+</div>
+<p>and answer a short list of questions:</p>
+<div class="highlight-python"><div class="highlight"><pre>LHUB = 1: Slater-Condo parametrization.
+LHUB = 0: U_{i,j,k,l} (NO SPIN INDEX) = int_{dr int_{dr&#39; phi^{*}(r_i) phi^{*}(r&#39;_j) phi(r_k) phi(r&#39;_l)}} will be provided by file V2AO.INP
+LHUB =-1: U_{i,j,k,l} (INCLUDING SPIN INDEX) = int_{dr int_{dr&#39; phi^{*}(r_i) phi^{*}(r&#39;_j) phi(r_k) phi(r&#39;_l)}} will be provided by file V2H.INP
+Please select LHUB:  Pick one from [-1, 0, 1]...1
+
+LDC = 12:  Recommended. Standard double counting (updating Vdc at each charge iteration, initial n0 to be provided.)
+LDC =  2:  Fix double counting potential (keep same Vdc/n0 at each charge iteration, n0 to be provided.)
+LDC =  1:  Standard double counting potential (n0 self-consistently determined.)
+LDC =  0:  No double counting.
+Please select LDC:  Pick one from [0, 1, 2, 12]...0
+
+LCLUSTER = 0: Single-atom impurity.
+LCLUSTER = 1: Multi-atom (cluster) impurity.
+Please select LCLUSTER:  Pick one from [0, 1]...0
+
+Solution embedding system:
+LEIGV = 0:  Choose automatically solver depending on the size of the problem (DEFAULT)
+        1:  Exact diagonalization (ZHEEV) in LAPACK
+        2:  Lanczos (zhdrv1) in ARPACK
+        3:  Exact diagonalization (ZHEEVX, selective lowest two eigen-vectors) in LAPACK
+        5:  PRIMEE (Iterative MultiMethod Eigensolver)
+Please select LEIGV:  Pick one from [0, 1, 2, 3, 5]...1
+
+INFORMATION FOR g ELECTRONS OF X :
+Please provide interaction parameters U,J separated by a space: 7.0 0.0
+Please provide N1,N2 defining valence range [N1,N2] separated by a space ( 0 &lt; N1 &lt; N2 &lt; 2 ): 0 2
+</pre></div>
+</div>
+</li>
+<li><p class="first">type:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ add_path/CyGutz
+</pre></div>
+</div>
+<p>The text format result is in <a class="reference download internal" href="_downloads/GUTZ.LOG"><code class="xref download docutils literal"><span class="pre">GUTZ.LOG</span></code></a>.
+and key resultant data are also stored in <code class="docutils literal"><span class="pre">glog.h5</span></code> for easy post-processing.
+one can easily view the content by typing:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ h5ls -r glog.h5
+</pre></div>
+</div>
+<p>and one would see the list of metadata:</p>
+<div class="highlight-python"><div class="highlight"><pre>/                        Group
+/Distinct_impurity_indices Dataset {1}
+/E_DC2_U                 Dataset {1}
+/E_GAMMA                 Dataset {1}
+/E_POT2_U                Dataset {1}
+/E_TB_TOT                Dataset {1}
+/Impurity_1              Group
+/Impurity_1/ComplexHarmonicsToCurrentBasis Dataset {2, 2}
+/Impurity_1/GA_D         Dataset {2, 2}
+/Impurity_1/GA_Lc        Dataset {2, 2}
+/Impurity_1/GA_NC_PHY    Dataset {2, 2}
+/Impurity_1/GA_NC_VAR    Dataset {2, 2}
+/Impurity_1/GA_R         Dataset {2, 2}
+/Impurity_1/H.data       Dataset {1}
+/Impurity_1/H.indices    Dataset {1}
+/Impurity_1/H.indptr     Dataset {5}
+/Impurity_1/H.ncol       Dataset {1}
+/Impurity_1/H.nrow       Dataset {1}
+/Impurity_1/One_body_local Dataset {2, 2}
+/Impurity_1/RHO.data     Dataset {6}
+/Impurity_1/RHO.indices  Dataset {6}
+/Impurity_1/RHO.indptr   Dataset {5}
+/Impurity_1/RHO.ncol     Dataset {1}
+/Impurity_1/RHO.nrow     Dataset {1}
+/Impurity_1/Sec_ID       Dataset {4}
+/Impurity_1/Sec_VAL      Dataset {4}
+/Impurity_1/Two_body_local Dataset {2, 2, 2, 2}
+/Impurity_1/annihi.op._1.data Dataset {2}
+/Impurity_1/annihi.op._1.indices Dataset {2}
+/Impurity_1/annihi.op._1.indptr Dataset {5}
+/Impurity_1/annihi.op._1.ncol Dataset {1}
+/Impurity_1/annihi.op._1.nrow Dataset {1}
+/Impurity_1/annihi.op._2.data Dataset {2}
+/Impurity_1/annihi.op._2.indices Dataset {2}
+/Impurity_1/annihi.op._2.indptr Dataset {5}
+/Impurity_1/annihi.op._2.ncol Dataset {1}
+/Impurity_1/annihi.op._2.nrow Dataset {1}
+/Impurity_1/phi.data     Dataset {5}
+/Impurity_1/phi.indices  Dataset {5}
+/Impurity_1/phi.indptr   Dataset {5}
+/Impurity_1/phi.ncol     Dataset {1}
+/Impurity_1/phi.nrow     Dataset {1}
+</pre></div>
+</div>
+</li>
+<li><p class="first">You may further experiment it with different parameters.</p>
+</li>
+</ol>
+</dd></dl>
+
+</div>
+<div class="section" id="module-2_1D_bilayer_Model">
+<span id="bilayer-model"></span><h2>Bilayer Model<a class="headerlink" href="#module-2_1D_bilayer_Model" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="2_1D_bilayer_Model.tutorial_2_1D_bilayer_Model">
+<code class="descclassname">2_1D_bilayer_Model.</code><code class="descname">tutorial_2_1D_bilayer_Model</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/2_1D_bilayer_Model.html#tutorial_2_1D_bilayer_Model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#2_1D_bilayer_Model.tutorial_2_1D_bilayer_Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>A 1-dim bilayer model interface for CyGutz.
+To run this example</p>
+<ol class="arabic">
+<li><p class="first">goto some working directory</p>
+</li>
+<li><p class="first">type:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python add_path/examples/2_1D_bilayer_Model.py
+</pre></div>
+</div>
+<p>and answer a short list of questions:</p>
+<div class="highlight-python"><div class="highlight"><pre>LHUB = 1: Slater-Condo parametrization.
+LHUB = 0: U_{i,j,k,l} (NO SPIN INDEX) = int_{dr int_{dr&#39; phi^{*}(r_i) phi^{*}(r&#39;_j) phi(r_k) phi(r&#39;_l)}} will be provided by file V2AO.INP
+LHUB =-1: U_{i,j,k,l} (INCLUDING SPIN INDEX) = int_{dr int_{dr&#39; phi^{*}(r_i) phi^{*}(r&#39;_j) phi(r_k) phi(r&#39;_l)}} will be provided by file V2H.INP
+Please select LHUB:  Pick one from [-1, 0, 1]...0
+LDC = 12:  Recommended. Standard double counting (updating Vdc at each charge iteration, initial n0 to be provided.)
+LDC =  2:  Fix double counting potential (keep same Vdc/n0 at each charge iteration, n0 to be provided.)
+LDC =  1:  Standard double counting potential (n0 self-consistently determined.)
+LDC =  0:  No double counting.
+Please select LDC:  Pick one from [0, 1, 2, 12]...0
+LCLUSTER = 0: Single-atom impurity.
+LCLUSTER = 1: Multi-atom (cluster) impurity.
+Please select LCLUSTER:  Pick one from [0, 1]...0
+Solution embedding system:
+LEIGV = 0:  Choose automatically solver depending on the size of the problem (DEFAULT)
+        1:  Exact diagonalization (ZHEEV) in LAPACK
+        2:  Lanczos (zhdrv1) in ARPACK
+        3:  Exact diagonalization (ZHEEVX, selective lowest two eigen-vectors) in LAPACK
+        5:  PRIMEE (Iterative MultiMethod Eigensolver)
+Please select LEIGV:  Pick one from [0, 1, 2, 3, 5]...1
+INFORMATION FOR g ELECTRONS OF X :
+Please provide N1,N2 defining valence range [N1,N2] separated by a space ( 0 &lt; N1 &lt; N2 &lt; 4 ): 0 4
+</pre></div>
+</div>
+<p>Since we choose LHUB = 0, we also create the file <a class="reference download internal" href="_downloads/V2AO.INP"><code class="xref download docutils literal"><span class="pre">V2AO.INP</span></code></a>.</p>
+</li>
+<li><p class="first">type:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ add_path/CyGutz
+</pre></div>
+</div>
+<p>The text format result is in <code class="docutils literal"><span class="pre">GUTZ.LOG</span></code>,
+and key resultant data are also stored in <code class="docutils literal"><span class="pre">glog.h5</span></code> for easy post-processing.
+one can easily view the content by typing:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ h5ls -r glog.h5
+</pre></div>
+</div>
+</li>
+<li><p class="first">You may further experiment it with different parameters.</p>
+</li>
+</ol>
+</dd></dl>
+
+</div>
+<div class="section" id="ce-with-spin-orbit-interaction">
+<h2><span class="math">\(\alpha\)</span>-Ce with spin-orbit interaction<a class="headerlink" href="#ce-with-spin-orbit-interaction" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Finish a self-consistent lapw + so run for <span class="math">\(\alpha\)</span>-Ce using WIEN2k.
+Here is the structure file <a class="reference download internal" href="_downloads/Ce.struct"><code class="xref download docutils literal"><span class="pre">Ce.struct</span></code></a>.</p>
+</li>
+<li><p class="first">type:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ ~/WIEN_GUTZ/bin/tools/Gutzwiller/init_ga.py
+</pre></div>
+</div>
+<p>Read the list of questions and pick your options:</p>
+<div class="highlight-python"><div class="highlight"><pre>User inputs to initialize the ga job.
+Do you want to BREAK SPIN-SYMMETRY? Pick one from [y, n]...n
+Do you want to COMPLETELY BREAK ORBITAL-SYMMETRY? Pick one from [y, n]...n
+atom  0   Ce
+Is this atom correlated? Pick one from [y, n]...y
+Enter correlated shells? Pick one or combinations separated by blank space from [s, p, d, f]...f
+Do you want to take into account the SPIN-ORBIT interaction? Pick one from [y, n]...y
+Do you want to take into account the CRYSTAL FIELD effect? Pick one from [y, n]...n
+
+LHUB = 1: Slater-Condo parametrization.
+LHUB = 0: U_{i,j,k,l} (NO SPIN INDEX) = int_{dr int_{dr&#39; phi^{*}(r_i) phi^{*}(r&#39;_j) phi(r_k) phi(r&#39;_l)}}
+          will be provided by file V2AO.INP
+LHUB =-1: U_{i,j,k,l} (INCLUDING SPIN INDEX) = int_{dr int_{dr&#39; phi^{*}(r_i) phi^{*}(r&#39;_j) phi(r_k) phi(r&#39;_l)}}
+          will be provided by file V2H.INP
+Please select LHUB:  Pick one from [-1, 0, 1]...1
+
+LDC = 12:  Recommended. Standard double counting (updating Vdc at each charge iteration, initial n0 to be provided.)
+LDC =  2:  Fix double counting potential (keep same Vdc/n0 at each charge iteration, n0 to be provided.)
+LDC =  1:  Standard double counting potential (n0 self-consistently determined.)
+LDC =  0:  No double counting.
+Please select LDC:  Pick one from [0, 1, 2, 12]...12
+
+LCLUSTER = 0: Single-atom impurity.
+LCLUSTER = 1: Multi-atom (cluster) impurity.
+Please select LCLUSTER:  Pick one from [0, 1]...0
+
+Solution embedding system:
+LEIGV = 0:  Choose automatically solver depending on the size of the problem (DEFAULT)
+        1:  Exact diagonalization (ZHEEV) in LAPACK
+        2:  Lanczos (zhdrv1) in ARPACK
+        3:  Exact diagonalization (ZHEEVX, selective lowest two eigen-vectors) in LAPACK
+        5:  PRIMEE (Iterative MultiMethod Eigensolver)
+Please select LEIGV:  Pick one from [0, 1, 2, 3, 5]...5
+INFORMATION FOR f ELECTRONS OF Ce :
+Please provide interaction parameters U,J separated by a space: 6.0 0.7
+Please provide N1,N2 defining valence range [N1,N2] separated by a space ( 0 &lt; N1 &lt; N2 &lt; 14 ): 0 4
+Please provide guess n0 for valence (0 &lt; n0 &lt; 4): 1.0
+Please run ga_init_dmft.py with parameters given in  init_ga.slog
+</pre></div>
+</div>
+<p>Thus it finishes the setup of all the necessary files for CyGutz.</p>
+</li>
+<li><p class="first">To use the w2k+dmft priofector, we will type:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ ~/WIEN_GUTZ/bin/ga_init_dmft.py
+</pre></div>
+</div>
+<p>Read the list of questions and use the answers provided in <code class="docutils literal"><span class="pre">init_ga.slog</span></code>.</p>
+</li>
+<li><p class="first">Now we are ready to run the w2k+Gutzwiler/Slave-Boson self-cponsistently by typing:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ ~/WIEN_GUTZ/bin/ga_run_dmft.py
+</pre></div>
+</div>
+<p>Like WIEN2k jobs, the total energy is stored in <code class="docutils literal"><span class="pre">case.scf</span></code> file like <a class="reference download internal" href="_downloads/Ce.scf"><code class="xref download docutils literal"><span class="pre">Ce.scf</span></code></a>.
+The main CyGutz output (last electron density step) is located in <a class="reference download internal" href="_downloads/GL_LOG.OUT"><code class="xref download docutils literal"><span class="pre">GL_LOG.OUT</span></code></a>
+and <a class="reference download internal" href="_downloads/glog.h5"><code class="xref download docutils literal"><span class="pre">glog.h5</span></code></a>.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="band-structure-calculation-for-uo2">
+<h2>Band structure calculation for UO2<a class="headerlink" href="#band-structure-calculation-for-uo2" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Finish a self-consistent LDA+G calculation. (Make a copy of the job by using e.g. <cite>~/BitBucket/cygutz_release/tools/Gutzwiller/save_lapwg</cite>)</p>
+</li>
+<li><p class="first">Set <cite>LSCF = 2</cite> and add a new line <cite>LEL0 = 1</cite> in GL.INP</p>
+</li>
+<li><p class="first">type:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ cp WH_EL0.OUT WH_EL0.INP &amp;&amp; cp EFLDA.OUT EFLDA.INP
+</pre></div>
+</div>
+</li>
+<li><p class="first">Prepare the <cite>UO2_10.klist_band</cite> file for the high-symmetry k-path of the bands. (Check Wien2k <cite>user_guide</cite>)</p>
+</li>
+<li><p class="first">type:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ mv UO2_10.klist_band UO2_10.klist
+$ $(WIEN_GUTZ_ROOT)/ga_run_dmft.py -e CyGutz
+</pre></div>
+</div>
+</li>
+<li><p class="first">Use <a class="reference download internal" href="_downloads/plot_bands.py"><code class="xref download docutils literal"><span class="pre">plot_bands.py</span></code></a> to dump the data to <cite>BANDS.dat</cite> and use xmgrace to plot it.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="dos-plot-for-uo2">
+<h2>DOS plot for UO2<a class="headerlink" href="#dos-plot-for-uo2" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Finish a self-consistent LDA+G calculation.</li>
+<li>Use <a class="reference download internal" href="_downloads/dos.py"><code class="xref download docutils literal"><span class="pre">dos.py</span></code></a> to plot the (partial) dos.</li>
+</ol>
+</div>
+<div class="section" id="crystal-field-for-ceb6">
+<h2>Crystal field for CeB6<a class="headerlink" href="#crystal-field-for-ceb6" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Finish a self-consistent LDA+G calculation.</li>
+<li>Use <a class="reference download internal" href="_downloads/analysis_cf.py"><code class="xref download docutils literal"><span class="pre">dos.py</span></code></a> to analyse the crystal field.</li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Tutorial</a><ul>
+<li><a class="reference internal" href="#module-1_1D_1_band_Hubbard_Model">Single Band Hubbard Model</a></li>
+<li><a class="reference internal" href="#module-2_1D_bilayer_Model">Bilayer Model</a></li>
+<li><a class="reference internal" href="#ce-with-spin-orbit-interaction"><span class="math">\(\alpha\)</span>-Ce with spin-orbit interaction</a></li>
+<li><a class="reference internal" href="#band-structure-calculation-for-uo2">Band structure calculation for UO2</a></li>
+<li><a class="reference internal" href="#dos-plot-for-uo2">DOS plot for UO2</a></li>
+<li><a class="reference internal" href="#crystal-field-for-ceb6">Crystal field for CeB6</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="install.html"
+                        title="previous chapter">Installation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tools.html"
+                        title="next chapter">CyGutz tools</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/tutorials.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tools.html" title="CyGutz tools"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="install.html" title="Installation"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Yongxin Yao, Nicola Lanata, Xiaoyu Deng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

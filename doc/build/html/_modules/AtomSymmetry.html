@@ -1,0 +1,558 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AtomSymmetry &mdash; CyGutz_user_guide 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CyGutz_user_guide 1.0.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for AtomSymmetry</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Atom Symmetry module</span>
+
+<span class="sd">Input: 3D rotation group and a representation of J = [J_{x}, J_{y}, J_{z}] of an atom</span>
+<span class="sd">Output:</span>
+
+<span class="sd">1) A new representation of Jp and a unitary transformation U such that Jp = U^H J U</span>
+<span class="sd">2) A symbolic matrix representing a general matrix commuting with the representation of the group.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse</span> <span class="kn">import</span> <span class="n">csr_matrix</span>
+
+<span class="k">def</span> <span class="nf">get_3D_rotation_generator</span><span class="p">():</span>
+  <span class="k">return</span> <span class="o">-</span><span class="mf">1.j</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[[</span><span class="nb">int</span><span class="p">((</span><span class="n">i</span><span class="o">-</span><span class="n">j</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">j</span><span class="o">-</span><span class="n">k</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="n">i</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">)])</span>
+
+<div class="viewcode-block" id="get_rotation"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_rotation">[docs]</a><span class="k">def</span> <span class="nf">get_rotation</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">theta</span><span class="p">,</span><span class="n">method</span><span class="o">=</span><span class="s">&quot;eigh&quot;</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get rotation matrix by Lie parameters and generator J.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">exponent</span> <span class="o">=</span> <span class="n">J</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">theta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">J</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">theta</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">J</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">theta</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+  <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s">&quot;eigh&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">exponent</span><span class="p">,</span><span class="n">csr_matrix</span><span class="p">):</span>
+      <span class="n">exponent</span> <span class="o">=</span> <span class="n">exponent</span><span class="o">.</span><span class="n">todense</span><span class="p">()</span>
+    <span class="n">vals</span><span class="p">,</span> <span class="n">vecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">exponent</span><span class="p">)</span>
+    <span class="n">rep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vecs</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mf">1.j</span><span class="o">*</span><span class="n">vals</span><span class="p">))),</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">vecs</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s">&quot;expm&quot;</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">expm</span>
+    <span class="n">rep</span> <span class="o">=</span> <span class="n">expm</span><span class="p">(</span><span class="mf">1.j</span><span class="o">*</span><span class="n">exponent</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&quot; Unsupported method in get_rotation!&quot;</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">rep</span>
+</div>
+<div class="viewcode-block" id="get_Lie_parameter_3D"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_Lie_parameter_3D">[docs]</a><span class="k">def</span> <span class="nf">get_Lie_parameter_3D</span><span class="p">(</span><span class="n">g</span><span class="p">,</span><span class="n">plus2pi</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get Lie parameter from a 3D rotation matrix.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">J</span> <span class="o">=</span> <span class="n">get_3D_rotation_generator</span><span class="p">()</span>
+  <span class="n">list_theta</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">,</span> <span class="s">&#39; Error: get_Lie_parameter_3D is exclusively for 3D rotations!&#39;</span>
+  <span class="n">vals</span><span class="p">,</span> <span class="n">vecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="c"># all rotation matrices are diagonalizable over the complex field</span>
+  <span class="n">rotation_axes_label</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">vals</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">vals</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)))</span> <span class="c"># pick the label of the eigenvalue 1 (rotation axis)</span>
+  <span class="n">axis</span> <span class="o">=</span> <span class="n">vecs</span><span class="p">[:,</span><span class="n">rotation_axes_label</span><span class="p">]</span><span class="o">.</span><span class="n">real</span>
+  <span class="n">fix</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">g</span><span class="p">)</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span>
+  <span class="k">if</span> <span class="n">fix</span> <span class="o">&lt;=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">:</span>
+    <span class="k">assert</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">g</span><span class="p">)</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span> <span class="o">-</span> <span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span> <span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.000000001</span> <span class="p">)</span>
+    <span class="n">fix</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+  <span class="k">if</span> <span class="n">fix</span> <span class="o">&gt;=</span> <span class="mf">1.0</span><span class="p">:</span>
+    <span class="k">assert</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">g</span><span class="p">)</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span> <span class="o">-</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">)</span> <span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.000000001</span> <span class="p">)</span>
+    <span class="n">fix</span> <span class="o">=</span> <span class="mf">1.0</span>
+  <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">fix</span><span class="p">)</span>
+  <span class="n">theta</span> <span class="o">=</span> <span class="n">alpha</span><span class="o">*</span><span class="n">axis</span>
+  <span class="c"># get the additional sign</span>
+  <span class="n">gp</span> <span class="o">=</span> <span class="n">get_rotation</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">theta</span><span class="p">,</span><span class="n">method</span><span class="o">=</span><span class="s">&quot;eigh&quot;</span><span class="p">)</span>
+  <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">gp</span><span class="o">-</span><span class="n">g</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">&gt;</span> <span class="mf">1.e-7</span><span class="p">:</span> <span class="n">alpha</span> <span class="o">=</span> <span class="o">-</span><span class="n">alpha</span>
+  <span class="n">list_theta</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">alpha</span><span class="o">*</span><span class="n">axis</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">plus2pi</span><span class="p">:</span>
+    <span class="n">list_theta</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">alpha</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="mf">2.</span><span class="p">)</span><span class="o">*</span><span class="n">axis</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">list_theta</span>
+</div>
+<div class="viewcode-block" id="get_Lie_parameters"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_Lie_parameters">[docs]</a><span class="k">def</span> <span class="nf">get_Lie_parameters</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">plus2pi</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get Lie parameters for a 3D rotation group.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">Lie_parameters</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">Rotations</span><span class="p">:</span>
+    <span class="n">list_theta</span> <span class="o">=</span> <span class="n">get_Lie_parameter_3D</span><span class="p">(</span><span class="n">g</span><span class="p">,</span><span class="n">plus2pi</span><span class="o">=</span><span class="n">plus2pi</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">theta</span> <span class="ow">in</span> <span class="n">list_theta</span><span class="p">:</span>
+      <span class="n">Lie_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">Lie_parameters</span>
+</div>
+<div class="viewcode-block" id="get_plus2pi"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_plus2pi">[docs]</a><span class="k">def</span> <span class="nf">get_plus2pi</span><span class="p">(</span><span class="n">Jz</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Decide whether one needs to double the number of Lie parameters due to half-integer of J.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigvalsh</span><span class="p">(</span><span class="n">Jz</span><span class="p">)</span>
+  <span class="n">val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">vals</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">val</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.e-7</span><span class="p">:</span>
+    <span class="n">plus2pi</span> <span class="o">=</span> <span class="bp">True</span>
+  <span class="k">elif</span> <span class="n">val</span> <span class="o">&lt;</span> <span class="mf">1.e-7</span><span class="p">:</span>
+    <span class="n">plus2pi</span> <span class="o">=</span> <span class="bp">False</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&#39; Error in eigen-values of Jz:&#39;</span>
+    <span class="k">print</span> <span class="n">vals</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">plus2pi</span>
+</div>
+<div class="viewcode-block" id="check_Lie_parameters"><a class="viewcode-back" href="../tools.html#AtomSymmetry.check_Lie_parameters">[docs]</a><span class="k">def</span> <span class="nf">check_Lie_parameters</span><span class="p">(</span><span class="n">G</span><span class="p">,</span><span class="n">J</span><span class="p">,</span><span class="n">Lie_parameters</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Check the representation generated by Lie parameters and J with G.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">Lie_parameters</span><span class="p">)</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>  <span class="c"># can be 1 or 2</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">g</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">G</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="o">*</span><span class="n">N</span><span class="p">,(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">N</span><span class="p">):</span>
+      <span class="n">theta</span> <span class="o">=</span> <span class="n">Lie_parameters</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+      <span class="n">gp</span> <span class="o">=</span> <span class="n">get_rotation</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">theta</span><span class="p">,</span><span class="n">method</span><span class="o">=</span><span class="s">&quot;eigh&quot;</span><span class="p">)</span>
+      <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">gp</span><span class="o">-</span><span class="n">g</span><span class="p">))</span>
+      <span class="k">assert</span> <span class="n">err</span> <span class="o">&lt;</span> <span class="mf">1.e-7</span><span class="p">,</span> <span class="s">&quot; check_Lie_parameters!&quot;</span>
+</div>
+<div class="viewcode-block" id="check_Lie_parameters_3D"><a class="viewcode-back" href="../tools.html#AtomSymmetry.check_Lie_parameters_3D">[docs]</a><span class="k">def</span> <span class="nf">check_Lie_parameters_3D</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">Lie_parameters</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Compare the 3D rotation matrices with the one generated by Lie parameters and the generator J.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">J</span> <span class="o">=</span> <span class="n">get_3D_rotation_generator</span><span class="p">()</span>
+  <span class="n">check_Lie_parameters</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">J</span><span class="p">,</span><span class="n">Lie_parameters</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="get_ratio_matab"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_ratio_matab">[docs]</a><span class="k">def</span> <span class="nf">get_ratio_matab</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get a scale ratio of two matrix.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">ratio</span> <span class="o">=</span> <span class="mf">0.</span><span class="o">+</span><span class="mf">0.j</span>
+  <span class="c"># locate the first significant element of a</span>
+  <span class="n">ia</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span> <span class="n">ja</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+  <span class="kn">import</span> <span class="nn">itertools</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">j</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)),</span><span class="n">repeat</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span><span class="o">&gt;</span><span class="mf">1.e-5</span><span class="p">:</span>
+      <span class="n">ia</span><span class="o">=</span><span class="n">i</span><span class="p">;</span> <span class="n">ja</span><span class="o">=</span><span class="n">j</span><span class="p">;</span> <span class="k">break</span>
+  <span class="k">if</span> <span class="n">ia</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="n">ia</span><span class="p">][</span><span class="n">ja</span><span class="p">])</span><span class="o">&gt;</span><span class="mf">1.e-7</span><span class="p">:</span>
+      <span class="n">rat</span><span class="o">=</span><span class="n">a</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span><span class="n">ja</span><span class="p">]</span><span class="o">/</span><span class="n">b</span><span class="p">[</span><span class="n">ia</span><span class="p">,</span><span class="n">ja</span><span class="p">]</span>
+      <span class="k">if</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">a</span><span class="o">-</span><span class="n">b</span><span class="o">*</span><span class="n">rat</span><span class="p">))</span><span class="o">&lt;</span><span class="mf">1.e-6</span><span class="p">):</span>
+        <span class="n">ratio</span><span class="o">=</span><span class="n">rat</span>
+  <span class="k">return</span> <span class="n">ratio</span>
+</div>
+<div class="viewcode-block" id="get_structure_constants"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_structure_constants">[docs]</a><span class="k">def</span> <span class="nf">get_structure_constants</span><span class="p">(</span><span class="n">J</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get the structure constant or commutation table of [Jx,Jy,Jz].</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+  <span class="n">eijk</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">l</span><span class="p">,</span><span class="n">l</span><span class="p">,</span><span class="n">l</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">complex</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">i0</span><span class="p">,</span><span class="n">J0</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">J</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i1</span><span class="p">,</span><span class="n">J1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">J</span><span class="p">):</span>
+      <span class="n">J01</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">J0</span><span class="p">,</span><span class="n">J1</span><span class="p">)</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">J1</span><span class="p">,</span><span class="n">J0</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">i2</span><span class="p">,</span><span class="n">J2</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">J</span><span class="p">):</span>
+        <span class="n">eijk</span><span class="p">[</span><span class="n">i0</span><span class="p">,</span><span class="n">i1</span><span class="p">,</span><span class="n">i2</span><span class="p">]</span><span class="o">=</span><span class="n">get_ratio_matab</span><span class="p">(</span><span class="n">J01</span><span class="p">,</span><span class="n">J2</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">eijk</span>
+</div>
+<div class="viewcode-block" id="check_strcture_constants"><a class="viewcode-back" href="../tools.html#AtomSymmetry.check_strcture_constants">[docs]</a><span class="k">def</span> <span class="nf">check_strcture_constants</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">Jp</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Compare the structure constants between two sets of generators.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">eijk</span>  <span class="o">=</span> <span class="n">get_structure_constants</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+  <span class="n">eijkp</span> <span class="o">=</span> <span class="n">get_structure_constants</span><span class="p">(</span><span class="n">Jp</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">eijkp</span><span class="o">-</span><span class="n">eijk</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mf">1.e-6</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&#39; Commutation table for J:&#39;</span>
+    <span class="k">print</span> <span class="n">eijk</span>
+    <span class="k">print</span> <span class="s">&#39; Commutation table for Jp:&#39;</span>
+    <span class="k">print</span> <span class="n">eijkp</span>
+    <span class="k">print</span> <span class="s">&#39; Inconsistency error!&#39;</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+</div>
+<span class="k">def</span> <span class="nf">check_strcture_constants_3D</span><span class="p">(</span><span class="n">J</span><span class="p">):</span>
+  <span class="n">Jp</span> <span class="o">=</span> <span class="n">get_3D_rotation_generator</span><span class="p">()</span>
+  <span class="n">check_strcture_constants</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">Jp</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">get_representation</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">Lie_parameters</span><span class="p">):</span>
+  <span class="n">representation</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">theta</span> <span class="ow">in</span> <span class="n">Lie_parameters</span><span class="p">:</span>
+    <span class="nb">repr</span> <span class="o">=</span> <span class="n">get_rotation</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">theta</span><span class="p">,</span><span class="n">method</span><span class="o">=</span><span class="s">&quot;eigh&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="nb">repr</span> <span class="o">=</span> <span class="nb">repr</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="nb">repr</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.e-8</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+      <span class="k">pass</span>
+    <span class="n">representation</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">repr</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">representation</span>
+
+<div class="viewcode-block" id="locate_R_list"><a class="viewcode-back" href="../tools.html#AtomSymmetry.locate_R_list">[docs]</a><span class="k">def</span> <span class="nf">locate_R_list</span><span class="p">(</span><span class="n">R01</span><span class="p">,</span><span class="n">R_list</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Locate the R in R_list.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">loc</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">R</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">R_list</span><span class="p">):</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">R01</span><span class="o">-</span><span class="n">R</span><span class="p">))</span><span class="o">&lt;</span><span class="mf">1.e-6</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">loc</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">loc</span> <span class="o">=</span> <span class="n">i</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&#39;Error in locate_R_list: Found multiple identical elements!&#39;</span>
+        <span class="n">quit</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">loc</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&#39;Error locate_R_list: Failed to locate the element!&#39;</span>
+    <span class="n">quit</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">loc</span>
+</div>
+<div class="viewcode-block" id="get_product_table"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_product_table">[docs]</a><span class="k">def</span> <span class="nf">get_product_table</span><span class="p">(</span><span class="n">R_list</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get product table of the representation.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">h</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">R_list</span><span class="p">)</span>
+  <span class="n">table</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">h</span><span class="p">,</span><span class="n">h</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">i0</span><span class="p">,</span><span class="n">R0</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">R_list</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i1</span><span class="p">,</span><span class="n">R1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">R_list</span><span class="p">):</span>
+      <span class="n">R01</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">R0</span><span class="p">,</span><span class="n">R1</span><span class="p">)</span>
+      <span class="n">table</span><span class="p">[</span><span class="n">i0</span><span class="p">,</span><span class="n">i1</span><span class="p">]</span><span class="o">=</span><span class="n">locate_R_list</span><span class="p">(</span><span class="n">R01</span><span class="p">,</span><span class="n">R_list</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">table</span>
+</div>
+<span class="k">def</span> <span class="nf">check_product_table</span><span class="p">(</span><span class="n">G</span><span class="p">,</span><span class="n">representation</span><span class="p">):</span>
+  <span class="n">product_table_G</span> <span class="o">=</span> <span class="n">get_product_table</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+  <span class="n">product_table_R</span> <span class="o">=</span> <span class="n">get_product_table</span><span class="p">(</span><span class="n">representation</span><span class="p">)</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">G</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">representation</span><span class="p">):</span>
+     <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">product_table_G</span><span class="o">-</span><span class="n">product_table_R</span><span class="p">))</span>
+     <span class="k">if</span> <span class="n">err</span> <span class="o">&gt;</span> <span class="mf">1.e-6</span><span class="p">:</span>
+       <span class="k">print</span> <span class="s">&#39; Error: product table not match!&#39;</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+
+<div class="viewcode-block" id="sym_matrix"><a class="viewcode-back" href="../tools.html#AtomSymmetry.sym_matrix">[docs]</a><span class="k">def</span> <span class="nf">sym_matrix</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">R_list</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Symmetrize matrix X.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">Ham</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">R</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">R_list</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+      <span class="n">Ham</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">R</span><span class="p">,</span><span class="n">X</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">R</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">csr_matrix</span><span class="p">):</span>
+      <span class="n">Ham</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">todense</span><span class="p">())</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot; Unsupported data type of R&quot;</span><span class="p">,</span> <span class="n">R</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span><span class="n">i</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">Ham</span>
+</div>
+<div class="viewcode-block" id="get_eigen_space"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_eigen_space">[docs]</a><span class="k">def</span> <span class="nf">get_eigen_space</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="n">tol</span><span class="o">=</span><span class="mf">1.e-4</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get eigen spaces of a Hermitian matrix H.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">vals</span><span class="p">,</span> <span class="n">vecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
+  <span class="n">list_eigen_space</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">val</span> <span class="o">=</span> <span class="n">vals</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="n">eigen_space</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">((</span><span class="n">vals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="n">val</span><span class="p">)</span><span class="o">/</span><span class="n">val</span><span class="p">)</span><span class="o">&lt;</span><span class="n">tol</span><span class="p">:</span>
+      <span class="n">eigen_space</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vecs</span><span class="p">[:,</span><span class="n">i</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">list_eigen_space</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">eigen_space</span><span class="p">))</span>
+      <span class="n">eigen_space</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="n">eigen_space</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vecs</span><span class="p">[:,</span><span class="n">i</span><span class="p">])</span>
+      <span class="n">val</span> <span class="o">=</span> <span class="n">vals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+  <span class="n">list_eigen_space</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">eigen_space</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">list_eigen_space</span>
+</div>
+<span class="k">def</span> <span class="nf">brief_eigen_spaces</span><span class="p">(</span><span class="n">list_eigen_space</span><span class="p">):</span>
+  <span class="k">print</span> <span class="s">&#39;Number of eigen space =&#39;</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">list_eigen_space</span><span class="p">)</span>
+  <span class="k">print</span> <span class="s">&#39;Dimension of each eigen space:&#39;</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">eigen_space</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">list_eigen_space</span><span class="p">):</span>
+    <span class="k">print</span> <span class="n">i</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">eigen_space</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">check_commute_G</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="n">G</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">g</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">G</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+      <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="n">g</span><span class="p">)</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">g</span><span class="p">,</span><span class="n">H</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span><span class="n">csr_matrix</span><span class="p">):</span>
+      <span class="n">C</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="n">g</span><span class="o">.</span><span class="n">todense</span><span class="p">())</span><span class="o">-</span><span class="n">g</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot; Unsupported datatype of g&quot;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">__class__</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">C</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">&gt;</span> <span class="mf">1.e-4</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&#39;Error in check_commute_G =&#39;</span><span class="p">,</span><span class="n">err</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+
+<div class="viewcode-block" id="get_characters_espace"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_characters_espace">[docs]</a><span class="k">def</span> <span class="nf">get_characters_espace</span><span class="p">(</span><span class="n">representation</span><span class="p">,</span><span class="n">V</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get the character (vector) of one eigen-space defined by V.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">chi</span> <span class="o">=</span> <span class="p">[];</span> <span class="nb">repr</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">R</span> <span class="ow">in</span> <span class="n">representation</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+      <span class="n">VHRV</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">V</span><span class="p">),</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">R</span><span class="p">,</span><span class="n">V</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">csr_matrix</span><span class="p">):</span>
+      <span class="n">VHRV</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">V</span><span class="p">),</span><span class="n">R</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">V</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot; Unsupported data type of V&quot;</span><span class="p">,</span> <span class="n">V</span><span class="o">.</span><span class="n">__class__</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">VHRV</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">1</span><span class="p">,):</span>
+      <span class="n">chi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">VHRV</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">chi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">VHRV</span><span class="p">))</span>
+    <span class="nb">repr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">VHRV</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">chi</span><span class="p">,</span> <span class="nb">repr</span>
+</div>
+<span class="k">def</span> <span class="nf">get_sub_repr_characters</span><span class="p">(</span><span class="n">representation</span><span class="p">,</span><span class="n">list_eigen_space</span><span class="p">):</span>
+  <span class="n">list_chi</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">list_repr</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">V</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">list_eigen_space</span><span class="p">):</span>
+    <span class="n">chi</span><span class="p">,</span> <span class="nb">repr</span> <span class="o">=</span> <span class="n">get_characters_espace</span><span class="p">(</span><span class="n">representation</span><span class="p">,</span><span class="n">V</span><span class="p">)</span>
+    <span class="n">list_chi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chi</span><span class="p">)</span>
+    <span class="n">list_repr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">repr</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">list_chi</span><span class="p">),</span><span class="n">list_repr</span>
+
+<span class="c"># Check sum of character^2</span>
+<span class="k">def</span> <span class="nf">check_sum_chi2_1</span><span class="p">(</span><span class="n">chi</span><span class="p">):</span>
+  <span class="n">irr</span> <span class="o">=</span> <span class="s">&#39;OK&#39;</span>
+  <span class="n">h</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chi</span><span class="p">)</span> <span class="c"># order of the group</span>
+  <span class="n">sum_chi2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vdot</span><span class="p">(</span><span class="n">chi</span><span class="p">,</span> <span class="n">chi</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+  <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">sum_chi2</span><span class="o">-</span><span class="n">h</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.e-5</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&#39;Error in sum_chi2 = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">sum_chi2</span><span class="o">-</span><span class="n">h</span><span class="p">))</span>
+    <span class="n">irr</span> <span class="o">=</span> <span class="s">&#39;NO&#39;</span>
+  <span class="k">return</span> <span class="n">irr</span>
+
+<span class="c"># Check sum of character^2</span>
+<span class="k">def</span> <span class="nf">check_sum_chi2</span><span class="p">(</span><span class="n">list_chi</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">chi</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">list_chi</span><span class="p">):</span>
+    <span class="n">irr</span> <span class="o">=</span> <span class="n">check_sum_chi2_1</span><span class="p">(</span><span class="n">chi</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">irr</span> <span class="o">==</span> <span class="s">&#39;NO&#39;</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">irr</span>
+  <span class="k">return</span> <span class="n">irr</span>
+
+<span class="k">def</span> <span class="nf">get_ired_representation</span><span class="p">(</span><span class="n">representation</span><span class="p">):</span>
+  <span class="n">l</span> <span class="o">=</span> <span class="n">representation</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">check</span> <span class="o">=</span> <span class="s">&#39;NO&#39;</span>
+  <span class="c">#</span>
+  <span class="k">while</span> <span class="n">check</span> <span class="o">==</span> <span class="s">&#39;NO&#39;</span><span class="p">:</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">l</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">l</span><span class="p">,</span><span class="n">l</span><span class="p">)</span><span class="o">*</span><span class="mf">1.j</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>  <span class="c"># make X Hermitian</span>
+    <span class="n">H</span> <span class="o">=</span> <span class="n">sym_matrix</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">representation</span><span class="p">)</span>
+    <span class="n">check_commute_G</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="n">representation</span><span class="p">)</span>
+    <span class="n">list_eigen_space</span> <span class="o">=</span> <span class="n">get_eigen_space</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
+    <span class="n">list_chi</span><span class="p">,</span><span class="n">list_repr</span> <span class="o">=</span> <span class="n">get_sub_repr_characters</span><span class="p">(</span><span class="n">representation</span><span class="p">,</span><span class="n">list_eigen_space</span><span class="p">)</span>
+    <span class="n">check</span> <span class="o">=</span> <span class="n">check_sum_chi2</span><span class="p">(</span><span class="n">list_chi</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">check</span> <span class="o">==</span> <span class="s">&#39;OK&#39;</span><span class="p">:</span>
+      <span class="k">break</span>
+  <span class="k">return</span> <span class="n">list_eigen_space</span><span class="p">,</span><span class="n">list_chi</span><span class="p">,</span><span class="n">list_repr</span>
+
+<div class="viewcode-block" id="get_chi_repr"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_chi_repr">[docs]</a><span class="k">def</span> <span class="nf">get_chi_repr</span><span class="p">(</span><span class="n">list_chi</span><span class="p">,</span><span class="n">list_repr</span><span class="p">,</span><span class="n">list_eigen_space</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Group the equivalent (chi) representations.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">list_chi_repr</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">list_chi_space</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">list_distinct_chi</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">done_list</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">h</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_chi</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="n">chi_product</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">list_chi</span><span class="p">),</span><span class="n">list_chi</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">/</span><span class="n">h</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">product</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">chi_product</span><span class="p">):</span>
+    <span class="n">chi_repr</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">chi_space</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">done_list</span><span class="p">:</span> <span class="k">continue</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">product</span><span class="p">)):</span>
+      <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">product</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span><span class="mf">1.e-6</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">j</span><span class="o">&lt;</span><span class="n">i</span><span class="p">:</span>
+          <span class="k">print</span> <span class="s">&#39;Error in get_chi_repr!&#39;</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+        <span class="n">chi_repr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">list_repr</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+        <span class="n">chi_space</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">list_eigen_space</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+        <span class="n">done_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">chi_repr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+          <span class="n">list_distinct_chi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">list_chi</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+    <span class="n">list_chi_repr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chi_repr</span><span class="p">)</span>
+    <span class="n">list_chi_space</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chi_space</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">list_chi_repr</span><span class="p">,</span><span class="n">list_chi_space</span><span class="p">,</span><span class="n">list_distinct_chi</span>
+</div>
+<div class="viewcode-block" id="get_U_equiv_repr"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_U_equiv_repr">[docs]</a><span class="k">def</span> <span class="nf">get_U_equiv_repr</span><span class="p">(</span><span class="n">representationA</span><span class="p">,</span><span class="n">representationB</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get the transformation matrix U such that B= UAU^H.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">representationA</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">representationA</span><span class="p">)):</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">M</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">representationB</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">representationA</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+  <span class="n">MM</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">M</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+  <span class="n">vals</span><span class="p">,</span> <span class="n">vecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">MM</span><span class="p">)</span>
+  <span class="n">MM</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vecs</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span><span class="o">**</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">))),</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">vecs</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">M</span><span class="p">,</span><span class="n">MM</span><span class="p">)</span>
+</div>
+<span class="k">def</span> <span class="nf">check_U_equiv_repr</span><span class="p">(</span><span class="n">representationA</span><span class="p">,</span><span class="n">representationB</span><span class="p">,</span><span class="n">U</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">representationA</span><span class="p">)):</span>
+    <span class="n">UAUH</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">U</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">representationA</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">U</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">UAUH</span><span class="o">-</span><span class="n">representationB</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">&gt;</span> <span class="mf">1.e-5</span><span class="p">:</span> <span class="c">#10:</span>
+      <span class="k">print</span> <span class="s">&#39; Large error in check_U_equiv_repr =&#39;</span><span class="p">,</span><span class="n">err</span><span class="p">;</span> <span class="n">quit</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">get_list_U_equiv_repr</span><span class="p">(</span><span class="n">list_chi_repr</span><span class="p">):</span>
+  <span class="n">list_U</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">chi_repr</span> <span class="ow">in</span> <span class="n">list_chi_repr</span><span class="p">:</span>
+    <span class="n">U</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">chi_repr</span><span class="p">)):</span>
+      <span class="n">U1</span> <span class="o">=</span> <span class="n">get_U_equiv_repr</span><span class="p">(</span><span class="n">chi_repr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">chi_repr</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+      <span class="n">check_U_equiv_repr</span><span class="p">(</span><span class="n">chi_repr</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">chi_repr</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">U1</span><span class="p">)</span>
+      <span class="n">U</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">U1</span><span class="p">)</span>
+    <span class="n">list_U</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">U</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">list_U</span>
+
+<div class="viewcode-block" id="get_U_Jnew"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_U_Jnew">[docs]</a><span class="k">def</span> <span class="nf">get_U_Jnew</span><span class="p">(</span><span class="n">list_chi_space</span><span class="p">,</span><span class="n">list_chi_U</span><span class="p">,</span><span class="n">reorder</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Reorder basis to get nice block form.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">U_Jnew</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">chi_space</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">list_chi_space</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">chi_space</span><span class="p">)):</span>
+      <span class="n">chi_space</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">list_chi_U</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span><span class="n">chi_space</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="c"># Fortran c row/column convention different</span>
+    <span class="k">if</span> <span class="n">reorder</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chi_space</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chi_space</span><span class="p">)):</span>
+          <span class="n">U_Jnew</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chi_space</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">k</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chi_space</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chi_space</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+          <span class="n">U_Jnew</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chi_space</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">k</span><span class="p">])</span>
+  <span class="n">U_Jnew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">U_Jnew</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="c"># back to Fortran convention</span>
+  <span class="k">return</span> <span class="n">U_Jnew</span>
+</div>
+<div class="viewcode-block" id="get_seq_matrix"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_seq_matrix">[docs]</a><span class="k">def</span> <span class="nf">get_seq_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Generate a square matrix with sequential elements.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">M</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+    <span class="n">Mi</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+      <span class="n">Mi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="o">+</span><span class="n">i</span><span class="o">*</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">M</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Mi</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+</div>
+<span class="k">def</span> <span class="nf">get_sigma_struct</span><span class="p">(</span><span class="n">list_chi_space</span><span class="p">):</span>
+  <span class="n">sigma</span> <span class="o">=</span> <span class="p">[];</span> <span class="n">ibase</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">for</span> <span class="n">chi_space</span> <span class="ow">in</span> <span class="n">list_chi_space</span><span class="p">:</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chi_space</span><span class="p">)</span> <span class="c"># number of equivalent irred. repr.</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chi_space</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">get_seq_matrix</span><span class="p">(</span><span class="n">N</span><span class="p">)</span><span class="o">+</span><span class="n">ibase</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">L</span><span class="p">):</span>
+      <span class="n">sigma</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+    <span class="n">ibase</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">sigma</span>
+
+<div class="viewcode-block" id="get_Lie_from_JR"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_Lie_from_JR">[docs]</a><span class="k">def</span> <span class="nf">get_Lie_from_JR</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">J</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get the Lie parameters of {R}.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">plus2pi</span> <span class="o">=</span> <span class="n">get_plus2pi</span><span class="p">(</span><span class="n">J</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+  <span class="n">Lie_parameters</span> <span class="o">=</span> <span class="n">get_Lie_parameters</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">plus2pi</span><span class="o">=</span><span class="n">plus2pi</span><span class="p">)</span>
+  <span class="n">check_Lie_parameters_3D</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">Lie_parameters</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">Lie_parameters</span>
+</div>
+<div class="viewcode-block" id="get_JR_representation"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_JR_representation">[docs]</a><span class="k">def</span> <span class="nf">get_JR_representation</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">J</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Get the representation of {R} using generator {J}.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">Lie_parameters</span> <span class="o">=</span> <span class="n">get_Lie_from_JR</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">J</span><span class="p">)</span>
+  <span class="n">check_strcture_constants_3D</span><span class="p">(</span><span class="n">J</span><span class="p">)</span>
+  <span class="n">representation</span> <span class="o">=</span> <span class="n">get_representation</span><span class="p">(</span><span class="n">J</span><span class="p">,</span><span class="n">Lie_parameters</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">representation</span>
+</div>
+<span class="k">def</span> <span class="nf">get_diag_sub_array</span><span class="p">(</span><span class="n">H</span><span class="p">,</span><span class="n">I1</span><span class="p">,</span><span class="n">I2</span><span class="p">,</span><span class="n">J1</span><span class="p">,</span><span class="n">J2</span><span class="p">):</span>
+  <span class="n">err</span> <span class="o">=</span> <span class="mf">0.</span>
+  <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">H</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">I1</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">H</span><span class="p">[:</span><span class="n">I1</span><span class="p">,</span><span class="n">J1</span><span class="p">:</span><span class="n">J2</span><span class="p">])))</span>
+  <span class="k">if</span> <span class="n">I2</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">:</span> <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">H</span><span class="p">[</span><span class="n">I2</span><span class="p">:,</span><span class="n">J1</span><span class="p">:</span><span class="n">J2</span><span class="p">])))</span>
+  <span class="k">if</span> <span class="n">J1</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">H</span><span class="p">[</span><span class="n">I1</span><span class="p">:</span><span class="n">I2</span><span class="p">,:</span><span class="n">J1</span><span class="p">])))</span>
+  <span class="k">if</span> <span class="n">J2</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">:</span> <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">H</span><span class="p">[</span><span class="n">I1</span><span class="p">:</span><span class="n">I2</span><span class="p">,</span><span class="n">J2</span><span class="p">:])))</span>
+  <span class="k">assert</span> <span class="n">err</span> <span class="o">&lt;</span> <span class="mf">1.e-7</span><span class="p">,</span> <span class="s">&#39; Subarray not diagonal, err &gt; 1.e-7!&#39;</span>
+  <span class="k">return</span> <span class="n">H</span><span class="p">[</span><span class="n">I1</span><span class="p">:</span><span class="n">I2</span><span class="p">,</span><span class="n">J1</span><span class="p">:</span><span class="n">J2</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">get_atom_U_sigma_chi</span><span class="p">(</span><span class="n">representation</span><span class="p">):</span>
+  <span class="n">list_eigen_space</span><span class="p">,</span><span class="n">list_chi</span><span class="p">,</span><span class="n">list_repr</span> <span class="o">=</span> <span class="n">get_ired_representation</span><span class="p">(</span><span class="n">representation</span><span class="p">)</span>
+  <span class="n">list_chi_repr</span><span class="p">,</span><span class="n">list_chi_space</span><span class="p">,</span><span class="n">list_distinct_chi</span> <span class="o">=</span> <span class="n">get_chi_repr</span><span class="p">(</span><span class="n">list_chi</span><span class="p">,</span><span class="n">list_repr</span><span class="p">,</span><span class="n">list_eigen_space</span><span class="p">)</span>
+  <span class="n">list_chi_U</span> <span class="o">=</span> <span class="n">get_list_U_equiv_repr</span><span class="p">(</span><span class="n">list_chi_repr</span><span class="p">)</span>
+  <span class="n">U</span> <span class="o">=</span> <span class="n">get_U_Jnew</span><span class="p">(</span><span class="n">list_chi_space</span><span class="p">,</span><span class="n">list_chi_U</span><span class="p">)</span>
+  <span class="n">sigma</span> <span class="o">=</span> <span class="n">get_sigma_struct</span><span class="p">(</span><span class="n">list_chi_space</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">U</span><span class="p">,</span><span class="n">sigma</span><span class="p">,</span><span class="n">list_distinct_chi</span>
+
+<div class="viewcode-block" id="get_atom_Jnew"><a class="viewcode-back" href="../tools.html#AtomSymmetry.get_atom_Jnew">[docs]</a><span class="k">def</span> <span class="nf">get_atom_Jnew</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">J</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Main function.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">representation</span> <span class="o">=</span> <span class="n">get_JR_representation</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">J</span><span class="p">)</span>
+  <span class="n">check_product_table</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">representation</span><span class="p">)</span>
+  <span class="n">U</span><span class="p">,</span><span class="n">sigma</span><span class="p">,</span><span class="n">chi</span> <span class="o">=</span> <span class="n">get_atom_U_sigma_chi</span><span class="p">(</span><span class="n">representation</span><span class="p">)</span>
+  <span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">block_diag</span>
+  <span class="n">Jnew</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">J1</span> <span class="ow">in</span> <span class="n">J</span><span class="p">:</span>
+    <span class="n">Jnew</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">U</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">J1</span><span class="p">,</span><span class="n">U</span><span class="p">)))</span>
+  <span class="k">return</span> <span class="n">Jnew</span><span class="p">,</span><span class="n">U</span><span class="p">,</span><span class="n">block_diag</span><span class="p">(</span><span class="o">*</span><span class="n">sigma</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="check_commute_sigma_J"><a class="viewcode-back" href="../tools.html#AtomSymmetry.check_commute_sigma_J">[docs]</a><span class="k">def</span> <span class="nf">check_commute_sigma_J</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span><span class="n">J</span><span class="p">,</span><span class="n">Rotations</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Check the commutation of sigma with the new rotated representation.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">representation</span> <span class="o">=</span> <span class="n">get_JR_representation</span><span class="p">(</span><span class="n">Rotations</span><span class="p">,</span><span class="n">J</span><span class="p">)</span>
+  <span class="n">check_commute_G</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span><span class="n">representation</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Yongxin Yao, Nicola Lanata, Xiaoyu Deng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

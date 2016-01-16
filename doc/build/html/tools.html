@@ -1,0 +1,446 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>CyGutz tools &mdash; CyGutz_user_guide 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CyGutz_user_guide 1.0.0 documentation" href="index.html" />
+    <link rel="prev" title="Tutorial" href="tutorials.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorials.html" title="Tutorial"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="cygutz-tools">
+<h1>CyGutz tools<a class="headerlink" href="#cygutz-tools" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-init_ga">
+<span id="initialization"></span><h2>Initialization<a class="headerlink" href="#module-init_ga" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="init_ga.help">
+<code class="descclassname">init_ga.</code><code class="descname">help</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/init_ga.html#help"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#init_ga.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print instructions.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="init_ga.initialize">
+<code class="descclassname">init_ga.</code><code class="descname">initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/init_ga.html#initialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#init_ga.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialization for the Gutzwiller/Slave-Boson solver.
+Store symmetry informations to init_ga_info.h5.</p>
+</dd></dl>
+
+<span class="target" id="module-usrqa"></span><dl class="function">
+<dt id="usrqa.inp_ga_init_dmft">
+<code class="descclassname">usrqa.</code><code class="descname">inp_ga_init_dmft</code><span class="sig-paren">(</span><em>soc_list</em>, <em>log</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/usrqa.html#inp_ga_init_dmft"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#usrqa.inp_ga_init_dmft" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the inputs for running ga_init_dmft.py.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="usrqa.usr_qa_setup">
+<code class="descclassname">usrqa.</code><code class="descname">usr_qa_setup</code><span class="sig-paren">(</span><em>material</em>, <em>log</em>, <em>usr_input</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/usrqa.html#usr_qa_setup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#usrqa.usr_qa_setup" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of questions to be answered to initialize the CyGutz job.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-myatom">
+<span id="material-class"></span><h2>Material class<a class="headerlink" href="#module-myatom" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="myatom.myAtoms">
+<em class="property">class </em><code class="descclassname">myatom.</code><code class="descname">myAtoms</code><span class="sig-paren">(</span><em>symbols=None</em>, <em>positions=None</em>, <em>numbers=None</em>, <em>masses=None</em>, <em>magmoms=None</em>, <em>scaled_positions=None</em>, <em>cell=None</em>, <em>pbc=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/myatom.html#myAtoms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#myatom.myAtoms" title="Permalink to this definition">¶</a></dt>
+<dd><p>A class to describe the calculated system with all the relevant informations,
+such as coordinates, correlated atom indices, symmetry information, etc.</p>
+<dl class="method">
+<dt id="myatom.myAtoms.get_S_vector_list">
+<code class="descname">get_S_vector_list</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/myatom.html#myAtoms.get_S_vector_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#myatom.myAtoms.get_S_vector_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get S_vector_list in the working local basis.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="myatom.myAtoms.get_myJ">
+<code class="descname">get_myJ</code><span class="sig-paren">(</span><em>basis</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/myatom.html#myAtoms.get_myJ"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#myatom.myAtoms.get_myJ" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get J vector in basis of &#8216;CH&#8217; (complex harmonics) if spin-orbit interaction is neglected
+or &#8216;JJ&#8217; (J^2-J_z basis) if spin-orbit interaction is present.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="myatom.myAtoms.get_myLieParameters">
+<code class="descname">get_myLieParameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/myatom.html#myAtoms.get_myLieParameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#myatom.myAtoms.get_myLieParameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the Lie parameters of rotation operators for odd and even J.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="myatom.myAtoms.get_mySelfEnergy">
+<code class="descname">get_mySelfEnergy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/myatom.html#myAtoms.get_mySelfEnergy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#myatom.myAtoms.get_mySelfEnergy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the self-energy structure and the corresponding unitary transformation of the local basis.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="myatom.myAtoms.set_1p_U_list">
+<code class="descname">set_1p_U_list</code><span class="sig-paren">(</span><em>U_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/myatom.html#myAtoms.set_1p_U_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#myatom.myAtoms.set_1p_U_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the one-particle unitary transformation from eithter CH (no spin-orbit) or JJ (with spin-orbit)
+to the basis used in the real calculation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="myatom.myAtoms.set_Mvec">
+<code class="descname">set_Mvec</code><span class="sig-paren">(</span><em>Mvec_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/myatom.html#myAtoms.set_Mvec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#myatom.myAtoms.set_Mvec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set magnetization direction list.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-AtomSymmetry">
+<span id="symmetry-analysis"></span><h2>Symmetry analysis<a class="headerlink" href="#module-AtomSymmetry" title="Permalink to this headline">¶</a></h2>
+<p>Atom Symmetry module</p>
+<p>Input: 3D rotation group and a representation of J = [J_{x}, J_{y}, J_{z}] of an atom
+Output:</p>
+<ol class="arabic simple">
+<li>A new representation of Jp and a unitary transformation U such that Jp = U^H J U</li>
+<li>A symbolic matrix representing a general matrix commuting with the representation of the group.</li>
+</ol>
+<dl class="function">
+<dt id="AtomSymmetry.check_Lie_parameters">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">check_Lie_parameters</code><span class="sig-paren">(</span><em>G</em>, <em>J</em>, <em>Lie_parameters</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#check_Lie_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.check_Lie_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check the representation generated by Lie parameters and J with G.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.check_Lie_parameters_3D">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">check_Lie_parameters_3D</code><span class="sig-paren">(</span><em>Rotations</em>, <em>Lie_parameters</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#check_Lie_parameters_3D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.check_Lie_parameters_3D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare the 3D rotation matrices with the one generated by Lie parameters and the generator J.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.check_commute_sigma_J">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">check_commute_sigma_J</code><span class="sig-paren">(</span><em>sigma</em>, <em>J</em>, <em>Rotations</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#check_commute_sigma_J"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.check_commute_sigma_J" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check the commutation of sigma with the new rotated representation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.check_strcture_constants">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">check_strcture_constants</code><span class="sig-paren">(</span><em>J</em>, <em>Jp</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#check_strcture_constants"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.check_strcture_constants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare the structure constants between two sets of generators.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_JR_representation">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_JR_representation</code><span class="sig-paren">(</span><em>Rotations</em>, <em>J</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_JR_representation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_JR_representation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the representation of {R} using generator {J}.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_Lie_from_JR">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_Lie_from_JR</code><span class="sig-paren">(</span><em>Rotations</em>, <em>J</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_Lie_from_JR"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_Lie_from_JR" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the Lie parameters of {R}.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_Lie_parameter_3D">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_Lie_parameter_3D</code><span class="sig-paren">(</span><em>g</em>, <em>plus2pi=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_Lie_parameter_3D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_Lie_parameter_3D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Lie parameter from a 3D rotation matrix.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_Lie_parameters">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_Lie_parameters</code><span class="sig-paren">(</span><em>Rotations</em>, <em>plus2pi=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_Lie_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_Lie_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Lie parameters for a 3D rotation group.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_U_Jnew">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_U_Jnew</code><span class="sig-paren">(</span><em>list_chi_space</em>, <em>list_chi_U</em>, <em>reorder=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_U_Jnew"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_U_Jnew" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reorder basis to get nice block form.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_U_equiv_repr">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_U_equiv_repr</code><span class="sig-paren">(</span><em>representationA</em>, <em>representationB</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_U_equiv_repr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_U_equiv_repr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the transformation matrix U such that B= UAU^H.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_atom_Jnew">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_atom_Jnew</code><span class="sig-paren">(</span><em>Rotations</em>, <em>J</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_atom_Jnew"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_atom_Jnew" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main function.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_characters_espace">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_characters_espace</code><span class="sig-paren">(</span><em>representation</em>, <em>V</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_characters_espace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_characters_espace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the character (vector) of one eigen-space defined by V.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_chi_repr">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_chi_repr</code><span class="sig-paren">(</span><em>list_chi</em>, <em>list_repr</em>, <em>list_eigen_space</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_chi_repr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_chi_repr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Group the equivalent (chi) representations.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_eigen_space">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_eigen_space</code><span class="sig-paren">(</span><em>H</em>, <em>tol=0.0001</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_eigen_space"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_eigen_space" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get eigen spaces of a Hermitian matrix H.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_plus2pi">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_plus2pi</code><span class="sig-paren">(</span><em>Jz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_plus2pi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_plus2pi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decide whether one needs to double the number of Lie parameters due to half-integer of J.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_product_table">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_product_table</code><span class="sig-paren">(</span><em>R_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_product_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_product_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get product table of the representation.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_ratio_matab">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_ratio_matab</code><span class="sig-paren">(</span><em>a</em>, <em>b</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_ratio_matab"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_ratio_matab" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a scale ratio of two matrix.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_rotation">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_rotation</code><span class="sig-paren">(</span><em>J</em>, <em>theta</em>, <em>method='eigh'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_rotation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_rotation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get rotation matrix by Lie parameters and generator J.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_seq_matrix">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_seq_matrix</code><span class="sig-paren">(</span><em>N</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_seq_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_seq_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a square matrix with sequential elements.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.get_structure_constants">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">get_structure_constants</code><span class="sig-paren">(</span><em>J</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#get_structure_constants"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.get_structure_constants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the structure constant or commutation table of [Jx,Jy,Jz].</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.locate_R_list">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">locate_R_list</code><span class="sig-paren">(</span><em>R01</em>, <em>R_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#locate_R_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.locate_R_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Locate the R in R_list.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="AtomSymmetry.sym_matrix">
+<code class="descclassname">AtomSymmetry.</code><code class="descname">sym_matrix</code><span class="sig-paren">(</span><em>X</em>, <em>R_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/AtomSymmetry.html#sym_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#AtomSymmetry.sym_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Symmetrize matrix X.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-multiplets_analysis">
+<span id="multiplets-analysis"></span><h2>Multiplets analysis<a class="headerlink" href="#module-multiplets_analysis" title="Permalink to this headline">¶</a></h2>
+<p>Tools to analyse the local many-body density matrix (multiplets).</p>
+<dl class="function">
+<dt id="multiplets_analysis.get_local_histogram">
+<code class="descclassname">multiplets_analysis.</code><code class="descname">get_local_histogram</code><span class="sig-paren">(</span><em>imp</em>, <em>f</em>, <em>num_ev=0</em>, <em>Rpr_list=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiplets_analysis.html#get_local_histogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiplets_analysis.get_local_histogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the local histogram with labels.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="multiplets_analysis.get_rho_histogram">
+<code class="descclassname">multiplets_analysis.</code><code class="descname">get_rho_histogram</code><span class="sig-paren">(</span><em>rho</em>, <em>ID_block</em>, <em>N=None</em>, <em>J=None</em>, <em>num_ev=0</em>, <em>Rpr_list=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiplets_analysis.html#get_rho_histogram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiplets_analysis.get_rho_histogram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the histogram of the local density matrix with labels.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-embed_test">
+<span id="embeding-hamiltonian"></span><h2>Embeding Hamiltonian<a class="headerlink" href="#module-embed_test" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="embed_test.get_D_term">
+<code class="descclassname">embed_test.</code><code class="descname">get_D_term</code><span class="sig-paren">(</span><em>D</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/embed_test.html#get_D_term"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#embed_test.get_D_term" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get D (cross) terms.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="embed_test.get_Lc_term">
+<code class="descclassname">embed_test.</code><code class="descname">get_Lc_term</code><span class="sig-paren">(</span><em>Lc</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/embed_test.html#get_Lc_term"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#embed_test.get_Lc_term" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get Lc (auxillary) terms.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="embed_test.get_R">
+<code class="descclassname">embed_test.</code><code class="descname">get_R</code><span class="sig-paren">(</span><em>c</em>, <em>gs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/embed_test.html#get_R"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#embed_test.get_R" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the R-matrix.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="embed_test.get_one_body_term">
+<code class="descclassname">embed_test.</code><code class="descname">get_one_body_term</code><span class="sig-paren">(</span><em>t</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/embed_test.html#get_one_body_term"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#embed_test.get_one_body_term" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get local one-body terms.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="embed_test.get_phy_nssp">
+<code class="descclassname">embed_test.</code><code class="descname">get_phy_nssp</code><span class="sig-paren">(</span><em>c</em>, <em>gs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/embed_test.html#get_phy_nssp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#embed_test.get_phy_nssp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get &lt; c^{dagger} c&gt;_G.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="embed_test.get_two_body_term">
+<code class="descclassname">embed_test.</code><code class="descname">get_two_body_term</code><span class="sig-paren">(</span><em>U</em>, <em>c</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/embed_test.html#get_two_body_term"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#embed_test.get_two_body_term" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get local two-body terms.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="embed_test.get_var_nssp">
+<code class="descclassname">embed_test.</code><code class="descname">get_var_nssp</code><span class="sig-paren">(</span><em>c</em>, <em>gs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/embed_test.html#get_var_nssp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#embed_test.get_var_nssp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get &lt; c^{dagger} c&gt;_G.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="embed_test.test_embed">
+<code class="descclassname">embed_test.</code><code class="descname">test_embed</code><span class="sig-paren">(</span><em>param_file</em>, <em>op_file</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/embed_test.html#test_embed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#embed_test.test_embed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test the embedding formalism.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-impurity_analysis">
+<span id="impurity-analysis"></span><h2>Impurity analysis<a class="headerlink" href="#module-impurity_analysis" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="impurity_analysis.get_d11_sb">
+<code class="descclassname">impurity_analysis.</code><code class="descname">get_d11_sb</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/impurity_analysis.html#get_d11_sb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#impurity_analysis.get_d11_sb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get &lt;n_{1, up} n_{1, dn}&gt;_{G}</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="impurity_analysis.get_ed_d_occ_1">
+<code class="descclassname">impurity_analysis.</code><code class="descname">get_ed_d_occ_1</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/impurity_analysis.html#get_ed_d_occ_1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#impurity_analysis.get_ed_d_occ_1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get double occupancy of the first (correlated) site.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="impurity_analysis.get_n12_ed">
+<code class="descclassname">impurity_analysis.</code><code class="descname">get_n12_ed</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/impurity_analysis.html#get_n12_ed"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#impurity_analysis.get_n12_ed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get &lt;c^{dagger}_{1, up} c_{2, up}&gt;.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="impurity_analysis.get_n12_sb">
+<code class="descclassname">impurity_analysis.</code><code class="descname">get_n12_sb</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/impurity_analysis.html#get_n12_sb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#impurity_analysis.get_n12_sb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get &lt;c^{dagger}_{1, up} c_{2, up}&gt;_{G}</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="impurity_analysis.get_w0_sb">
+<code class="descclassname">impurity_analysis.</code><code class="descname">get_w0_sb</code><span class="sig-paren">(</span><em>num_spin_orbital</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/impurity_analysis.html#get_w0_sb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#impurity_analysis.get_w0_sb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get W^{0}_{R, Psi}</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="impurity_analysis.get_w1_sb">
+<code class="descclassname">impurity_analysis.</code><code class="descname">get_w1_sb</code><span class="sig-paren">(</span><em>num_spin_orbital</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/impurity_analysis.html#get_w1_sb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#impurity_analysis.get_w1_sb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get W^{1}_{R, Psi}</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">CyGutz tools</a><ul>
+<li><a class="reference internal" href="#module-init_ga">Initialization</a></li>
+<li><a class="reference internal" href="#module-myatom">Material class</a></li>
+<li><a class="reference internal" href="#module-AtomSymmetry">Symmetry analysis</a></li>
+<li><a class="reference internal" href="#module-multiplets_analysis">Multiplets analysis</a></li>
+<li><a class="reference internal" href="#module-embed_test">Embeding Hamiltonian</a></li>
+<li><a class="reference internal" href="#module-impurity_analysis">Impurity analysis</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorials.html"
+                        title="previous chapter">Tutorial</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/tools.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorials.html" title="Tutorial"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Yongxin Yao, Nicola Lanata, Xiaoyu Deng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

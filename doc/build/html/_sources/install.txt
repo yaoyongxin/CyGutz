@@ -1,0 +1,42 @@
+Installation
+============
+
+Prerequisites
+-------------
+
+* Linux
+* Fortran compiler and blas/lapack libs. The following have been tested.
+
+  * ifort and mkl
+  * gcc, gfortran >= 4.8 and openblas (prefereed). 
+
+* HDF5 lib. https://www.hdfgroup.org/HDF5/release/obtain5.html
+* python >= 2.5
+* numpy >= 1.5.0
+* ccipy >= 0.9.0
+* h5py  >= 2.5.0
+* matplotlib >= 1.4.3
+* ase >= 3.3.1. https://wiki.fysik.dtu.dk/ase/download.html
+* pyspglib >= 1.7.2. http://spglib.sourceforge.net
+
+Build and install
+-----------------
+The default directory the CyGutz package will be installed is ``~/WIEN_GUTZ/bin``. 
+It will be automatically created. 
+The makefiles need to be checked for consistency with your machines. 
+Thet are ``Gutzwiller_Slave_Boson_Solver/SRC_cmplx/makefile`` and 
+``Interface/WIEN2k/Makefile.in``. Then one can run the following command at the top directory to install it::
+
+    $ ./install.sh
+
+The output of the installation script expalins how the code is compiled and installed.
+With a successful installation, you will see excutible files ``dmft, dmft2, CyGutz`` 
+and other python scripts and a directory ``tools`` located in ``~/WIEN_GUTZ/bin``.
+
+In order to run LDA + Gutzwiller/Slave Boson, WIEN2k needs to be installed separately.
+Please refer to user guide of WIEN2k for details. 
+
+Testing
+-------
+
+To be added.

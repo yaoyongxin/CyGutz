@@ -1,0 +1,302 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>myatom &mdash; CyGutz_user_guide 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CyGutz_user_guide 1.0.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for myatom</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">pyspglib</span> <span class="kn">import</span> <span class="n">spglib</span>
+<span class="kn">from</span> <span class="nn">atoms</span> <span class="kn">import</span> <span class="n">Atoms</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="myAtoms"><a class="viewcode-back" href="../tools.html#myatom.myAtoms">[docs]</a><span class="k">class</span> <span class="nc">myAtoms</span><span class="p">(</span><span class="n">Atoms</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  A class to describe the calculated system with all the relevant informations,</span>
+<span class="sd">  such as coordinates, correlated atom indices, symmetry information, etc.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">set_myCorrAtoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">corr_list</span><span class="p">):</span> <span class="c"># corr_list = list of indeces of correlated atoms listed in self.symbols</span>
+    <span class="n">N</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">corr_list</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">corr_list</span> <span class="o">=</span> <span class="n">corr_list</span>
+
+  <span class="k">def</span> <span class="nf">get_myCorrAtoms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">corr_list</span>
+
+<div class="viewcode-block" id="myAtoms.set_1p_U_list"><a class="viewcode-back" href="../tools.html#myatom.myAtoms.set_1p_U_list">[docs]</a>  <span class="k">def</span> <span class="nf">set_1p_U_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">U_list</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Save the one-particle unitary transformation from eithter CH (no spin-orbit) or JJ (with spin-orbit)</span>
+<span class="sd">    to the basis used in the real calculation.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">one_body_U_list</span> <span class="o">=</span> <span class="n">U_list</span>
+</div>
+  <span class="k">def</span> <span class="nf">get_1p_U_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">one_body_U_list</span>
+
+  <span class="k">def</span> <span class="nf">set_sigma_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sigma_list</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sigma_list</span> <span class="o">=</span> <span class="n">sigma_list</span>
+
+  <span class="k">def</span> <span class="nf">get_sigma_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_list</span>
+
+  <span class="k">def</span> <span class="nf">set_myAM</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">df_list</span><span class="p">):</span> <span class="c"># df_list = list of angular momentum correlated atoms (s, p, d or f)</span>
+    <span class="n">N</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df_list</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">df_list</span> <span class="o">=</span> <span class="n">df_list</span>
+
+  <span class="k">def</span> <span class="nf">get_myAM</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">df_list</span>
+
+  <span class="k">def</span> <span class="nf">set_mySOC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">soc_list</span><span class="p">):</span> <span class="c"># soc_list = list of yes/no for correlated atoms (yes = soc, no = no soc)</span>
+    <span class="n">N</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">soc_list</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">soc_list</span> <span class="o">=</span> <span class="n">soc_list</span>
+
+  <span class="k">def</span> <span class="nf">get_mySOC</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">soc_list</span>
+
+  <span class="k">def</span> <span class="nf">set_spin_polarization</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spin_polarization</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">spin_polarization</span> <span class="o">=</span> <span class="n">spin_polarization</span>
+
+  <span class="k">def</span> <span class="nf">get_spin_polarization</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin_polarization</span>
+
+  <span class="k">def</span> <span class="nf">set_orbital_polarization</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orbital_polarization</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">orbital_polarization</span> <span class="o">=</span> <span class="n">orbital_polarization</span>
+
+  <span class="k">def</span> <span class="nf">set_myCF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">cf_list</span><span class="p">):</span> <span class="c"># soc_list = list of yes/no for correlated atoms (yes = soc, no = no soc)</span>
+    <span class="n">N</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cf_list</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">N</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cf_list</span> <span class="o">=</span> <span class="n">cf_list</span>
+
+<div class="viewcode-block" id="myAtoms.set_Mvec"><a class="viewcode-back" href="../tools.html#myatom.myAtoms.set_Mvec">[docs]</a>  <span class="k">def</span> <span class="nf">set_Mvec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Mvec_list</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Set magnetization direction list.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">Mvec_list</span> <span class="o">=</span> <span class="n">Mvec_list</span>
+</div>
+  <span class="k">def</span> <span class="nf">get_Mvec_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">Mvec_list</span>
+
+  <span class="k">def</span> <span class="nf">set_sym_dist_cut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dist_cut</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sym_dist_cut</span> <span class="o">=</span> <span class="n">dist_cut</span>
+
+  <span class="k">def</span> <span class="nf">get_sym_dist_cut</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sym_dist_cut</span>
+
+  <span class="k">def</span> <span class="nf">get_myCF</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cf_list</span>
+
+  <span class="k">def</span> <span class="nf">get_myRotations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iat</span><span class="p">,</span> <span class="n">Nmax</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+    <span class="n">symbols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbols</span>
+    <span class="n">cell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cell</span>
+    <span class="n">scaled_positions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scaled_positions</span>
+    <span class="n">Mvec_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_Mvec_list</span><span class="p">()</span>
+    <span class="kn">from</span> <span class="nn">molecule</span> <span class="kn">import</span> <span class="n">xtal_get_local_rot</span>
+    <span class="k">return</span> <span class="n">xtal_get_local_rot</span><span class="p">(</span><span class="n">symbols</span><span class="p">,</span> <span class="n">scaled_positions</span><span class="p">,</span> <span class="n">cell</span><span class="p">,</span> <span class="n">iat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sym_dist_cut</span><span class="p">,</span> <span class="n">Mvec_list</span> <span class="o">=</span> <span class="n">Mvec_list</span><span class="p">,</span> <span class="n">Nmax</span> <span class="o">=</span> <span class="n">Nmax</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">get_myEquivalentAtoms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">pyspglib</span> <span class="kn">import</span> <span class="n">spglib</span>
+    <span class="c"># Getting general information about symmetry of the lattice</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">spglib</span><span class="o">.</span><span class="n">get_symmetry_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">symprec</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dataset</span>
+
+  <span class="k">def</span> <span class="nf">get_myllist</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">angular_momentum_1p</span> <span class="kn">import</span> <span class="n">get_l_list_from_string</span>
+    <span class="n">l_list</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">myAM_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myAM</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_myCorrAtoms</span><span class="p">()):</span>
+      <span class="n">l_sublist</span> <span class="o">=</span> <span class="n">get_l_list_from_string</span><span class="p">(</span><span class="n">myAM_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+      <span class="n">l_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">l_sublist</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">l_list</span>
+
+<div class="viewcode-block" id="myAtoms.get_S_vector_list"><a class="viewcode-back" href="../tools.html#myatom.myAtoms.get_S_vector_list">[docs]</a>  <span class="k">def</span> <span class="nf">get_S_vector_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Get S_vector_list in the working local basis.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="kn">from</span> <span class="nn">matrix_util</span> <span class="kn">import</span> <span class="n">trans_orbital_fast_to_spin_fast</span>
+    <span class="n">l_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myllist</span><span class="p">()</span>
+    <span class="n">soc_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mySOC</span><span class="p">()</span>
+    <span class="n">S_vector_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="kn">from</span> <span class="nn">angular_momentum_1p</span> <span class="kn">import</span> <span class="n">get_S_vector</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">ls</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">l_list</span><span class="p">):</span>
+      <span class="n">S_vector</span> <span class="o">=</span> <span class="n">get_S_vector</span><span class="p">(</span><span class="n">ls</span><span class="p">,</span> <span class="n">soc_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+      <span class="k">if</span> <span class="s">&#39;y&#39;</span> <span class="ow">in</span> <span class="n">soc_list</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+        <span class="n">U</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">one_body_U_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">U</span> <span class="o">=</span> <span class="n">trans_orbital_fast_to_spin_fast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">one_body_U_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+      <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">S_vector</span><span class="p">)):</span>
+        <span class="n">S_vector</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conj</span><span class="p">(</span><span class="n">U</span><span class="o">.</span><span class="n">T</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">S_vector</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">U</span><span class="p">))</span>
+      <span class="n">S_vector_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">S_vector</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">S_vector_list</span>
+</div>
+<div class="viewcode-block" id="myAtoms.get_myJ"><a class="viewcode-back" href="../tools.html#myatom.myAtoms.get_myJ">[docs]</a>  <span class="k">def</span> <span class="nf">get_myJ</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">basis</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Get J vector in basis of &#39;CH&#39; (complex harmonics) if spin-orbit interaction is neglected</span>
+<span class="sd">    or &#39;JJ&#39; (J^2-J_z basis) if spin-orbit interaction is present.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="kn">from</span>  <span class="nn">angular_momentum_1p</span> <span class="kn">import</span> <span class="n">get_J_vector</span>
+    <span class="n">J_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">l_list</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myllist</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_myCorrAtoms</span><span class="p">())):</span>
+      <span class="n">J_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_J_vector</span><span class="p">(</span><span class="n">l_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">basis</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">J_list</span>
+</div>
+<div class="viewcode-block" id="myAtoms.get_mySelfEnergy"><a class="viewcode-back" href="../tools.html#myatom.myAtoms.get_mySelfEnergy">[docs]</a>  <span class="k">def</span> <span class="nf">get_mySelfEnergy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Get the self-energy structure and the corresponding unitary transformation of the local basis.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="kn">from</span> <span class="nn">self_energy</span> <span class="kn">import</span> <span class="n">get_self_energy</span>
+    <span class="n">U_list</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">sigma_list</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">soc_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mySOC</span><span class="p">()</span>
+    <span class="n">cf_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myCF</span><span class="p">()</span>
+    <span class="n">l_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myllist</span><span class="p">()</span>
+    <span class="n">idx_equivalent_atoms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myEquivalentAtoms</span><span class="p">()[</span><span class="s">&#39;equivalent_atoms&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_myCorrAtoms</span><span class="p">()):</span>
+      <span class="k">if</span> <span class="n">l</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">idx_equivalent_atoms</span><span class="p">[</span><span class="n">l</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">idx_equivalent_atoms</span><span class="p">[</span><span class="n">l</span><span class="p">]:</span>
+        <span class="n">U_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">U_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span> <span class="n">sigma_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sigma_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">continue</span>
+      <span class="k">if</span> <span class="s">&#39;y&#39;</span> <span class="ow">in</span> <span class="n">cf_list</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+        <span class="n">rotations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myRotations</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">rotations</span> <span class="o">=</span> <span class="bp">None</span>
+      <span class="n">U</span><span class="p">,</span> <span class="n">sigma</span> <span class="o">=</span> <span class="n">get_self_energy</span><span class="p">(</span><span class="n">l_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">spin_polarization</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">orbital_polarization</span><span class="p">,</span>
+        <span class="n">cf_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">soc_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">rotations</span> <span class="o">=</span> <span class="n">rotations</span><span class="p">)</span>
+      <span class="n">U_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">U</span><span class="p">);</span> <span class="n">sigma_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sigma</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">set_1p_U_list</span><span class="p">(</span><span class="n">U_list</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">set_sigma_list</span><span class="p">(</span><span class="n">sigma_list</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">U_list</span><span class="p">,</span> <span class="n">sigma_list</span>
+</div>
+<div class="viewcode-block" id="myAtoms.get_myLieParameters"><a class="viewcode-back" href="../tools.html#myatom.myAtoms.get_myLieParameters">[docs]</a>  <span class="k">def</span> <span class="nf">get_myLieParameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Get the Lie parameters of rotation operators for odd and even J.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="kn">from</span> <span class="nn">angular_momentum_1p</span> <span class="kn">import</span> <span class="n">get_J_vector</span>
+    <span class="kn">import</span> <span class="nn">AtomSymmetry</span> <span class="kn">as</span> <span class="nn">atsym</span>
+    <span class="n">cf_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myCF</span><span class="p">()</span>
+    <span class="n">Lie_Jeven_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">Lie_Jodd_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_myCorrAtoms</span><span class="p">()):</span>
+      <span class="k">if</span> <span class="s">&#39;y&#39;</span> <span class="ow">in</span> <span class="n">cf_list</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+        <span class="n">rotations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_myRotations</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+        <span class="n">Lie</span> <span class="o">=</span> <span class="n">atsym</span><span class="o">.</span><span class="n">get_Lie_parameters</span><span class="p">(</span><span class="n">rotations</span><span class="p">,</span><span class="n">plus2pi</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">Lie_Jeven_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Lie</span><span class="p">)</span>
+        <span class="n">Lie</span> <span class="o">=</span> <span class="n">atsym</span><span class="o">.</span><span class="n">get_Lie_parameters</span><span class="p">(</span><span class="n">rotations</span><span class="p">,</span><span class="n">plus2pi</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">Lie_Jodd_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Lie</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">Lie_Jeven_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+        <span class="n">Lie_Jodd_list</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+    <span class="k">return</span> <span class="n">Lie_Jeven_list</span><span class="p">,</span><span class="n">Lie_Jodd_list</span>
+</div>
+  <span class="k">def</span> <span class="nf">get_myLabels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">corr_atoms</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_myCorrAtoms</span><span class="p">()</span>
+    <span class="n">corr_atom_type</span><span class="o">=</span><span class="p">[]</span> <span class="c"># list symbols correlated atoms (not repeated, e.g., Ce1 and Ce2 have the same symbol, Ce)</span>
+    <span class="n">type_1atom</span><span class="o">=</span><span class="p">[]</span> <span class="c"># correlated-atom label such that: corr_atom_type[k] = self.symbols[type_1atom[k]]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">corr_atoms</span><span class="p">):</span>
+      <span class="n">a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="n">l</span><span class="p">]</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">corr_atom_type</span><span class="p">:</span>
+        <span class="n">corr_atom_type</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="n">type_1atom</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="n">NI0_list</span><span class="o">=</span><span class="p">[]</span> <span class="c"># NI0 of GL.INP</span>
+    <span class="n">NIMAP_list</span><span class="o">=</span><span class="p">[]</span> <span class="c"># NIMAP of GL.INP</span>
+    <span class="n">X</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_myEquivalentAtoms</span><span class="p">()[</span><span class="s">&#39;equivalent_atoms&#39;</span><span class="p">]</span>
+    <span class="n">NI0</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">Y</span> <span class="ow">in</span> <span class="n">X</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">Y</span> <span class="ow">in</span> <span class="n">corr_atoms</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">Y</span><span class="o">+</span><span class="mi">1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">NIMAP_list</span><span class="p">:</span>
+          <span class="n">NI0</span> <span class="o">=</span> <span class="n">NI0</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">NIMAP_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Y</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">NI0_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NI0</span><span class="p">)</span>
+    <span class="n">ITYPE_list</span><span class="o">=</span><span class="p">[]</span> <span class="c"># ITYPE of GL.INP</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">corr_atoms</span><span class="p">:</span>
+      <span class="n">a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbols</span><span class="p">[</span><span class="n">l</span><span class="p">]</span>
+      <span class="n">ITYPE_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">corr_atom_type</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">NTYPE</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">ITYPE_list</span><span class="p">)</span>
+    <span class="n">NIONS</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ITYPE_list</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">NTYPE</span><span class="p">,</span> <span class="n">NIONS</span><span class="p">,</span> <span class="n">ITYPE_list</span><span class="p">,</span> <span class="n">NI0_list</span><span class="p">,</span> <span class="n">NIMAP_list</span><span class="p">,</span> <span class="n">corr_atom_type</span><span class="p">,</span> <span class="n">type_1atom</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Yongxin Yao, Nicola Lanata, Xiaoyu Deng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

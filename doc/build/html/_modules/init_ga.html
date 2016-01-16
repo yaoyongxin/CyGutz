@@ -1,0 +1,172 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>init_ga &mdash; CyGutz_user_guide 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CyGutz_user_guide 1.0.0 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for init_ga</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+
+<div class="viewcode-block" id="help"><a class="viewcode-back" href="../tools.html#init_ga.help">[docs]</a><span class="k">def</span> <span class="nf">help</span><span class="p">():</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Print instructions.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">message</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">  Usage:</span>
+
+<span class="s">  init_ga.py [OPTION]</span>
+
+<span class="s">  The script sets up the necessary input files for the Gutzwiller/Slave-Boson solver.</span>
+<span class="s">  By default, it will choose the rotated local orbital basis {hs} to work with,</span>
+<span class="s">  since it could be computationally more efficient than using the original basis.</span>
+<span class="s">  However, the script also prints WH_HS.INP_ORIG which contains {hs} in the original basis</span>
+<span class="s">  for consistence check.</span>
+
+<span class="s">  The script will generate file &quot;WH_RLNELF.INP&quot; if &quot;WH_RLNEF.OUT_ORIG&quot; exists.</span>
+<span class="s">  And it assumes that &quot;WH_RLNELF.OUT_ORIG&quot; is some previous converged solution</span>
+<span class="s">  with the original local basis.</span>
+<span class="s">  Tips: 1) you can use &quot;init_ga.py [OPTION] &lt; init_ga.input&quot; to repeat the initialization,</span>
+<span class="s">           where init_ga.input was generated at the first run.</span>
+<span class="s">        2) init_ga.slog records the important information in the session.</span>
+
+<span class="s">  -c rcut_symmetry  Assign the cut-off distance for extracting the atom-centered&quot;</span>
+<span class="s">                    cluster for symmetry analysis.&quot;</span>
+<span class="s">  -vasp             Set struct file in VASP format. By default it is in Wien2K format.&quot;</span>
+<span class="s">  &#39;&#39;&#39;</span>
+
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;-h&#39;</span><span class="p">,</span> <span class="s">&#39;--help&#39;</span><span class="p">]:</span>
+    <span class="k">print</span> <span class="n">message</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="initialize"><a class="viewcode-back" href="../tools.html#init_ga.initialize">[docs]</a><span class="k">def</span> <span class="nf">initialize</span><span class="p">():</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Initialization for the Gutzwiller/Slave-Boson solver.</span>
+<span class="sd">  Store symmetry informations to init_ga_info.h5.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">log_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;init_ga.slog&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+  <span class="k">print</span> <span class="o">&gt;&gt;</span> <span class="n">log_file</span><span class="p">,</span> <span class="s">&quot;The executed commant line is:&quot;</span>
+  <span class="k">print</span> <span class="o">&gt;&gt;</span> <span class="n">log_file</span><span class="p">,</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[:])</span>
+  <span class="n">usr_input</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;input.slog&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+  <span class="kn">from</span> <span class="nn">structure</span> <span class="kn">import</span> <span class="n">get_myatoms</span><span class="p">,</span> <span class="n">check_material</span>
+
+  <span class="c"># get the material</span>
+  <span class="n">material</span> <span class="o">=</span> <span class="n">get_myatoms</span><span class="p">()</span>
+
+  <span class="c"># Q &amp; A</span>
+  <span class="kn">from</span> <span class="nn">usrqa</span> <span class="kn">import</span> <span class="n">usr_qa_setup</span>
+  <span class="n">usr_qa_setup</span><span class="p">(</span><span class="n">material</span><span class="p">,</span> <span class="n">log_file</span><span class="p">,</span> <span class="n">usr_input</span><span class="p">)</span>
+
+  <span class="c"># check some info in log</span>
+  <span class="n">check_material</span><span class="p">(</span><span class="n">material</span><span class="p">,</span> <span class="n">log_file</span><span class="p">)</span>
+
+  <span class="c"># write input files for CyGutz</span>
+  <span class="kn">from</span> <span class="nn">gl_inp</span> <span class="kn">import</span> <span class="n">set_gl_inp_material</span>
+  <span class="n">set_gl_inp_material</span><span class="p">(</span><span class="n">material</span><span class="p">,</span> <span class="n">log_file</span><span class="p">,</span> <span class="n">usr_input</span><span class="p">)</span>
+
+  <span class="c"># ga_init_dmft.py inputs.</span>
+  <span class="kn">from</span> <span class="nn">usrqa</span> <span class="kn">import</span> <span class="n">inp_ga_init_dmft</span>
+  <span class="n">inp_ga_init_dmft</span><span class="p">(</span><span class="n">material</span><span class="o">.</span><span class="n">get_mySOC</span><span class="p">(),</span> <span class="n">log_file</span><span class="p">)</span>
+
+  <span class="n">log_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+  <span class="n">usr_input</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="s">&quot;input.slog&quot;</span><span class="p">,</span> <span class="s">&quot;init_ga.input&quot;</span><span class="p">)</span>
+
+  <span class="c"># save data for further process.</span>
+  <span class="kn">from</span> <span class="nn">h5save_init_ga_info</span> <span class="kn">import</span> <span class="n">h5save_init_ga_info</span>
+  <span class="n">h5save_init_ga_info</span><span class="p">(</span><span class="n">material</span><span class="p">)</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+
+  <span class="n">help</span><span class="p">()</span>
+  <span class="n">initialize</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">CyGutz_user_guide 1.0.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Yongxin Yao, Nicola Lanata, Xiaoyu Deng.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>
