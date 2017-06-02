@@ -1,0 +1,29 @@
+      SUBROUTINE WRITE_BNDU(EVALS, WR, WI, NSP, NKPTS, NBANDS, NORB, NI)
+      IMPLICIT NONE
+      INTEGER NSP, NKPTS, NBANDS, NORB, NI
+      REAL(8) EVALS(NBANDS, NKPTS, NSP)
+      REAL(8) WR(NORB, NBANDS, NKPTS, NSP), &
+             &WI(NORB, NBANDS, NKPTS, NSP)
+!f2py intent(in) EVALS, WR, WI, NSP, NKPTS, NBANDS, NORB
+! LOCAL
+      INTEGER ISP,NK,IB
+      CHARACTER*7 STR
+      COMPLEX(8) WC(NBANDS)
+      INTEGER,PARAMETER :: IU=39
+
+      WRITE(STR,'(I7)')NI
+      OPEN(IU,FILE='BNDU_'//TRIM(ADJUSTL(STR))//'.INP',STATUS='REPLACE',&
+          &FORM="UNFORMATTED",ACCESS="SEQUENTIAL")
+      DO ISP=1,NSP; DO NK=1,NKPTS
+          WRITE(IU) EVALS(ISP,NK,:)
+          DO IB=1,NORB
+              ! <psi_nk | local orbital>, note c.c.
+              WC = WR(ISP,NK,:,IB) + (0.D0, -1.D0)*WI(ISP,NK,:,IB) 
+              WRITE(IU) WC
+          ENDDO
+      ENDDO; ENDDO
+      CLOSE(IU)
+      RETURN
+
+      END SUBROUTINE WRITE_BNDU
+

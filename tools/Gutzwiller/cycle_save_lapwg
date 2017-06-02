@@ -1,0 +1,24 @@
+#!/bin/bash
+
+exec_path=~/BitBucket/pyscript/Gutzwiller
+save_dir=/home/ykent/WIEN_GUTZ/EXAMPLE/UO2/f04_SOC_U6.0_J512_RES
+case=UO2
+
+mkdir -p ${save_dir}
+
+for i in {0..11}
+do
+  echo ${case}_${i}
+  cd ${case}_${i}
+  if [ -d ykent* ]; then
+    cd ykent*/
+    echo 'ykent* exist!'
+  fi
+  ${exec_path}/save_lapwg -N ${case} -a -d ${save_dir}/${case}_${i}
+  cd ../
+  if [ -d *ykent ]; then
+    cd ../
+  fi
+  cd ..
+done
+

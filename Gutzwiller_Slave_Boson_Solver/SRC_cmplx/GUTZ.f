@@ -1,0 +1,4287 @@
+!******************************************************************************
+! Copyright c 2013, The Ames Laboratory, Iowa State University, and Rutgers
+! University*.  All rights reserved.
+! 
+! This software was authored by Yongxin Yao, Nicola Lanata*, Gabriel Kotliar*,
+! Cai-Zhuang Wang, and Kai-Ming Ho, at The Ames Laboratory and 
+! Rutgers University and was supported by the U.S. 
+! Department of Energy (DOE), Office of Science, 
+! Basic Energy Sciences, Materials Science and Engineering Division.  
+! The Ames Laboratory is operated by Iowa State University for DOE 
+! under U.S. Government contract DE-AC02-07CH11358.  
+! The U.S. Government has the rights to use, reproduce, and 
+! distribute this software.  
+! NEITHER THE GOVERNMENT, THE AMES LABORATORY, IOWA STATE UNIVERSITY, 
+! NOR RUTGERS UNIVERSITY MAKES ANY WARRANTY, 
+! EXPRESS OR IMPLIED, OR ASSUMES ANY LIABILITY FOR THE USE OF THIS SOFTWARE.  
+! If software is modified to produce derivative works, 
+! such modified software should be clearly marked, 
+! so as to not confuse it with the version available from 
+! The Ames Laboratory and Rutgers University.
+! 
+! Additionally, redistribution and use in source and binary forms, 
+! with or without modification, 
+! are permitted provided that the following conditions are met:
+! 
+!     Redistribution of source code must retain the above copyright notice,
+!     this list of conditions, and the following disclaimer.
+!
+!     Redistribution in binary form must reproduce the above copyright notice,
+!     this list of conditions, and the following disclaimer 
+!     in the documentation and/or other materials provided with distribution.
+!
+!     Neither the name of The Ames Laboratory, Iowa State University, 
+!     Rutgers University, the U.S. Government, nor the names of 
+!     its contributors may be used to endorse or promote products derived 
+!     from this software without specific prior written permission.
+! 
+! THIS SOFTWARE IS PROVIDED BY THE AMES LABORATORY, IOWA STATE UNIVERSITY, 
+! RUTGERS UNIVERSITY, AND CONTRIBUTORS "AS IS" 
+! AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, 
+! THE IMPLIED WARRANTIES OF MERCHANTABILITY 
+! AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  
+! IN NO EVENT SHALL THE GOVERNMENT, THE AMES LABORATORY, 
+! IOWA STATE UNIVERSITY, RUTGERS UNIVERSITY, OR CONTRIBUTORS BE LIABLE 
+! FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+! EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+! PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+! LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) 
+! HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+! WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+! OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+! EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+!******************************************************************************
+!
+!
+      MODULE GUTZ
+      USE gprec; USE gconstant; USE GINFO
+      USE SPARSE; USE FOCKSTATE
+      USE CORRORB; USE BANDSTRU; USE GPROJECTOR
+      USE WAREHOUSE
+      USE GUTIL; USE GBROYDEN
+      USE GREENFUN; USE GMPI
+      USE GHDF5_BASE, ONLY: gh5_create_groups, gh5_write, log_file_id
+      USE GHDF5, ONLY: gh5_write_compound
+      USE GREENFUN2
+      IMPLICIT NONE
+!
+      TYPE GL_YS
+        TYPE (FOCK_STATE)  FS
+        TYPE (CORR_ORB)    CO
+        TYPE(LOCAL_HAMIL)  HL
+        TYPE (PROJ)        PJ
+      END TYPE GL_YS
+!
+      TYPE GL_YZ
+        TYPE (FOCK_STATE)  FS
+        TYPE (CORR_ORB)    CO
+        TYPE(LOCAL_HAMIL)  HL
+        TYPE (PROJ)        PJ
+      END TYPE GL_YZ
+!
+! VARIABLES
+      TYPE (GL_YS),ALLOCATABLE,SAVE :: GYS(:)
+      TYPE (GL_YZ),ALLOCATABLE,SAVE :: GYZ(:)
+!
+      CONTAINS
+!
+!********************************************************************************
+! CALLED BY OUTSIDE DRIVER ROUTINES
+!********************************************************************************
+      SUBROUTINE GUTZ1_INI(NAT,IU,IO,LBSCODE)
+      INTEGER,INTENT(IN)          :: IU,IO,NAT
+      INTEGER,INTENT(IN),OPTIONAL :: LBSCODE
+! LOCAL
+      INTEGER NIONS,NTYP,NAT_TOT
+      INTEGER NT,NI,NA,NA2,NA2MAX,NI0,NIMAP,ITMP
+      CHARACTER*256 STR
+!
+      !" GUTZ1_INI"
+      GL%IO=IO; GL%IU=IU; GL%ITER_RHO=0; GMEM_SIZE=0
+      GL%NAT_TOT=NAT
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" CyGutz VMPI.4.7 BUILT ON",A12)')"Mar 24 2017"
+      GL%LBSCODE=0 ! VASP
+      GL%LSCF=6; GL%LBNDU=0; GL%LPHISYM=0
+      GL%LENSEMBLE=0 ! Canonical ensemble
+      GL%LNEWTON=0; GL%LEFERMI=0
+      GL%LEL0=0; BND%LFERWE=0; GL%RHO_CUT=0.99_gq
+      GL%RMIX_A=0.1_gq; GL%DCMIX_A=0.1_gq
+      BND%ISPIN=1; GL%LGPRJ=1; GL%LHUB=1; GL%LDC=12; GL%NMAX_ITER=10000
+      GL%NMAX_INNER = 5; GL%NB_RESET = 50
+      GL%LENTANGLES=0; GL%LDIAPJ=0
+      GL%LSOLVER=1; GL%NEV_F=10; GL%NCV_F=0; GL%LEIGV=0; GL%LPJC=0; GL%NCV_P=16
+      SYM%MODE=1; GL%LCHKLOC=1
+      GL%LV2AO=-1 ! 1: complex Harmonics; 0: real Harmonics
+      GL%LGREEN=0; GL%LMODEL=0 ! 0: Lattice model; Other: impurity model
+      GF%WTYP=0 ! Complex frequency
+      GF%DS=1._gq; GF%TSP=0.5_gq; GF%WMIN=0._gq; GF%WMAX=0._gq 
+      GF%NW=1001; GF%TEV=1.E-8_gq; GF%T=1._gq ! Kelvin
+      GF%ETA=1.E-12_gq; GL%LIADBOCC=0; GL%LCURRENT=0
+      GL%LPLTGF=0; GL%LMCFLY=0
+      GL%LHARMONICS=0; GL%LXGUESS=1
+      GF%MU=0; BND%ISO=1; GL%RTOL=1.E-6_gq; GL%RCUT_HS=1.E-8_gq
+      GL%LB2N = 0 ! B2N applied, default as wien2k interface.
+      GL%LH5WRT = 5; GL%LA1ADJUST = 0
+      GL%RMODE = 1 *2
+      GL%LFZ1SET = 1
+      GL%DCV_ERROR = 0._gq
+! CMR3 begin
+      GL%LFUNR=0  ! Default: no CMR3
+! CMR3 end
+!
+      IF(PRESENT(LBSCODE))GL%LBSCODE=LBSCODE
+      IF(GL%LBSCODE==0)THEN
+        GL%LUNIT=0 ! eV
+      ELSE ! Wien2K
+        GL%LUNIT=1 ! Ryd.
+      ENDIF
+      OPEN(IU,FILE='GL.INP',STATUS='OLD')
+      DO 
+        READ(IU,'(A256)',END=100)STR
+        IF(LKEY_EXIST(STR,'LSCF'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LSCF
+        ELSEIF(LKEY_EXIST(STR,'RHO_CUT'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%RHO_CUT
+        ELSEIF(LKEY_EXIST(STR,'LDIAPJ'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LDIAPJ
+        ELSEIF(LKEY_EXIST(STR,'LSOLVER'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LSOLVER
+        ELSEIF(LKEY_EXIST(STR,'NB_RESET'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%NB_RESET
+        ELSEIF(LKEY_EXIST(STR,'LNEWTON'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LNEWTON
+        ELSEIF(LKEY_EXIST(STR,'LEIGV'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LEIGV
+        ELSEIF(LKEY_EXIST(STR,'ISPIN'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)BND%ISPIN
+        ELSEIF(LKEY_EXIST(STR,'LGPRJ'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LGPRJ
+        ELSEIF(LKEY_EXIST(STR,'LBNDU'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LBNDU
+        ELSEIF(LKEY_EXIST(STR,'LHUB'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LHUB
+        ELSEIF(LKEY_EXIST(STR,'LH5WRT'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LH5WRT
+        ELSEIF(LKEY_EXIST(STR,'BNDISO'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)BND%ISO
+        ELSEIF(LKEY_EXIST(STR,'LGREEN'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LGREEN
+        ELSEIF(LKEY_EXIST(STR,'LPHISYM'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LPHISYM
+        ELSEIF(LKEY_EXIST(STR,'LMCFLY'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LMCFLY
+        ELSEIF(LKEY_EXIST(STR,'LFZ1SET'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LFZ1SET
+        ELSEIF(LKEY_EXIST(STR,'RMODE'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)ITMP
+          IF(ITMP>=0.AND.ITMP<=GL%RMODE)THEN
+            GL%RMODE=ITMP
+          ELSE
+            IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WARNING: ILLEGAL RMODE IN GL.INP!")')
+            IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(0,'(" WARNING: ILLEGAL RMODE IN GL.INP!")')
+          ENDIF
+        ELSEIF(LKEY_EXIST(STR,'LXGUESS'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LXGUESS
+        ELSEIF(LKEY_EXIST(STR,'RTOL'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%RTOL
+        ELSEIF(LKEY_EXIST(STR,'RCUT_HS'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%RCUT_HS
+        ELSEIF(LKEY_EXIST(STR,'LB2n'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LB2N
+        ELSEIF(LKEY_EXIST(STR,'LFUNR'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LFUNR
+        ELSEIF(LKEY_EXIST(STR,'LIADBOCC'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LIADBOCC
+        ELSEIF(LKEY_EXIST(STR,'LENSEMBLE'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LENSEMBLE
+        ELSEIF(LKEY_EXIST(STR,'LHARMONICS'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LHARMONICS
+        ELSEIF(LKEY_EXIST(STR,'GFWTYP'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%WTYP
+        ELSEIF(LKEY_EXIST(STR,'LCURRENT'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LCURRENT
+        ELSEIF(LKEY_EXIST(STR,'VBIAS'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%MU(1)
+          GF%MU(2)=-GF%MU(1)/2; GF%MU(1)=GF%MU(1)/2
+        ELSEIF(LKEY_EXIST(STR,'GFNW'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%NW
+          IF(MOD(GF%NW,2)==0)THEN
+            GF%NW=GF%NW+1
+          ENDIF
+        ELSEIF(LKEY_EXIST(STR,'GFWMIN'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%WMIN
+        ELSEIF(LKEY_EXIST(STR,'GFWMAX'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%WMAX
+        ELSEIF(LKEY_EXIST(STR,'GFDS'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%DS
+        ELSEIF(LKEY_EXIST(STR,'GFTSP'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%TSP
+        ELSEIF(LKEY_EXIST(STR,'LPLTGF'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LPLTGF
+        ELSEIF(LKEY_EXIST(STR,'GFTEMP'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%T
+        ELSEIF(LKEY_EXIST(STR,'GFTEV'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%TEV
+        ELSEIF(LKEY_EXIST(STR,'GFETA'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GF%ETA
+        ELSEIF(LKEY_EXIST(STR,'LMODEL'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LMODEL
+        ELSEIF(LKEY_EXIST(STR,'LA1ADJUST'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LA1ADJUST
+        ELSEIF(LKEY_EXIST(STR,'LPJC'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LPJC
+        ELSEIF(LKEY_EXIST(STR,'LEL0'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LEL0
+        ELSEIF(LKEY_EXIST(STR,'LEFERMI'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LEFERMI
+        ELSEIF(LKEY_EXIST(STR,'LV2AO'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LV2AO
+        ELSEIF(LKEY_EXIST(STR,'SYM_MODE'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)SYM%MODE
+        ELSEIF(LKEY_EXIST(STR,'LCHKLOC'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LCHKLOC
+        ELSEIF(LKEY_EXIST(STR,'LDC'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LDC
+        ELSEIF(LKEY_EXIST(STR,'RMIX_A'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%RMIX_A
+        ELSEIF(LKEY_EXIST(STR,'DCMIX_A'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%DCMIX_A
+        ELSEIF(LKEY_EXIST(STR,'NEV_F'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%NEV_F
+        ELSEIF(LKEY_EXIST(STR,'NCV_F'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%NCV_F
+        ELSEIF(LKEY_EXIST(STR,'NCV_P'))THEN
+           READ(STR(INDEX(STR,'=')+1:),*)GL%NCV_P
+        ELSEIF(LKEY_EXIST(STR,'NMAX_ITER'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%NMAX_ITER
+        ELSEIF(LKEY_EXIST(STR,'NMAX_INNER'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%NMAX_INNER
+        ELSEIF(LKEY_EXIST(STR,'LENTANGLES'))THEN
+          READ(STR(INDEX(STR,'=')+1:),*)GL%LENTANGLES
+        ELSEIF(LKEY_EXIST(STR,'ATOM TYPE INFO'))THEN
+          READ(IU,*)NTYP
+          WH%NTYP=NTYP
+          ALLOCATE(GYS(NTYP))
+          DO NT=1,NTYP
+            READ(IU,*)
+            GYS(NT)%CO%U=0; GYS(NT)%CO%J=0
+            GYS(NT)%CO%F0=0; GYS(NT)%CO%F2=0
+            GYS(NT)%CO%F4=0; GYS(NT)%CO%F6=0
+            SELECT CASE(GL%LHUB)
+            CASE(1,2); READ(IU,*) GYS(NT)%CO%U,GYS(NT)%CO%J
+            CASE(3  ); READ(IU,*) GYS(NT)%CO%F0,GYS(NT)%CO%F2,GYS(NT)%CO%F4,GYS(NT)%CO%F6
+            CASE DEFAULT; READ(IU,*)
+            END SELECT
+            IF(GL%LUNIT==1)THEN ! Rydberg
+              GYS(NT)%CO%U =GYS(NT)%CO%U /RYTOEV; GYS(NT)%CO%J =GYS(NT)%CO%J /RYTOEV
+              GYS(NT)%CO%F0=GYS(NT)%CO%F0/RYTOEV; GYS(NT)%CO%F2=GYS(NT)%CO%F2/RYTOEV
+              GYS(NT)%CO%F4=GYS(NT)%CO%F4/RYTOEV; GYS(NT)%CO%F6=GYS(NT)%CO%F6/RYTOEV
+            ENDIF
+            READ(IU,*) GYS(NT)%FS%NA
+            GYS(NT)%CO%NELF1=-1._gq; GYS(NT)%CO%NELF2=-1._gq
+            SELECT CASE(GL%LDC)
+            CASE(2,12)
+              READ(IU,*) GYS(NT)%HL%OCC,GYS(NT)%CO%NELF1
+            CASE(3)
+              READ(IU,*) GYS(NT)%HL%OCC,GYS(NT)%CO%NELF1,GYS(NT)%CO%NELF2
+            CASE DEFAULT
+              READ(IU,*) GYS(NT)%HL%OCC
+            END SELECT
+          ENDDO
+        ELSEIF(LKEY_EXIST(STR,'ATOM INFO'))THEN
+          READ(IU,*)NIONS
+          ALLOCATE(GYZ(NIONS))
+          DO NI=1,NIONS
+            READ(IU,*)NT,NI0,NIMAP ! Correlated atom type and index in the total atoms
+            IF(NI0>GL%NAT_TOT)THEN
+              WRITE(0,'(" WARNING: TOTAL INEQUIVALENT ATOMS in STRUCT FILE=",I4," NI0=",I4)')GL%NAT_TOT,NI0
+            ENDIF
+            IF(NIMAP>NI)THEN
+              WRITE(0,'(" ERROR: (NIMAP=",I4,") > (NI=",I4,")!")')NIMAP,NI; STOP
+            ENDIF
+            GYZ(NI)%HL%NT=NT; GYZ(NI)%HL%NI=NI; GYZ(NI)%HL%NI0=NI0; GYZ(NI)%HL%NIMAP=NIMAP
+            GYZ(NI)%FS%NA2=GYS(NT)%FS%NA*2
+          ENDDO
+        ENDIF
+      ENDDO
+100   CLOSE(IU)
+!
+      IF(GL%LMODEL/=0.AND.GL%LGREEN==0)THEN
+        GL%LGREEN=1
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WARNING: GL%LMODEL/=0 -> SET GL%LGREEN=0")')
+      ENDIF
+      IF(GL%LV2AO==-1)THEN
+        IF(GL%LHUB==2.OR.GL%LBSCODE==0)THEN ! Kanamori
+          GL%LV2AO=0
+        ELSE
+          GL%LV2AO=1
+        ENDIF
+      ENDIF
+!      
+      NA2MAX=MAXVAL(GYZ(:)%FS%NA2); GL%NA2MAX=NA2MAX
+      CALL ALLOC_WAREHOUSE(NA2MAX,NIONS)
+      CALL READ_WH_HS(IU,"WH_HS.INP",WH%HM)
+      CALL READ_WH_MATRIX_STRUCT(IU,"WH_SIGMA_STRUCT.INP", WH%HM)
+      CALL SET_WH_HS_DIM(WH%HM)
+      CALL SET_WH_HM_MINDEX(GL%RCUT_HS,WH%HM)
+      CALL SET_WH_HS(IU,"WH_HS_L.INP",WH%HM_L)
+      CALL SET_WH_HS(IU,"WH_HS_R.INP",WH%HM_R)
+      CALL SET_WH_HS(IU,"WH_HS_E.INP",WH%HM_E,WH%HM)
+!
+      ! READ S_VEC, L_VEC
+      CALL READ_WH_SL_VEC(IU)
+      CALL READ_FROZEN(GL%IU)
+      BND%NELET_FROZEN=SUM(WH%FZ(:)%NELECT)
+      BND%N_FROZEN=SUM(WH%FZ(:)%NSORB)
+      CALL OUT_FROZEN(GL%IO)
+      CALL SET_IDX_HS_RED()
+      IF(WH%HM_L%DIMHSMAX<=0)THEN
+        WH%HM_L = WH%HM
+      ELSE
+        CALL READ_WH_MATRIX_STRUCT(IU,"WH_SIGMA_STRUCT_L.INP", WH%HM_L)
+        CALL SET_WH_HM_MINDEX(GL%RCUT_HS,WH%HM_L)
+        CALL SET_WH_HS_DIM(WH%HM_L)
+        CALL SET_IDX_HS_RED_L()
+      ENDIF
+      IF(WH%HM_R%DIMHSMAX<=0)THEN
+        WH%HM_R = WH%HM
+      ELSE
+        CALL READ_WH_MATRIX_STRUCT(IU,"WH_SIGMA_STRUCT_R.INP", WH%HM_R)
+        CALL SET_WH_HM_MINDEX(GL%RCUT_HS,WH%HM_R)
+        CALL SET_WH_HS_DIM(WH%HM_R)
+        CALL SET_IDX_HS_RED_R()
+      ENDIF
+      CALL SET_WH_HS_COEF()
+      CALL CHK_WH_HS(GL%IO,WH%HM)
+      IF(WH%HM%DIMHST>WH%HM_L%DIMHST)THEN
+        CALL CHK_WH_HS(GL%IO,WH%HM_L)
+      ENDIF
+      IF(WH%HM%DIMHST>WH%HM_R%DIMHST)THEN
+        CALL CHK_WH_HS(GL%IO,WH%HM_R)
+      ENDIF
+      CALL GH5_WRT_CORR_ATM_INDICES()
+!
+      DO NT=1,NTYP
+        NA=GYS(NT)%FS%NA; NA2=NA*2
+        GYS(NT)%FS%NA2 =NA2
+        GYS(NT)%FS%LFZ1SET=(GL%LFZ1SET==1)
+        GYS(NT)%CO%DIM =NA
+        GYS(NT)%CO%DIM2=NA2
+        GYS(NT)%FS%OCC(1)=MAX(GYS(NT)%HL%OCC(1)-1,0) ! not use C+C+CC (-2), instead C+C (-1)
+        GYS(NT)%FS%OCC(2)=MIN(GYS(NT)%HL%OCC(2),NA2)
+        DO NI=1,NIONS; IF(GYZ(NI)%HL%NT==NT)EXIT; ENDDO
+        IF(WH%FZ(NI)%NSORB<=0)THEN
+          CALL INI_FOCKSTATE(GYS(NT)%FS,WH%FZ(NI)%NSORB,GL%LGPRJ)
+        ELSE
+          CALL INI_FOCKSTATE(GYS(NT)%FS,WH%FZ(NI)%NSORB,GL%LGPRJ, &
+              &WH%FZ(NI)%IDX_ORB,NINT(WH%FZ(NI)%NELECT))
+        ENDIF
+        CALL SET_U_MAT(GYS(NT)%CO,GL%LHUB,NT,IU)
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NT=",I3," FS%SEC_N%DIM=",I5," WITH ID:")')NT,GYS(NT)%FS%SEC_N%DIM
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(4X,10I8)')GYS(NT)%FS%SEC_N%ID
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(4X," WITH ID_FROZEN:")')
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(4X,10I8)')GYS(NT)%FS%SEC_N%ID_FROZEN
+        IF(GL%LBSCODE==0)THEN
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MEAN U/J:",2F8.4," eV.")')GYS(NT)%CO%UB,GYS(NT)%CO%JB
+        ELSE
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MEAN U/J:",2F8.4," Ryd.",2F8.4," eV.")')GYS(NT)%CO%UB,GYS(NT)%CO%JB,GYS(NT)%CO%UB*RYTOEV,GYS(NT)%CO%JB*RYTOEV
+        ENDIF
+        IF(GL%LDC.GE.2)THEN
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NEL_FIX_VDC1=",F10.2)')GYS(NT)%CO%NELF1
+        ENDIF
+        IF(GL%LDC.EQ.3)THEN
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NEL_FIX_EDC2=",F10.2)')GYS(NT)%CO%NELF2
+        ENDIF
+      ENDDO
+!
+      IF(GL%LHUB>=0)THEN
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL DUMP_V2AO_ALL()
+      ENDIF
+      IF(GL%LBSCODE==0)THEN
+        WH%B2N=>WH%R2N ! real Harmonics
+      ELSE
+        WH%B2N=>WH%C2N ! complex Harmonics
+      ENDIF
+      DO NI=1,NIONS
+        NT=GYZ(NI)%HL%NT
+        GYZ(NI)%CO%U = GYS(NT)%CO%U;  GYZ(NI)%CO%J = GYS(NT)%CO%J
+        GYZ(NI)%CO%UB = GYS(NT)%CO%UB; GYZ(NI)%CO%JB = GYS(NT)%CO%JB
+        NA2 = GYS(NT)%FS%NA2
+        GYZ(NI)%FS%NA = GYS(NT)%FS%NA; GYZ(NI)%FS%NA2 = NA2
+        GYZ(NI)%CO%DIM = GYS(NT)%FS%NA; GYZ(NI)%CO%DIM2 = NA2
+        GYZ(NI)%CO%DIM_HS = WH%HM%DIM_HS(NI)
+        GYZ(NI)%CO%DIM_HS_E = WH%HM_E%DIM_HS(NI)
+        GYZ(NI)%CO%DIM_HS_L = WH%HM_L%DIM_HS(NI)
+        GYZ(NI)%CO%DIM_HS_R = WH%HM_R%DIM_HS(NI)
+        GYZ(NI)%FS%DIM = GYS(NT)%FS%DIM
+        GYZ(NI)%FS%OCC = GYS(NT)%FS%OCC; GYZ(NI)%HL%OCC = GYS(NT)%HL%OCC
+        GYZ(NI)%CO%NELF1 = GYS(NT)%CO%NELF1
+        GYZ(NI)%CO%NELF2 = GYS(NT)%CO%NELF2
+        GYZ(NI)%FS%SEC_N = GYS(NT)%FS%SEC_N
+        GYZ(NI)%FS%C => GYS(NT)%FS%C 
+        GYZ(NI)%FS%BS => GYS(NT)%FS%BS
+        GYZ(NI)%FS%BS_JSZ => GYS(NT)%FS%BS_JSZ
+        GYZ(NI)%FS%IBS => GYS(NT)%FS%IBS
+        GYZ(NI)%FS%ID_FSC_N => GYS(NT)%FS%ID_FSC_N
+        GYZ(NI)%CO%NKS => WH%NKS(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%ISIMIX => WH%ISIMIX(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%NC_VAR => WH%NC_VAR(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%NC_PHY => WH%NC_PHY(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%R => WH%R(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%R0 => WH%R0(1:NA2,1:NA2,NI)
+        IF(WH%LCALC_LS)THEN
+          GYZ(NI)%CO%S_VEC => WH%S_VEC(1:NA2,1:NA2,:,NI)
+          GYZ(NI)%CO%L_VEC => WH%L_VEC(1:NA2,1:NA2,:,NI)
+        ENDIF
+! CMR3 BEGIN
+        GYZ(NI)%CO%R1 => WH%R1(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%PFPR => WH%PFPR(1:NA2,1:NA2,NI)
+! CMR3 END
+        GYZ(NI)%CO%C2N => WH%C2N(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%R2N => WH%R2N(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%B2N => WH%B2N(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%N2N => WH%N2N(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%Z => WH%Z(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%D0 => WH%D0(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%D => WH%D(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%LA1 => WH%LA1(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%LA2 => WH%LA2(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%EL0 => WH%EL0(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%VDC2 => WH%VDC2(1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%M_INDEX => WH%HM%M_INDEX(:,1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%M_INDEX_L => WH%HM_L%M_INDEX(:,1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%M_INDEX_R => WH%HM_R%M_INDEX(:,1:NA2,1:NA2,NI)
+        GYZ(NI)%CO%HS => WH%HM%HS(1:NA2,1:NA2,1:WH%HM%DIM_HS(NI),NI)
+        GYZ(NI)%CO%HS_L => WH%HM_L%HS(1:NA2,1:NA2,1:WH%HM_L%DIM_HS(NI),NI)
+        GYZ(NI)%CO%HS_R => WH%HM_R%HS(1:NA2,1:NA2,1:WH%HM_R%DIM_HS(NI),NI)
+        GYZ(NI)%CO%HS_E => WH%HM_E%HS(1:NA2,1:NA2,1:WH%HM_E%DIM_HS(NI),NI)
+        GYZ(NI)%CO%NPHY_FIX => WH%NPHY_FIX(1:NA2,1:NA2,NI)
+        ALLOCATE(GYZ(NI)%CO%V2H(1:NA2,1:NA2,1:NA2,1:NA2))
+        GYZ(NI)%CO%V2H = GYS(NT)%CO%V2H
+        GYZ(NI)%PJ%LENTANGLES = GL%LENTANGLES
+        GYZ(NI)%PJ%LSCF = GL%LSCF
+        GYZ(NI)%PJ%NEV_F = GL%NEV_F; GYZ(NI)%PJ%LEIGV = GL%LEIGV
+        GYZ(NI)%PJ%NCV_F = GL%NCV_F; GYZ(NI)%PJ%NCV_P = GL%NCV_P
+        GYZ(NI)%PJ%LMCFLY= GL%LMCFLY
+        GYZ(NI)%HL%LGPRJ = GL%LGPRJ; GYZ(NI)%HL%LDIAPJ= GL%LDIAPJ
+      ENDDO
+!
+      CALL READ_NELF1()
+      CALL SET_NIL()
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL DUMP_V2H_ALL_TEXT()
+      CALL OUT_MAT2("MATRIX HS",WH%HM,GL%IO,0)
+      CALL OUT_MAT2("MATRIX HS_L",WH%HM_L,GL%IO,1)
+      CALL OUT_MAT2("MATRIX HS_R",WH%HM_R,GL%IO,1)
+      CALL OUT_MAT2("MATRIX HS_E",WH%HM_E,GL%IO,1)
+!
+      IF(ABS(GF%WMIN)<=1.E-16_gq)THEN
+        GF%WMIN=-GF%DS-0.2_gq
+      ENDIF
+      IF(ABS(GF%WMAX)<=1.E-16_gq)THEN
+        GF%WMAX= GF%DS+0.2_gq
+      ENDIF
+!
+      IF(GL%LGREEN==10)THEN
+        GF2%ETA = GF%ETA; GF2%DS = GF%DS; GF2%TSP = GF%TSP
+        GF2%WMIN = GF%WMIN; GF2%WMAX = GF%WMAX
+        GF2%NW = GF%NW; GF2%TEV = GF%TEV; GF2%T = GF%T
+        GF2%MU = GF%MU
+        CALL GF2_INI(GL%LUNIT,GL%LMODEL,GL%IO)
+      ELSEIF(GL%LGREEN>0)THEN
+        CALL GF_INI(GL%LGREEN,GL%LUNIT,GL%LMODEL,GL%IU,GL%IO)
+      ENDIF
+      CALL OUT_PAR_GL(NIONS,NTYP,IO)
+      IF(SYM%MODE==10)THEN
+        CALL READ_PAWSYM(GL%IU)
+        CALL LOCMAP_SYM()
+      ENDIF
+      !"GUTZ1_INI"
+      RETURN
+!
+      END SUBROUTINE GUTZ1_INI
+!
+!****************************************************************************
+      SUBROUTINE GUTZ2_SET_NISO(ISO_IN,ISPIN_IN,NBMAX,NKPT)
+      INTEGER,INTENT(IN) :: ISO_IN,ISPIN_IN,NBMAX,NKPT
+!
+      !" GUTZ2_SET_NISO"
+      CALL SET_BND_NISO(ISO_IN,ISPIN_IN,NBMAX,NKPT,GL%IO)
+      GYS(:)%CO%DIMSO=GYS(:)%CO%DIM*BND%ISO
+      GYZ(:)%CO%DIMSO=GYZ(:)%CO%DIM*BND%ISO
+      GL%NASOMAX=MAXVAL(GYS(:)%CO%DIMSO)
+      WH%NASOMAX=GL%NASOMAX
+      BND%NASOTOT=SUM(GYZ(:)%CO%DIMSO)
+      WH%NASOTOT =BND%NASOTOT
+      !" GUTZ2_SET_NISO"
+      RETURN
+!
+      END SUBROUTINE GUTZ2_SET_NISO
+!
+!******************************************************************************
+      SUBROUTINE GUTZ4_SET_C2N_UH(B2N,NASOMAX,NIONS)
+      INTEGER,INTENT(IN)     :: NASOMAX,NIONS
+      COMPLEX(gq),INTENT(IN) :: B2N(NASOMAX,NASOMAX,NIONS)
+! LOCAL
+      INTEGER NI,NA2,NA1,NASO,I,L
+      REAL(gq) MAXERR
+      INTEGER,PARAMETER::LMAX=3
+      COMPLEX(gq),POINTER :: C2N_U(:,:)
+      COMPLEX(gq),ALLOCATABLE :: YLM_CR(:,:,:)
+!
+      !"GUTZ4_SET_C2N_UH"
+      IF(GL%LHARMONICS==1)THEN
+! Catch: assume single l (e.g., d of f)
+        ALLOCATE(YLM_CR(2*LMAX+1,2*LMAX+1,0:LMAX))
+        CALL GET_YLM_CR_ALL(YLM_CR,LMAX)
+      ENDIF
+      CALL SET_WH_N2N(GL%IU,GL%IO)
+      WH%R2N=0; WH%C2N=0
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2
+        NA1=GYZ(NI)%CO%DIM; L=(NA1-1)/2
+        NASO=NA1*BND%ISO_IN
+        GYZ(NI)%CO%C2N=0
+        IF(GL%LBSCODE==0)THEN ! REAL harmonics as basis -> complex
+          GYZ(NI)%CO%R2N(1:NASO,1:NASO)=B2N(1:NASO,1:NASO,NI)
+          IF(GL%LHARMONICS==1)THEN
+            GYZ(NI)%CO%C2N(1:NA1,1:NA1)=MATMUL(YLM_CR(1:NA1,1:NA1,L),B2N(1:NA1,1:NA1,NI))
+            IF(NASO==NA2)THEN
+              GYZ(NI)%CO%C2N(1+NA1:NASO,1+NA1:NASO)=MATMUL(YLM_CR(1:NA1,1:NA1,L),B2N(1+NA1:NASO,1+NA1:NASO,NI))
+            ENDIF
+          ELSE
+            GYZ(NI)%CO%C2N(1:NASO,1:NASO)=B2N(1:NASO,1:NASO,NI)
+          ENDIF
+        ELSE
+          GYZ(NI)%CO%C2N(1:NASO,1:NASO)=B2N(1:NASO,1:NASO,NI)
+          IF(GL%LHARMONICS==1)THEN
+            GYZ(NI)%CO%R2N(1:NA1,1:NA1)=MATMUL(TRANSPOSE(CONJG(YLM_CR(1:NA1,1:NA1,L))),B2N(1:NA1,1:NA1,NI))
+            IF(NASO==NA2)THEN
+              GYZ(NI)%CO%R2N(1+NA1:NASO,1+NA1:NASO)=MATMUL(TRANSPOSE(CONJG(YLM_CR(1:NA1,1:NA1,L))),B2N(1+NA1:NASO,1+NA1:NASO,NI))
+            ENDIF
+          ELSE
+            GYZ(NI)%CO%R2N(1:NASO,1:NASO)=B2N(1:NASO,1:NASO,NI)
+          ENDIF
+        ENDIF
+        IF(NASO<NA2)THEN
+          GYZ(NI)%CO%C2N(1+NASO:,1+NASO:)=GYZ(NI)%CO%C2N(1:NASO,1:NASO)
+          GYZ(NI)%CO%R2N(1+NASO:,1+NASO:)=GYZ(NI)%CO%R2N(1:NASO,1:NASO)
+        ENDIF
+!
+        CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%N2N,NA2,NA2,.TRUE.,BND%ISO,LURIGHT=.TRUE.) ! Additional transformation.
+!
+        GYZ(NI)%CO%C2N=MATMUL(GYZ(NI)%CO%C2N,GYZ(NI)%CO%N2N)
+        GYZ(NI)%CO%R2N=MATMUL(GYZ(NI)%CO%R2N,GYZ(NI)%CO%N2N)
+        IF(GL%LV2AO==0)THEN ! REAL HARMONICS
+          C2N_U=>GYZ(NI)%CO%R2N
+        ELSE
+          C2N_U=>GYZ(NI)%CO%C2N
+        ENDIF        
+        CALL A_TRANS(GYZ(NI)%CO%V2H,NA2,C2N_U)
+        NULLIFY(C2N_U)
+      ENDDO
+      IF(GL%LHARMONICS==1)THEN
+        DEALLOCATE(YLM_CR)
+      ENDIF
+      CALL ZOUT_MAT('U_N2N',WH%N2N,GL%IO)
+      CALL ZOUT_MAT('U_C2N',WH%C2N,GL%IO)
+      CALL ZOUT_MAT('U_B2N',WH%B2N,GL%IO)
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%N2N, "/PreferedBasisToCurrentBasis")
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%C2N, "/ComplexHarmonicsToCurrentBasis")
+      !"GUTZ4_SET_C2N_UH"
+      RETURN
+!
+      END SUBROUTINE GUTZ4_SET_C2N_UH
+!
+!********************************************************************************
+      SUBROUTINE GUTZ5_INI_CORR_UVEK(NKP,NKPL,WT,NELET,NE,KX,KY,KZ,KNAME)
+      INTEGER,INTENT(IN)               :: NKP,NKPL
+      REAL(gq),INTENT(IN)              :: WT(NKP),NELET
+      INTEGER,INTENT(IN),OPTIONAL      :: NE(3,NKP)
+      REAL(gq),INTENT(IN),OPTIONAL     :: KX(NKP),KY(NKP),KZ(NKP)
+      CHARACTER*10,INTENT(IN),OPTIONAL :: KNAME(NKP)
+! LOCAL
+      INTEGER NI,NBASE,NASO
+!
+      !"GUTZ5_INI_CORR_UVEK"
+      IF(GL%LMODEL==0)THEN
+        ALLOCATE(BND%NE(3,NKP))
+        IF(PRESENT(NE))THEN
+          BND%NE=NE
+        ELSE
+          BND%NE(1,:)=BND%NMAX; BND%NE(2,:)=1; BND%NE(3,:)=BND%NMAX
+        ENDIF
+        BND%NE(1,:)= BND%NE(1,:)*BND%ISO/BND%ISO_IN
+        BND%NE(3,:)= BND%NE(3,:)*BND%ISO/BND%ISO_IN
+        BND%NE(2,:)=(BND%NE(2,:)-1)*BND%ISO/BND%ISO_IN+1
+        BND%NMAXIN=MAXVAL(BND%NE(3,:)-BND%NE(2,:)+1)
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MIN/MAX(BND%NE(1,:))=",2I8)')MINVAL(BND%NE(1,:)),MAXVAL(BND%NE(1,:))
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MIN/MAX(BND%NE(2,:))=",2I8)')MINVAL(BND%NE(2,:)),MAXVAL(BND%NE(2,:))
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MIN/MAX(BND%NE(3,:))=",2I8)')MINVAL(BND%NE(3,:)),MAXVAL(BND%NE(3,:))
+      ELSE
+        BND%NMAXIN=BND%NASOTOT
+      ENDIF
+!
+      IF(PRESENT(KX))THEN
+        CALL SET_BND_UVEK(NKP,NKPL,WT,GL%LBNDU,KX=KX,KY=KY,KZ=KZ,KNAME=KNAME)
+      ELSE
+        CALL SET_BND_UVEK(NKP,NKPL,WT,GL%LBNDU)
+      ENDIF
+!
+      IF(GL%LMODEL==0)THEN
+        BND%NELEC=SUM((BND%NE(2,:)-1)*KPT%WT)*BND%RSPO
+        BND%NELEL=NELET-BND%NELEC
+      ELSE
+        BND%NELEC=0; BND%NELEL=NELET
+      ENDIF
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" VALENCE ELECTRONS: TOTAL=",F8.1)')NELET
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("                    CORRELATED BLOCK=",F8.1)')BND%NELEL
+!
+      GF%NBMAX=BND%NMAXIN; GF%NSPIN=BND%NSPIN
+      IF(GL%LGREEN==10)THEN
+        GF2%NBMAX = GF%NBMAX; GF2%NSPIN = GF%NSPIN
+        ALLOCATE(GF2%G(BND%NMAXIN, BND%NMAXIN, GF%NSPIN)); GF2%G=0
+      ELSEIF(GL%LGREEN>0)THEN 
+        ALLOCATE(GF%G(BND%NMAXIN, BND%NMAXIN, GF%NW,GF%NSPIN)); GF%G=0
+        ALLOCATE(GF%M(BND%NASOTOT,BND%NASOTOT,GF%NW,GF%NSPIN)); GF%M=0
+      ENDIF
+      IF(GL%LMODEL==100.OR.GL%LMODEL==102)THEN
+        IF(GL%LGREEN == 10)THEN
+          CALL GF2_HYBRD_INI() ! 1-band
+        ELSE
+          CALL GF_HYBRD_INI() ! 1-band 
+        ENDIF
+      ENDIF
+!
+      NBASE=1
+      DO NI=1,WH%NIONS
+        NASO=GYZ(NI)%CO%DIMSO
+        IF(GL%LMODEL==0)THEN
+          GYZ(NI)%CO%UK =>BND%UK (:,NBASE:NBASE+NASO-1,:,:)
+          GYZ(NI)%CO%VK =>BND%VK (NBASE:NBASE+NASO-1,:,:,:,:)
+          GYZ(NI)%CO%HK0=>BND%HK0(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:,:)
+        ENDIF
+        GYZ(NI)%CO%RB =>BND%R  (NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:)
+        GYZ(NI)%CO%DB =>BND%D0 (NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:)
+        GYZ(NI)%CO%LB1=>BND%LA1(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:)
+        GYZ(NI)%CO%ETB=>BND%ETA(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:)
+        IF(GL%LGREEN==10)THEN
+          GYZ(NI)%CO%GF2%T =GF2%T; GYZ(NI)%CO%GF2%NW=GF2%NW
+          GYZ(NI)%CO%GF2%WMIN=GF2%WMIN
+          GYZ(NI)%CO%GF2%WMAX=GF2%WMAX
+          GYZ(NI)%CO%GF2%MU  =GF2%MU
+          GYZ(NI)%CO%GF2%G =>GF2%G(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:)
+          GYZ(NI)%CO%GF2%NBMAX=NASO; GYZ(NI)%CO%GF2%NSPIN=GF2%NSPIN
+          GYZ(NI)%CO%GF2%NLR=GF2%NLR
+          IF(GL%LMODEL==100.OR.GL%LMODEL==102)THEN
+            GYZ(NI)%CO%GF2%D=>GF2%D(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:,:)
+            GYZ(NI)%CO%GF2%GM=>GF2%GM(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:,:)
+          ENDIF
+        ENDIF
+        IF(GL%LGREEN==1.OR.GL%LGREEN==2)THEN
+          GYZ(NI)%CO%GF%T =GF%T; GYZ(NI)%CO%GF%NW=GF%NW
+          GYZ(NI)%CO%GF%WMIN=GF%WMIN
+          GYZ(NI)%CO%GF%WMAX=GF%WMAX
+          GYZ(NI)%CO%GF%WTYP=GF%WTYP
+          GYZ(NI)%CO%GF%MU  =GF%MU
+          GYZ(NI)%CO%GF%W =>GF%W
+          GYZ(NI)%CO%GF%G =>GF%G(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:,:)
+          GYZ(NI)%CO%GF%M =>GF%M(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:,:)
+          GYZ(NI)%CO%GF%NBMAX=NASO; GYZ(NI)%CO%GF%NSPIN=GF%NSPIN
+          GYZ(NI)%CO%GF%NLR=GF%NLR
+          IF(GL%LMODEL==100.OR.GL%LMODEL==102)THEN
+            GYZ(NI)%CO%GF%D=>GF%D(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:,:,:)
+            IF(GF%WTYP==1)THEN
+              GYZ(NI)%CO%GF%GM=>GF%GM(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,:,:,:)
+              GYZ(NI)%CO%GF%WT=>GF%WT
+            ENDIF
+          ENDIF
+        ENDIF
+        NBASE=NBASE+NASO
+      ENDDO
+      BND%NELET=NELET
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" BND%NMAXIN=",I5)')BND%NMAXIN
+      !"GUTZ5_INI_CORR_UVEK"
+      RETURN
+!
+      END SUBROUTINE GUTZ5_INI_CORR_UVEK
+!
+!****************************************************************************
+      SUBROUTINE GUTZ6_SOLVE()
+      INTEGER NI
+      LOGICAL::LGLPRJ
+      REAL :: TA1,TA2,TB1,TB2; INTEGER TIB1,TIB2,TIRATE
+!
+      !"GUTZ6_SOLVE"
+      IF(GL%LGREEN > 0)THEN
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" APPROXIMATED FERMI FUNCTION EWIN=",F8.3)')GF%EWIN
+      ENDIF
+      IF(GL%LGREEN==10)THEN
+        CALL CALC_GREEN2_NV()
+      ENDIF
+      IF(GL%LMODEL==0)THEN
+        CALL PRE_ANALYSIS()
+        CALL ORTH_LOC_PROJ()
+        CALL SETUP_TB(GL%LBNDU)
+        CALL GET_EL0()
+        CALL RM_TB_EL0() ! Remove local 1p part.
+        CALL CALC_NKS(0)
+        CALL CALC_NKS_PP()
+        CALL EVAL_SL_VEC_ALL(1)
+        CALL GH5_WRT_LOCAL_ZMATRIX(WH%NKS, "/GA_NKS_BARE")
+        CALL CALC_DA0()
+        CALL CALC_DA0_PP()
+        CALL CALC_BAND_WIDGAP(BND%EK0,BND%NMAX,KPT%DIM,BND%EFLDA,GL%IO)
+        CALL CALC_CORR_EBWIDTH(GL%IO)
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" CORRELATED BAND WIDTH=",F8.3)')BND%EBWIDTH
+        IF((GL%LGREEN==1.OR.GL%LGREEN==2).AND.BND%EBWIDTH>GF%EWIN)THEN
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WARNING: MATSUBARA FREQUENCIES NOT SUFFICIENT!")')
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(0    ,'(" WARNING: MATSUBARA FREQUENCIES NOT SUFFICIENT!")')
+        ENDIF
+      ELSE
+        CALL GET_EL0()
+      ENDIF
+      CALL GH5_WRT_V2H_ALL()
+      IF(GL%LH5WRT >= 2)THEN
+        CALL GH5_WRT_ANNIHI_OP()
+      ENDIF
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%EL0, "/One_body_local")
+      INQUIRE(FILE='GLMKKP_1_1_1.VSP',EXIST=LGLPRJ)
+      IF(GL%LSCF==1.OR.GL%LSCF==3.OR.GL%LSCF==4.OR.GL%LSCF==5.OR.GL%LSCF==-11 &
+        &.OR.(.NOT.LGLPRJ.AND.GL%LSCF==6).OR.GL%LGPRJ==99) THEN
+        CALL CPU_TIME(TA1); CALL SYSTEM_CLOCK(TIB1,TIRATE); TB1=REAL(TIB1,4)/REAL(TIRATE,4)
+        CALL GUTZ_SET_PROJ(0)
+        CALL CPU_TIME(TA2); CALL SYSTEM_CLOCK(TIB2,TIRATE); TB2=REAL(TIB2,4)/REAL(TIRATE,4)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL OUT_TIME_USE('GUTZ_SET_PRJ',TA2-TA1,TB2-TB1,GL%IO)
+      ELSEIF(GL%LSCF==6.OR.GL%LSCF==105.OR.GL%LSCF==107)THEN
+        CALL GUTZ_SET_PROJ(1)
+      ELSEIF(GL%LSCF==2)THEN
+      ELSE
+        WRITE(0,'(" ERROR: ILLEGAL LSCF=",I2)')GL%LSCF; STOP
+      ENDIF
+      CALL OUT_SEC_ALL()
+      CALL GMPI_BARRIER()
+      IF(GL%LSCF == 4 .OR. GL%LSCF == 5 .OR. GL%LGPRJ == 99) RETURN
+      CALL CPU_TIME(TA1); CALL SYSTEM_CLOCK(TIB1,TIRATE); TB1=REAL(TIB1,4)/REAL(TIRATE,4)
+      GL%ITER1=0; GL%ITER2=0; GL%MAXERROR = 1.E4_gq
+      IF(WH%HM_L%DIMHST_RED+WH%HM_R%DIMHST_RED>0)THEN
+        CALL GUTZ_SOLVE_NL()
+      ELSE
+        CALL GUTZ_FROZEN_RUN()
+      ENDIF
+      CALL CPU_TIME(TA2); CALL SYSTEM_CLOCK(TIB2,TIRATE); TB2=REAL(TIB2,4)/REAL(TIRATE,4)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL OUT_TIME_USE('  GUTZ_SOLVE',TA2-TA1,TB2-TB1,GL%IO)
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%R, "/GA_R")
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%NC_VAR, "/GA_NC_VAR")
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%NKS, "/GA_NKS")
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%D, "/GA_D")
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%LA2, "/GA_Lc")
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%LA1, "/GA_La")
+      CALL CHK_W_ETA_ALL()
+      IF(GL%LPLTGF==1)THEN
+        CALL PLOT_GF(GL%IU)
+      ENDIF
+      WH%EF=BND%EF
+      CALL WRT_WH_RLNEF(GL%IU, "WH_RLNEF.OUT")
+      CALL TRANS_N2N_FAST_INDEX(.FALSE.)
+      CALL WRT_WH_RLNEF_ORIG(GL%IU)
+      CALL CALC_RNRL()
+      IF(GL%LMODEL==0)THEN
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(BND%NE, 3, KPT%DIM, "/BND_NE", log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(BND%EK, BND%NMAX, KPT%DIM, BND%NSPIN, "/BND_EK", &
+            & log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(BND%VK(:,:,SYM%IDI:SYM%IDF,:,:), &
+            & BND%NMAXIN, BND%NMAXIN, SYM%IDF-SYM%IDI+1, KPT%DIML, &
+            & BND%NSPIN, "/BND_VK", log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(BND%UK0(:,:,SYM%IDI:SYM%IDF,:), &
+            & BND%NMAXIN, BND%NMAXIN, SYM%IDF-SYM%IDI+1, KPT%DIML, &
+            & "/BND_UK0", log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(BND%FERWE(:,:,:), &
+            & BND%NMAX, KPT%DIM, BND%NSPIN, "/BND_FERWE", log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(KPT%WT, KPT%DIM, "/KPT_WT", log_file_id)
+      ENDIF
+      IF(ASSOCIATED(KPT%X))THEN
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(KPT%X, KPT%DIM, "/KPT_X", log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(KPT%Y, KPT%DIM, "/KPT_Y", log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(KPT%Z, KPT%DIM, "/KPT_Z", log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(KPT%NAME, 10, KPT%DIM, "/KPT_NAME", log_file_id)
+      ENDIF
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(BND%EF, "/E_FERMI", log_file_id)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(SYM%IE, "/SYM_IE", log_file_id)
+      CALL PLOT_SPECTRAL_DENSITY_1()
+      IF(GL%LSCF==3)GOTO 100
+      IF(GL%LSCF==2)GOTO 101
+      CALL WRT_PROJ_C()
+      CALL CALC_PJRHO(1) ! LOCAL CONFIGURATION DENSITY MATRIX
+      CALL CALC_NCPHY()
+      CALL GH5_WRT_LOCAL_ZMATRIX(WH%NC_PHY, "/GA_NC_PHY")
+      CALL EVAL_SL_VEC_ALL(2)
+      CALL CALC_ENG(1)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(ENG%TB, "/E_TB_TOT", log_file_id)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(GL%MAXERROR, "/GA_MAX_ERR", log_file_id)
+      CALL CALC_RCW()
+      IF(GL%LENTANGLES>1)THEN
+        CALL CALC_FSP0()  ! Fock states probabilities (diagonal)
+        CALL CALC_PROJENS()
+      ENDIF
+      IF(GL%LENTANGLES>0)THEN
+        CALL CALC_ENTANGLES()
+      ENDIF
+      CALL CALC_RED_VSP()
+      IF(GL%LSCF==107)THEN
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" SEC_N/J AFTER TRUNCATION BASED ON RHO:")')
+        CALL OUT_SEC_ALL()
+      ENDIF
+100   CONTINUE
+      CALL CLR_PROJ() ! RELEASE SOME MEMORY
+      CALL UPDATE_NELF1()
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(GL%DCV_ERROR, "/GA_DCV_ERR", log_file_id)
+      WH%EF=BND%EF
+      GL%ITER_RHO=GL%ITER_RHO+1
+101   CONTINUE
+      !"GUTZ6_SOLVE"
+      RETURN
+!
+      END SUBROUTINE GUTZ6_SOLVE
+!
+!****************************************************************************
+! Create a data set to record the distinct correlated atom indices.
+!****************************************************************************
+      SUBROUTINE GH5_WRT_CORR_ATM_INDICES()
+      INTEGER IDX(WH%NIONS)
+      INTEGER NI, error
+      INTEGER ISUM
+      CHARACTER*25 STR
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      ISUM = 0
+      DO NI = 1, WH%NIONS
+        IF (GYZ(NI)%HL%NIMAP /= NI) CYCLE
+        ISUM = ISUM + 1
+        IDX(ISUM) = NI
+      ENDDO
+      CALL gh5_create_groups(IDX(1:ISUM), ISUM, "/Impurity_", log_file_id)
+      CALL gh5_write(IDX(1:ISUM), ISUM, "/Distinct_impurity_indices", &
+          & log_file_id)
+      RETURN
+!
+      END SUBROUTINE GH5_WRT_CORR_ATM_INDICES
+!
+!****************************************************************************
+      SUBROUTINE GUTZ_SOLVE_NL()
+      INTEGER INFO,NX,NXR,INPUT(10)
+      REAL(gq),ALLOCATABLE :: X(:),FVEC(:)
+      REAL(gq),PARAMETER :: RTOL=1.E-10_gq,EPSFCN=1.E-10_gq
+      EXTERNAL :: GUTZ_FCN1,GUTZ_FCN1_NIL
+!
+      GL%ITER1=0
+      IF(GL%ITER2<=1)THEN
+        CALL INI_WH_X()
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" INITIAL CHEMICAL POTENTIAL=",F10.4)')BND%EF
+      ENDIF
+      NXR=WH%HM_R%DIMHST_RED*GL%RMODE
+      NX=NXR+WH%HM_L%DIMHST_RED
+      ALLOCATE(X(NX),FVEC(NX))
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" DIM_X = ",I4)')NX
+      CALL X_TO_R_COEF(X,.TRUE.)
+      IF(GL%LSOLVER==30)THEN  ! {R, N}
+        CALL X_TO_H_COEF(X(NXR+1:NX),WH%NKS_COEF,.TRUE.)
+      ELSE ! {R,LA1}
+        CALL X_TO_H_COEF(X(NXR+1:NX),WH%LA1_COEF,.TRUE.)
+      ENDIF
+! Different non-linear solvers.
+      IF(GL%LNEWTON==0)THEN
+        CALL GHYBRD(GUTZ_FCN1,NX,X,FVEC,RTOL,EPSFCN,GL%IO)
+      ELSEIF(GL%LNEWTON==1)THEN
+        INPUT=0; INPUT(1)=GL%NMAX_ITER
+        CALL gnitsol(GUTZ_FCN1_NIL,NX,X,GL%RTOL,RTOL,input)
+      ELSE
+        CALL BROYDEN_MIX(GUTZ_FCN1,NX,X,FVEC,GL%RMIX_A,GL%NB_RESET,GL%LNEWTON)
+      ENDIF
+      DEALLOCATE(X,FVEC)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,  '(" SOLVE_NL FINISHED WITH ",I7," ITERATIONS.")')GL%ITER1
+      RETURN
+!
+      END SUBROUTINE GUTZ_SOLVE_NL
+!
+!****************************************************************************
+      SUBROUTINE GUTZ_SOLVE_LA1()
+      INTEGER NX
+      REAL(gq),ALLOCATABLE :: X(:),FVEC(:)
+      REAL(gq),PARAMETER :: RTOL=1.E-10_gq,EPSFCN=1.E-10_gq
+      EXTERNAL :: GUTZ_FCN_NK
+!
+      GL%ITER_LA1=0
+      NX=WH%HM_L%DIMHST_RED
+      ALLOCATE(X(NX),FVEC(NX))
+      CALL X_TO_H_COEF(X,WH%LA1_COEF,.TRUE.)
+      CALL GHYBRD(GUTZ_FCN_NK,NX,X,FVEC,RTOL,EPSFCN,GL%IO)
+      DEALLOCATE(X,FVEC)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,  '(" SOLVE-LA1 FINISHED WITH ",I7," ITERATIONS.")')GL%ITER_LA1
+      RETURN
+!
+      END SUBROUTINE GUTZ_SOLVE_LA1
+!
+!****************************************************************************
+! Naive way to get Ef, not efficient at all.
+!****************************************************************************
+      SUBROUTINE GREEN_FERMI_NV()
+      REAL(gq) X(1),FVEC(1)
+      REAL(gq),PARAMETER :: RTOL=1.E-10_gq,EPSFCN=1.E-10_gq
+      EXTERNAL :: GFERMI_FCN
+!
+      GL%ITER_GF=0
+      X(1)=BND%EF
+      CALL GHYBRD(GFERMI_FCN,1,X,FVEC,RTOL,EPSFCN,GL%IO)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,  '(" GREEN_FERMI_NV FINISHED WITH ",I7," ITERATIONS.")')GL%ITER_GF
+      BND%EF=X(1)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" GUTZ_FERMI=",F12.5)')BND%EF
+      RETURN
+!
+      END SUBROUTINE GREEN_FERMI_NV
+!
+!****************************************************************************
+      SUBROUTINE X_TO_R_COEF(X,LBACK)
+      REAL(gq) X(*)
+      LOGICAL LBACK
+! LOCAL
+      INTEGER I,I_,IBASE
+!
+      IBASE=0
+      DO I=1,WH%HM_R%DIMHST_RED
+        I_=WH%HM_R%IDX_RED2FULL(I)
+        IF(LBACK)THEN
+          X(IBASE+1)=REAL(WH%R_COEF(I_))
+          IF(GL%RMODE==2)THEN
+            X(IBASE+2)=AIMAG(WH%R_COEF(I_))
+          ENDIF
+        ELSE
+          IF(GL%RMODE==2)THEN
+            WH%R_COEF(I_)=DCMPLX(X(IBASE+1),X(IBASE+2))
+          ELSE
+            WH%R_COEF(I_)=X(IBASE+1)
+          ENDIF
+        ENDIF
+        IBASE=IBASE+GL%RMODE
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE X_TO_R_COEF
+!
+!****************************************************************************
+      SUBROUTINE X_TO_H_COEF(X,H_COEF,LBACK)
+      REAL(gq) X(*),H_COEF(*)
+      LOGICAL LBACK
+! LOCAL
+      INTEGER I,I_
+!
+      DO I=1,WH%HM_L%DIMHST_RED
+        I_=WH%HM_L%IDX_RED2FULL(I)
+        IF(LBACK)THEN
+          X(I)=H_COEF(I_)
+        ELSE
+          H_COEF(I_)=X(I)
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE X_TO_H_COEF
+!
+!****************************************************************************
+! INTERNAL ROUTINES
+!****************************************************************************
+      SUBROUTINE CALC_VDC()
+      INTEGER NI
+      REAL(gq) UB,JB,NT
+!
+      IF(GL%LDC.EQ.0)RETURN
+      IF(GL%LDC<0)THEN
+        IF(GL%LDC==-1.OR.ABS(WH%NPHY_FIX(1,1,1))>1.1_gq)THEN
+          WH%NPHY_FIX=WH%NKS
+        ENDIF
+      ENDIF
+      DO NI=1,WH%NIONS
+        CALL CALC_CO_VDC(GYZ(NI)%CO,GL%LDC)
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," VDC=",F10.4)')NI,GYZ(NI)%CO%VDC
+      ENDDO
+      IF(GL%LDC<0)THEN
+        CALL ZOUT_MAT('VDC2',WH%VDC2,GL%IO)
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_VDC
+!
+!****************************************************************************
+      SUBROUTINE CALC_LC(MODE)
+      INTEGER MODE
+! LOCAL
+      INTEGER NI,NIMAP
+      REAL :: TA1,TA2,TB1,TB2; INTEGER TIB1,TIB2,TIRATE
+!
+      !"CALC_LC"
+      CALL CPU_TIME(TA1); CALL SYSTEM_CLOCK(TIB1,TIRATE); TB1=REAL(TIB1,4)/REAL(TIRATE,4)
+      WH%NC_VAR=0
+      !$OMP PARALLEL DO PRIVATE(NI,NIMAP) SCHEDULE(STATIC,1)
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.EQ.NI)THEN
+          GL_NI=NI
+          ! CALL DUMP_EMBED_HAMILTONIAN(NI,GYZ(NI)%CO)
+          IF(MODE==0)THEN
+            CALL CALC_PJ_LC(GYZ(NI)%CO,GYZ(NI)%HL,GYZ(NI)%PJ,GL%IO,GL%LSCF)
+          ELSE
+            CALL CALC_PJ_NCVAR(GYZ(NI)%CO,GYZ(NI)%HL,GYZ(NI)%PJ,GL%IO)
+          ENDIF
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," PHI-step gap=",E10.2)')NI,GYZ(NI)%PJ%EVL(2)-GYZ(NI)%PJ%EVL(1)
+          IF(GYZ(NI)%PJ%ITER==-1)THEN
+            GL%ITER1=-1
+          ENDIF
+        ENDIF
+      ENDDO
+      !$OMP END PARALLEL DO
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.NE.NI)THEN
+          GYZ(NI)%CO%NC_VAR=GYZ(NIMAP)%CO%NC_VAR
+        ENDIF
+      ENDDO
+      CALL ZSUM_ALL_MPI(WH%NC_VAR,WH%NA2MAX*WH%NA2MAX*WH%NIONS)
+      CALL ZOUT_MAT('NCV-UNSYM',WH%NC_VAR,GL%IO,1)
+      WH%COPY=WH%NC_VAR
+      CALL HM_EXPAND_ALL('NCV'); CALL HM_EXPAND_BACK_ALL('NCV')
+      CALL ZOUT_MAT('NCV-SYM',WH%NC_VAR,GL%IO,1)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX ERROR DUE TO SYMMETRIZATION = ", F12.6)')MAXVAL(ABS(WH%NC_VAR-WH%COPY))
+      CALL CPU_TIME(TA2); CALL SYSTEM_CLOCK(TIB2,TIRATE); TB2=REAL(TIB2,4)/REAL(TIRATE,4)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL OUT_TIME_USE('CALC_LC',TA2-TA1,TB2-TB1,GL%IO)
+      !"CALC_LC"
+      RETURN
+!
+      END SUBROUTINE CALC_LC
+!
+!****************************************************************************
+      SUBROUTINE REGULARIZE_NKS(MODE)
+      INTEGER,INTENT(IN) :: MODE
+! LOCAL
+      INTEGER NI,NIMAP
+!
+      DO NI=1,WH%NIONS
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.EQ.NI)THEN
+          IF(MODE==0)THEN
+            CALL H_REGULARIZE(GYZ(NI)%CO%NKS   ,GYZ(NI)%CO%DIM2,1.E-10_gq)
+          ELSE
+            CALL H_REGULARIZE(GYZ(NI)%CO%NC_VAR,GYZ(NI)%CO%DIM2,1.E-10_gq)
+          ENDIF
+        ELSE
+          IF(MODE==0)THEN
+            GYZ(NI)%CO%NKS   =GYZ(NIMAP)%CO%NKS
+          ELSE
+            GYZ(NI)%CO%NC_VAR=GYZ(NIMAP)%CO%NC_VAR
+          ENDIF
+        ENDIF
+      ENDDO
+      IF(MODE==0)THEN
+        CALL ZOUT_MAT('NKS-REGU',WH%NKS,GL%IO,1)
+      ELSE
+        CALL ZOUT_MAT('NC_VAR-REG',WH%NKS,GL%IO,1)
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE REGULARIZE_NKS
+!
+!****************************************************************************
+      SUBROUTINE CALC_ISIMIX(MODE)
+      INTEGER,INTENT(IN) :: MODE
+! LOCAL
+      INTEGER NI,NIMAP
+!
+      DO NI=1,WH%NIONS
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.EQ.NI)THEN
+          IF(MODE==0)THEN
+            CALL CALC_CO_ISIMIX(GYZ(NI)%CO,GYZ(NI)%CO%NKS   )
+          ELSE
+            CALL CALC_CO_ISIMIX(GYZ(NI)%CO,GYZ(NI)%CO%NC_VAR)
+          ENDIF
+        ELSE
+          GYZ(NI)%CO%ISIMIX=GYZ(NIMAP)%CO%ISIMIX
+        ENDIF
+      ENDDO
+      CALL ZOUT_MAT('ISIMIX-VAR',WH%ISIMIX,GL%IO,1)
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%ISIMIX,'ISIMIX','N',0)
+        CALL CHK_MATRIX_TRANS('ISIMIX-T',WH%ISIMIX,GL%IO,.TRUE.)
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_ISIMIX
+!
+!****************************************************************************
+      SUBROUTINE SET_WH_HS_DIM(MB)
+      TYPE (MATRIX_BASIS) :: MB
+! LOCAL      
+      INTEGER NI,NIMAP,IBASE,DIM_HS
+!
+      MB%DIMHST=0; MB%DIMHSMAX=MAXVAL(MB%DIM_HS)
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIMAP==NI)THEN
+          MB%DIMHST=MB%DIMHST+MB%DIM_HS(NI)
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE SET_WH_HS_DIM
+!
+!****************************************************************************
+      SUBROUTINE SET_WH_HS_COEF()
+      INTEGER NI,NIMAP,IBASE_L,IBASE_R
+!
+      ALLOCATE(WH%NKS_COEF(WH%HM_L%DIMHST),WH%LA1_COEF(WH%HM_L%DIMHST),WH%LA2_COEF(WH%HM_L%DIMHST), &
+              &WH%R_COEF(WH%HM_R%DIMHST),WH%NCV_COEF(WH%HM_L%DIMHST))
+      IBASE_L=0; IBASE_R=0
+      DO NI=1,WH%NIONS
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP==NI)THEN
+          GYZ(NI)%CO%NKS_COEF=>WH%NKS_COEF(IBASE_L+1:IBASE_L+WH%HM_L%DIM_HS(NI))
+          GYZ(NI)%CO%LA1_COEF=>WH%LA1_COEF(IBASE_L+1:IBASE_L+WH%HM_L%DIM_HS(NI))
+          GYZ(NI)%CO%LA2_COEF=>WH%LA2_COEF(IBASE_L+1:IBASE_L+WH%HM_L%DIM_HS(NI))
+          GYZ(NI)%CO%R_COEF  =>WH%R_COEF  (IBASE_R+1:IBASE_R+WH%HM_R%DIM_HS(NI))
+          GYZ(NI)%CO%NCV_COEF=>WH%NCV_COEF(IBASE_L+1:IBASE_L+WH%HM_L%DIM_HS(NI))
+          IBASE_L=IBASE_L+WH%HM_L%DIM_HS(NI)
+          IBASE_R=IBASE_R+WH%HM_R%DIM_HS(NI)
+        ELSE
+          GYZ(NI)%CO%NKS_COEF=>GYZ(NIMAP)%CO%NKS_COEF
+          GYZ(NI)%CO%LA1_COEF=>GYZ(NIMAP)%CO%LA1_COEF
+          GYZ(NI)%CO%LA2_COEF=>GYZ(NIMAP)%CO%LA2_COEF
+          GYZ(NI)%CO%R_COEF  =>GYZ(NIMAP)%CO%R_COEF
+          GYZ(NI)%CO%NCV_COEF=>GYZ(NIMAP)%CO%NCV_COEF
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE SET_WH_HS_COEF
+!
+!****************************************************************************
+      SUBROUTINE SET_IDX_HS_RED()
+      INTEGER NI,ISUM,IBASE,IHS,IDX_HS_RED(WH%HM%DIMHST)
+!
+      ISUM=0; IBASE=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIMAP/=NI)CYCLE
+        DO IHS=1,WH%HM%DIM_HS(NI)
+          ISUM=ISUM+1
+          IDX_HS_RED(ISUM)=IBASE+IHS
+        ENDDO
+        IBASE=IBASE+WH%HM%DIM_HS(NI)
+      ENDDO
+      WH%HM%DIMHST_RED=ISUM
+      ALLOCATE(WH%HM%IDX_RED2FULL(ISUM))
+      WH%HM%IDX_RED2FULL=IDX_HS_RED(1:ISUM)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WH%HM%DIMHST=",I4," WH%HM%DIMHST_RED=",I4)')WH%HM%DIMHST,WH%HM%DIMHST_RED
+      RETURN
+!
+      END SUBROUTINE SET_IDX_HS_RED
+!
+!****************************************************************************
+      SUBROUTINE SET_IDX_HS_RED_L()
+      INTEGER NI,ISUM,IBASE,IA,IHS,IA_,IDX_HS_RED(WH%HM_L%DIMHST)
+!
+      ISUM=0; IBASE=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIMAP/=NI)CYCLE
+        DO IHS=1,WH%HM_L%DIM_HS(NI)
+          DO IA=1,WH%FZ(NI)%NSORB
+            IA_=WH%FZ(NI)%IDX_ORB(IA)
+            IF(SUM(ABS(WH%HM_L%HS(:,IA_,IHS,NI)))>1.E-6_gq.OR. &
+              &SUM(ABS(WH%HM_L%HS(IA_,:,IHS,NI)))>1.E-6_gq) GOTO 100
+          ENDDO
+          ISUM=ISUM+1
+          IDX_HS_RED(ISUM)=IBASE+IHS
+100       CONTINUE
+        ENDDO
+        IBASE=IBASE+WH%HM_L%DIM_HS(NI)
+      ENDDO
+      WH%HM_L%DIMHST_RED=ISUM
+      ALLOCATE(WH%HM_L%IDX_RED2FULL(ISUM))
+      WH%HM_L%IDX_RED2FULL=IDX_HS_RED(1:ISUM)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WH%HM_L%DIMHST=",I4," WH%HM_L%DIMHST_RED=",I4)')WH%HM_L%DIMHST,WH%HM_L%DIMHST_RED
+      RETURN
+!
+      END SUBROUTINE SET_IDX_HS_RED_L
+!
+!****************************************************************************
+      SUBROUTINE SET_IDX_HS_RED_R()
+      INTEGER NI,ISUM,IBASE,IA,IHS,IA_,IDX_HS_RED(WH%HM_R%DIMHST)
+!
+      ISUM=0; IBASE=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIMAP/=NI)CYCLE
+        DO IHS=1,WH%HM_R%DIM_HS(NI)
+          DO IA=1,WH%FZ(NI)%NSORB
+            IA_=WH%FZ(NI)%IDX_ORB(IA)
+            IF(SUM(ABS(WH%HM_R%HS(IA_,:,IHS,NI)))>1.E-6_gq) GOTO 100 ! R_{a,\alpha}
+          ENDDO
+          ISUM=ISUM+1
+          IDX_HS_RED(ISUM)=IBASE+IHS
+100       CONTINUE
+        ENDDO
+        IBASE=IBASE+WH%HM_R%DIM_HS(NI)
+      ENDDO
+      WH%HM_R%DIMHST_RED=ISUM
+      ALLOCATE(WH%HM_R%IDX_RED2FULL(ISUM))
+      WH%HM_R%IDX_RED2FULL=IDX_HS_RED(1:ISUM)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WH%HM_R%DIMHST=",I4," WH%HM_R%DIMHST_RED=",I4)')WH%HM_R%DIMHST,WH%HM_R%DIMHST_RED
+      RETURN
+!
+      END SUBROUTINE SET_IDX_HS_RED_R
+!
+!****************************************************************************
+      SUBROUTINE SET_WH_HM_MINDEX(RCUT,MB)
+			REAL(gq),INTENT(IN)::RCUT
+      TYPE (MATRIX_BASIS) :: MB
+!
+      ALLOCATE(MB%M_INDEX(3,WH%NA2MAX,WH%NA2MAX,WH%NIONS)); MB%M_INDEX=0
+      IF(ASSOCIATED(MB%M_STRUCT))THEN
+        CALL SET_WH_HM_MINDEX_STRUCT(MB)
+      ELSE
+        CALL SET_WH_HM_MINDEX_HS(RCUT,MB)
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE SET_WH_HM_MINDEX
+!
+!****************************************************************************
+      SUBROUTINE SET_WH_HM_MINDEX_HS(RCUT,MB)
+			REAL(gq),INTENT(IN)::RCUT
+      TYPE (MATRIX_BASIS) :: MB
+! LOCAL
+      INTEGER NI,NA2,IA1,IA2
+      REAL(gq) VMAX
+!
+      DO NI=1,WH%NIONS
+      NA2=GYZ(NI)%FS%NA2
+      DO IA1=1,NA2; DO IA2=1,NA2
+        VMAX=MAXVAL(ABS(MB%HS(IA1,IA2,:,NI)))
+        IF(VMAX>RCUT)THEN
+          MB%M_INDEX(1,IA1,IA2,NI)=IA1
+          MB%M_INDEX(2,IA1,IA2,NI)=IA2
+          MB%M_INDEX(3,IA1,IA2,NI)=1  ! Degeneracy
+        ENDIF
+      ENDDO; ENDDO; ENDDO
+      RETURN
+!
+      END SUBROUTINE SET_WH_HM_MINDEX_HS
+!
+!****************************************************************************
+      SUBROUTINE SET_WH_HM_MINDEX_STRUCT(MB)
+      TYPE (MATRIX_BASIS) :: MB
+! LOCAL      
+      INTEGER NI,NA2,IA1,IA2,NMAX,IS
+      INTEGER,ALLOCATABLE::COORD(:,:)
+      REAL(gq) VMAX
+!
+      NMAX=MAXVAL(MB%M_STRUCT)
+      ALLOCATE(COORD(2,NMAX))
+      DO NI=1,WH%NIONS
+      NA2=GYZ(NI)%FS%NA2
+      COORD=0
+      DO IA1=1,NA2; DO IA2=1,NA2
+        IS=MB%M_STRUCT(IA1,IA2,NI)
+        IF(IS==0)CYCLE
+        IF(COORD(1,IS)==0)THEN
+          COORD(1,IS)=IA1; COORD(2,IS)=IA2
+        ENDIF
+        MB%M_INDEX(1:2,IA1,IA2,NI)=COORD(:,IS)
+        MB%M_INDEX(3,COORD(1,IS),COORD(2,IS),NI)=MB%M_INDEX(3,COORD(1,IS),COORD(2,IS),NI)+1
+      ENDDO; ENDDO; ENDDO
+      DEALLOCATE(COORD)
+      RETURN
+!
+      END SUBROUTINE SET_WH_HM_MINDEX_STRUCT
+!
+!****************************************************************************
+      SUBROUTINE UPDATE_MIX_R()
+      COMPLEX(gq) :: R_OLD(WH%NA2MAX,WH%NA2MAX,WH%NIONS),R_DIF(WH%NA2MAX,WH%NA2MAX,WH%NIONS)
+!
+      R_OLD=WH%R
+      CALL UPDATE_R_ALL()
+      R_DIF=WH%R-R_OLD
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX R DIFF=",F14.8)')MAXVAL(ABS(R_DIF))
+      WH%R=R_OLD+GL%RMIX_A*R_DIF
+      CALL HM_EXPAND_ALL('RAA'); CALL HM_EXPAND_BACK_ALL('RAA') 
+      RETURN
+!
+      END SUBROUTINE UPDATE_MIX_R
+!
+!****************************************************************************
+      SUBROUTINE TRANS_N2N_FAST_INDEX(LSFAST)
+      LOGICAL :: LSFAST
+! LOCAL
+      INTEGER NI,NA2
+!
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2
+        CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%N2N,NA2,NA2,LSFAST,BND%ISO,LURIGHT=.TRUE.) ! Additional transformation.
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE TRANS_N2N_FAST_INDEX
+!
+!****************************************************************************
+      SUBROUTINE EVAL_SL_VEC_ALL(MODE)
+      INTEGER MODE
+! LOCAL     
+      INTEGER NI
+      CHARACTER NAME_*12
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      IF(MODE==1)THEN
+        NAME_='VARIATIONAL'
+      ELSE
+        NAME_='PHYSICAL'
+      ENDIF
+      IF(.NOT.WH%LCALC_LS)RETURN
+      DO NI=1,WH%NIONS
+        CALL EVAL_CO_SL_VEC(GYZ(NI)%CO,MODE)
+        WRITE(GL%IO,'(" NI =",I4," S_XYZ(",A12,") =",3F12.5)')NI,NAME_, &
+             &GYZ(NI)%CO%S_VAL(:,MODE)
+        WRITE(GL%IO,'("     ",4X," L_XYZ(",A12,") =",3F12.5)')NAME_, &
+             &GYZ(NI)%CO%L_VAL(:,MODE)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE EVAL_SL_VEC_ALL
+!
+!****************************************************************************
+      SUBROUTINE UPDATE_R_ALL()
+      INTEGER NI,NIMAP,I
+      REAL :: TA1,TA2,TB1,TB2; INTEGER TIB1,TIB2,TIRATE
+!
+      !"UPDATE_R_ALL"
+      CALL CPU_TIME(TA1); CALL SYSTEM_CLOCK(TIB1,TIRATE); TB1=REAL(TIB1,4)/REAL(TIRATE,4)
+      WH%R=0; WH%R0=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.EQ.NI)THEN
+          CALL CALC_R(GYZ(NI)%CO,GYZ(NI)%PJ)
+        ELSE
+          GYZ(NI)%CO%R =GYZ(NIMAP)%CO%R
+          GYZ(NI)%CO%R0=GYZ(NIMAP)%CO%R0
+        ENDIF
+      ENDDO
+      CALL ZSUM_ALL_MPI(WH%R ,WH%NA2MAX*WH%NA2MAX*WH%NIONS)
+      CALL ZSUM_ALL_MPI(WH%R0,WH%NA2MAX*WH%NA2MAX*WH%NIONS)
+      CALL ZOUT_MAT('R0-OUT',WH%R0,GL%IO)
+      CALL ZOUT_MAT('R-OUT',WH%R,GL%IO)
+      CALL HM_EXPAND_ALL('RAA'); CALL HM_EXPAND_BACK_ALL('RAA')
+      CALL ZOUT_MAT('R-OUT-SYM',WH%R,GL%IO)
+      DO NI=1,WH%NIONS
+        GYZ(NI)%CO%Z=MATMUL(GYZ(NI)%CO%R,CONJG(TRANSPOSE(GYZ(NI)%CO%R)))
+      ENDDO
+      CALL ZOUT_MAT('RR\dagger',WH%Z,GL%IO)
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%Z,'RR\dagger','N',0)
+        CALL CHK_MATRIX_TRANS('RR\dagger_T',WH%Z,GL%IO,.TRUE.)
+      ENDIF
+      DO NI=1,WH%NIONS
+        GYZ(NI)%CO%Z=MATMUL(CONJG(TRANSPOSE(GYZ(NI)%CO%R)),GYZ(NI)%CO%R)
+      ENDDO
+      CALL ZOUT_MAT('R\daggerR',WH%Z,GL%IO)
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%Z,'R\daggerR','N',0)
+        CALL CHK_MATRIX_TRANS('R\daggerR_T',WH%Z,GL%IO,.TRUE.)
+      ENDIF
+      CALL CPU_TIME(TA2); CALL SYSTEM_CLOCK(TIB2,TIRATE); TB2=REAL(TIB2,4)/REAL(TIRATE,4)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL OUT_TIME_USE('UPDATE_R_ALL',TA2-TA1,TB2-TB1,GL%IO)
+      IF(GL%LSCF.EQ.-11)STOP
+      !"UPDATE_R_ALL"
+      RETURN
+!
+      END SUBROUTINE UPDATE_R_ALL
+!
+!****************************************************************************
+      SUBROUTINE CALC_LA(MODE)
+      INTEGER,INTENT(IN) :: MODE
+! LOCAL
+      INTEGER NI
+!
+      DO NI=1,WH%NIONS
+        CALL CALC_CO_LA(GYZ(NI)%CO,GL%LDC,MODE)
+      ENDDO
+      IF(MODE==2)THEN
+        CALL HM_EXPAND_ALL('LA2'); CALL HM_EXPAND_BACK_ALL('LA2')
+        CALL ZOUT_MAT('LA2-SYM',WH%LA2,GL%IO)
+        IF(GL%LCHKLOC>0)THEN
+          CALL CHK_EIGS_ANN(WH%LA2,'LA2-SYM','N',0)
+        ENDIF
+      ELSE
+        CALL HM_EXPAND_ALL('LA1'); CALL HM_EXPAND_BACK_ALL('LA1')
+        CALL ZOUT_MAT('LA1-SYM',WH%LA1,GL%IO)
+        IF(GL%LCHKLOC>0)THEN
+          CALL CHK_EIGS_ANN(WH%LA1,'LA1-SYM','N',0)
+        ENDIF
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_LA
+!
+!****************************************************************************
+      SUBROUTINE CALC_ENG(MODE)
+      INTEGER,INTENT(IN) :: MODE
+!
+      CALL CALC_ONSITE(MODE)
+      CALL CALC_EDBL(MODE)
+      IF(GL%LMODEL==0)THEN
+        CALL CALC_EBND()
+      ELSE
+        ENG%BAND=0
+      ENDIF
+      CALL CALC_E_HYBRD()
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%HYBRD:",F12.5)')ENG%HYBRD
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%BAND:",F12.5)')ENG%BAND
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%TS2 :",F12.5)')ENG%TS2
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%DL(DEEP LEVEL):",F12.5)')ENG%DL
+      ENG%DIFF=ENG%BAND+ENG%DBLC+ENG%GAMM-ENG%TB
+      ENG%TB=ENG%BAND+ENG%DBLC+ENG%GAMM
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" E_TWO_BODY(INTERACTION-D.C.)=",F12.5)')ENG%POT2+ENG%DC2
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" E_ONE_BODY(E_TOT-E_TWO_BODY)=",F12.5)')ENG%TB-(ENG%POT2+ENG%DC2)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%TB(ENG%BAND+ENG%DBLC+ENG%GAMM)=",F12.5)')ENG%TB
+      IF(GL%ITER1>1)THEN
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%TB CHANGE =",F12.5)')ENG%DIFF
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_ENG
+!
+!****************************************************************************
+      SUBROUTINE WRT_PROJ_C()
+      INTEGER NI,NIMAP
+!
+      ! "WRT_PROJ_C"
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        CALL DUMP_PJ_C(GYZ(NI)%PJ,NI)
+        IF(GL%LPJC==1)THEN
+          CALL DUMP_PJ_C01(GYZ(NI)%PJ,NI)
+        ENDIF
+      ENDDO
+      ! "WRT_PROJ_C"
+!
+      END SUBROUTINE WRT_PROJ_C
+!
+!****************************************************************************
+      SUBROUTINE GH5_WRT_ANNIHI_OP()
+      INTEGER NI, NIMAP, I
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      ! "GH5_WRT_ANNIHI_OP"
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        do i = 1, GYZ(NI)%co%dim2
+          CALL gh5_write_compound(GYZ(NI)%FS%C(i),"/Impurity_"// &
+              &TRIM(int_to_str(NI))//"/annihi.op._"// &
+              &TRIM(int_to_str(i)), log_file_id)
+        enddo
+      ENDDO
+      ! "GH5_WRT_ANNIHI_OP"
+!
+      END SUBROUTINE GH5_WRT_ANNIHI_OP
+!
+!****************************************************************************
+! Calculate reduced local configuration density matrix 
+!****************************************************************************
+      SUBROUTINE CALC_PJRHO(MODE)
+      INTEGER MODE
+!      
+      INTEGER NI,NIMAP
+!
+      ! "CALC_PJRHO"
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        IF(MODE>0.OR.GYZ(NI)%PJ%U_KKH%NROW==0)THEN
+          CALL CALC_PJ_RHO(GYZ(NI)%HL,GYZ(NI)%PJ,MODE)
+        ENDIF
+        IF(MODE>0)THEN
+          IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write_compound(GYZ(NI)%HL%RHO, &
+              &"/Impurity_"//TRIM(int_to_str(NI))//"/RHO", log_file_id)
+          CALL OUT_LOCAL_DBOCC1(GYZ(NI)%FS,GYZ(NI)%HL,GL%IO,GL%LIADBOCC)
+          CALL OUT_LOCAL_CURRENT1(GYZ(NI)%FS,GYZ(NI)%HL,GL%IO,GL%LCURRENT)
+        ENDIF
+      ENDDO
+      ! "CALC_PJRHO"
+      RETURN
+!
+      END SUBROUTINE CALC_PJRHO
+!
+!****************************************************************************
+      SUBROUTINE OUT_SEC_ALL()
+      INTEGER NI,NIMAP,NT
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      NT=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        IF(NT==GYZ(NI)%HL%NT)CYCLE
+        NT=GYZ(NI)%HL%NT
+        CALL OUT_SEC_A(GL%IO,GYZ(NI)%HL%SEC_N,'SEC_N ',1)
+        SELECT CASE (GL%LGPRJ)
+        CASE(1,2,21)
+          CALL OUT_SEC_A(GL%IO,GYZ(NI)%HL%SEC_J,'SEC_J ',2)
+        CASE(3)
+          CALL OUT_SEC_A(GL%IO,GYZ(NI)%HL%SEC_J,'SEC_S ',2)
+        CASE(4)
+          CALL OUT_SEC_A(GL%IO,GYZ(NI)%HL%SEC_J,'SEC_J ',1)
+        END SELECT
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE OUT_SEC_ALL
+!
+!******************************************************************************
+      SUBROUTINE DUMP_V2AO_ALL()
+      INTEGER NT
+!
+      OPEN(GL%IU,FILE='V2AO.OUT',STATUS='REPLACE')
+      DO NT=1,WH%NTYP
+        CALL WRITE_V2AO(GYS(NT)%CO,NT,GL%IU)
+        DEALLOCATE(GYS(NT)%CO%V2AO)
+      ENDDO
+      CLOSE(GL%IU)
+      RETURN
+!
+      END SUBROUTINE DUMP_V2AO_ALL
+!
+!******************************************************************************
+      SUBROUTINE DUMP_V2H_ALL_TEXT()
+      INTEGER NT
+!
+      OPEN(GL%IU,FILE='V2H.OUT',STATUS='REPLACE')
+      DO NT=1,WH%NTYP
+        CALL WRITE_V2H(GYS(NT)%CO,NT,GL%IU)
+      ENDDO
+      CLOSE(GL%IU)
+      RETURN
+!
+      END SUBROUTINE DUMP_V2H_ALL_TEXT
+!
+!******************************************************************************
+      SUBROUTINE GH5_WRT_V2H_ALL()
+      INTEGER NI, NIMAP, NA2
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      DO NI=1,WH%NIONS
+        NIMAP = GYZ(NI)%HL%NIMAP; IF (NIMAP .NE. NI) CYCLE
+        NA2 = GYZ(NI)%CO%DIM2
+        CALL gh5_write(GYZ(NI)%CO%V2H, NA2, NA2, NA2, NA2, "/Impurity_"// &
+            &TRIM(int_to_str(NI))//"/Two_body_local", log_file_id)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE GH5_WRT_V2H_ALL
+!
+!******************************************************************************
+      SUBROUTINE GH5_WRT_LOCAL_DMATRIX(A, postfix)
+      REAL(gq) A(:,:,:)
+      character(*) postfix
+! LOCAL
+      INTEGER NI, NIMAP, NA2
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      DO NI=1,WH%NIONS
+        NIMAP = GYZ(NI)%HL%NIMAP; IF (NIMAP .NE. NI) CYCLE
+        NA2 = GYZ(NI)%CO%DIM2
+        CALL gh5_write(a(1:na2, 1:na2, ni), NA2, NA2, "/Impurity_"//&
+            &TRIM(int_to_str(NI))//postfix, log_file_id)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE GH5_WRT_LOCAL_DMATRIX
+!
+!******************************************************************************
+      SUBROUTINE GH5_WRT_LOCAL_ZMATRIX(A, postfix)
+      COMPLEX(gq) A(:,:,:)
+      character(*) postfix
+! LOCAL
+      INTEGER NI, NIMAP, NA2
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      DO NI=1,WH%NIONS
+        NIMAP = GYZ(NI)%HL%NIMAP; IF (NIMAP .NE. NI) CYCLE
+        NA2 = GYZ(NI)%CO%DIM2
+        CALL gh5_write(a(1:na2, 1:na2, ni), NA2, NA2, "/Impurity_"//&
+            &TRIM(int_to_str(NI))//postfix, log_file_id)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE GH5_WRT_LOCAL_ZMATRIX
+!
+!****************************************************************************
+      SUBROUTINE CALC_RED_VSP()
+      INTEGER NI,NIMAP
+!
+      IF(GL%LSCF/=107)RETURN
+      ! "CALC_RED_VSP"
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        ALLOCATE(GYZ(NI)%HL%RHO_EV(GYZ(NI)%HL%RHO%DIM))
+        CALL ZBM_EIGENSYS(GYZ(NI)%HL%RHO,GYZ(NI)%HL%RHO_EV,-1)
+        CALL CALC_RED_EVECNJ(GYZ(NI)%HL,GL%RHO_CUT)
+        CALL SEC1_SIMPLIFY(GYZ(NI)%HL%SEC_J)
+        IF(GL%LGPRJ==11.OR.GL%LGPRJ==14.OR.GL%LGPRJ==15)THEN
+          CALL ALLOC_ZBM(GYZ(NI)%HL%EVEC,GYZ(NI)%HL%SEC_N%DIM,GYZ(NI)%HL%SEC_N%ID,0,0)
+          CALL SET_IDEN_ZBM(GYZ(NI)%HL%EVEC)
+        ENDIF
+        CALL ZBM_AXB(GYZ(NI)%HL%EVEC,GYZ(NI)%HL%RHO)
+        CALL ZBM_DUMP(GYZ(NI)%HL%EVEC,NI,0,0,16)
+        CALL DUMP_SEC1(GYZ(NI)%HL%SEC_N,NI,17)
+        CALL DUMP_SEC1(GYZ(NI)%HL%SEC_J,NI,18)
+      ENDDO
+      ! "CALC_RED_VSP"
+      RETURN
+!
+      END SUBROUTINE CALC_RED_VSP
+!
+!****************************************************************************
+      SUBROUTINE CALC_FSP0()
+      INTEGER NI,NIMAP
+!
+      ! "CALC_FSP0"
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        CALL CALC_P0_FS(GYZ(NI)%CO,GYZ(NI)%FS,GYZ(NI)%HL)
+      ENDDO
+      ! "CALC_FSP0"
+      RETURN
+!
+      END SUBROUTINE CALC_FSP0
+!
+!****************************************************************************
+      SUBROUTINE CLR_PROJ()
+      INTEGER NI,NIMAP
+!
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        IF(GYZ(NI)%PJ%LSET_MNSV)THEN
+          CALL CLR_PJ(GYZ(NI)%CO,GYZ(NI)%PJ)
+        ELSE
+          NULLIFY(GYZ(NI)%PJ%MKKP,GYZ(NI)%PJ%NVAR_KKP)
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE CLR_PROJ
+!
+!****************************************************************************
+! Calculate reduced configuration weight
+!****************************************************************************
+      SUBROUTINE CALC_RCW()
+      INTEGER NI,NIMAP,I,NMAX
+      INTEGER,POINTER  :: NDIM(:),NF(:,:)
+      REAL(gq),POINTER :: CWN(:,:)
+!
+      ! "CALC_RCW"
+      NMAX=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        NMAX=MAX(NMAX,GYZ(NI)%HL%SEC_N%DIM)
+      ENDDO
+      CALL IMAX1_ALL_MPI(NMAX)
+      ALLOCATE(NDIM(WH%NIONS),NF(NMAX,WH%NIONS),CWN(NMAX,WH%NIONS))
+      NDIM=0; NF=0; CWN=0
+!
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        NDIM(NI)=GYZ(NI)%HL%SEC_N%DIM
+        CALL CALC_OCC_CONFIG_WT(GYZ(NI)%HL)
+        NF(1:NDIM(NI),NI)=NINT(GYZ(NI)%HL%SEC_N%VAL)
+        CWN(1:NDIM(NI),NI)=GYZ(NI)%HL%CW_N
+      ENDDO
+!
+      CALL ISUM_MASTER_MPI(NF,WH%NIONS*NMAX)
+      CALL ISUM_MASTER_MPI(NDIM,WH%NIONS)
+      CALL DSUM_MASTER_MPI(CWN,NMAX*WH%NIONS)
+      DO NI=1,WH%NIONS
+        NIMAP=GYZ(NI)%HL%NIMAP; IF(NIMAP.NE.NI)CYCLE
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," OCC_CONFIG_WEIGHT:")')NI
+        DO I=1,NDIM(NI)
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(8X,"OCC=",I2," WEIGHT=",F10.5)')NF(I,NI),CWN(I,NI)
+          IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(CWN(I,NI), "/Impurity_"//TRIM(int_to_str(NI))// &
+              &"/weight_nf_"//TRIM(int_to_str(NF(I,NI))), log_file_id)
+        ENDDO
+      ENDDO
+      DEALLOCATE(NDIM,NF,CWN)
+      ! "CALC_RCW"
+      RETURN
+!
+      END SUBROUTINE CALC_RCW
+!
+!****************************************************************************
+! Calculate entanglement entropy
+!****************************************************************************
+      SUBROUTINE CALC_ENTANGLES()
+      INTEGER NI,NIMAP
+      REAL(gq),ALLOCATABLE::ENS(:)
+!
+      ! "CALC_ENTANGLES"
+      ALLOCATE(ENS(WH%NIONS)); ENS=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.NE.NI)CYCLE
+        CALL CALC_ENS(GYZ(NI)%HL,ENS(NI))
+      ENDDO
+      CALL DSUM_MASTER_MPI(ENS,WH%NIONS)
+      DO NI=1,WH%NIONS
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.NE.NI)CYCLE
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," ENTANGLEMENT ENTROPY=",F12.4)')NI,ENS(NI)
+      ENDDO
+      DEALLOCATE(ENS)
+      ! "CALC_ENTANGLES"
+      RETURN
+!
+      END SUBROUTINE CALC_ENTANGLES
+!
+!****************************************************************************
+      SUBROUTINE CALC_PROJENS()
+      INTEGER NI,NIMAP
+      REAL(gq) S_MIX
+      REAL(gq),ALLOCATABLE::ENS(:)
+!
+      ! "CALC_PROJENS"
+      ALLOCATE(ENS(WH%NIONS)); ENS=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.NE.NI)CYCLE
+        CALL CALC_PROJ_ENS(GYZ(NI)%HL)
+        ENS(NI)=GYZ(NI)%HL%PJ_ENS
+      ENDDO
+      CALL DSUM_MASTER_MPI(ENS,WH%NIONS)
+      DO NI=1,WH%NIONS
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP==NI)THEN
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," PROJECTION ENTROPY=",F12.4)')NI,ENS(NI)
+        ELSE
+          ENS(NI)=ENS(NIMAP)
+        ENDIF
+      ENDDO
+      IF(KPT%ISMEAR/=-1)THEN
+        S_MIX=0
+      ELSE
+        S_MIX=-ENG%TS2/KPT%DELTA
+      ENDIF
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" TOTAL PROJECTION ENTROPY=",F12.4," MERMIN ENTROPY=",F12.4)')SUM(ENS),S_MIX
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" TOTAL ELECTRONIC ENTROPY=",F12.4)')SUM(ENS)+S_MIX
+      DEALLOCATE(ENS)
+      ! "CALC_PROJENS"
+      RETURN
+!
+      END SUBROUTINE CALC_PROJENS
+!
+!****************************************************************************
+      SUBROUTINE CALC_ECOMP_1K(HK0,VK,FERWE,NBANDS,WTK,WTK0,ISP)
+      INTEGER,INTENT(IN)     :: NBANDS,ISP
+      REAL(gq),INTENT(IN)    :: WTK,WTK0,FERWE(NBANDS)
+      COMPLEX(gq),INTENT(IN) :: HK0(NBANDS,NBANDS),VK(NBANDS,NBANDS)
+! LOCAL
+      INTEGER IA
+      INTEGER NASOT
+      COMPLEX(gq),ALLOCATABLE :: NABR(:,:)
+!
+      ALLOCATE(NABR(NBANDS,NBANDS)); NABR=0
+      CALL CALC_NABR_1K(NABR,VK,FERWE,NBANDS,WTK,WTK0,ISP)
+      NABR=NABR*HK0
+      NASOT=BND%NASOTOT
+      DO IA=1,NASOT; WH%TFC(IA,ISP)=WH%TFC(IA,ISP)+SUM(NABR(IA,NASOT+1:))*2; ENDDO
+      WH%TFF(:,:,ISP)=WH%TFF(:,:,ISP)+NABR(1:NASOT,1:NASOT)
+      WH%TCC=WH%TCC+SUM(NABR(1+NASOT:,1+NASOT:))
+      DEALLOCATE(NABR)
+      RETURN
+!
+      END SUBROUTINE CALC_ECOMP_1K
+!
+!****************************************************************************
+! For energy component analysis
+! f_n <Psi_n|a> R_{a,A} R^+_{B,b} <b|Psi_n> 
+!=R^+_{B,b} <b|Psi_n> f_n <Psi_n|a> R_{a,A}
+!****************************************************************************
+      SUBROUTINE CALC_NABR_1K(NABR,VK,FERWE,NBANDS,WTK,WTK0,ISP)
+      INTEGER,INTENT(IN)        :: NBANDS,ISP
+      REAL(gq),INTENT(IN)       :: WTK,WTK0,FERWE(NBANDS)
+      COMPLEX(gq),INTENT(IN)    :: VK(NBANDS,NBANDS)
+      COMPLEX(gq),INTENT(INOUT) :: NABR(NBANDS,NBANDS)
+! LOCAL
+      INTEGER IA,NASOT
+      COMPLEX(gq) R(BND%NASOTOT,BND%NASOTOT)
+!
+      CALL CALC_NABR1_1K(NABR,VK,FERWE,NBANDS,WTK,ISP) ! R^+ <b|psi>f<psi|a>
+      NASOT=BND%NASOTOT
+      R=BND%R(:,:,ISP)
+      CALL ANMXBMM('N',NABR(:,1:NASOT),R,NBANDS,NASOT) ! R^+ <b|psi>f<psi|a> R  (B,A)
+      NABR=TRANSPOSE(NABR) ! (A,B)
+      NABR(1:NASOT,1:NASOT)=NABR(1:NASOT,1:NASOT)+(-BND%NRL(:,:,ISP)+BND%NC_PHY(:,:,ISP))*WTK0
+      RETURN
+!
+      END SUBROUTINE CALC_NABR_1K
+!
+!****************************************************************************
+! R^+ applied to right side only, for D
+! R^+ <b|psi>f<psi|a>
+!****************************************************************************
+      SUBROUTINE CALC_NABR1_1K(NABR,VK,FERWE,NBANDS,WTK,ISP)
+      INTEGER,INTENT(IN)        :: NBANDS,ISP
+      REAL(gq),INTENT(IN)       :: WTK,FERWE(NBANDS)
+      COMPLEX(gq),INTENT(IN)    :: VK(NBANDS,NBANDS)
+      COMPLEX(gq),INTENT(INOUT) :: NABR(NBANDS,NBANDS)
+! LOCAL
+      INTEGER NASOT
+      COMPLEX(gq) ZR(BND%NASOTOT,BND%NASOTOT)
+!
+      CALL CALC_NAB_1K(NABR,VK,FERWE,NBANDS,WTK)
+      NASOT=BND%NASOTOT
+      ZR=BND%R(:,:,ISP)
+      CALL ANNXB('C',ZR,NABR(1:NASOT,:),NASOT,NBANDS) ! R^+ <b|psi>f<psi|a>
+      RETURN
+!
+      END SUBROUTINE CALC_NABR1_1K
+!
+!****************************************************************************
+      SUBROUTINE CALC_NAB_1K(NAB,VK,FERWE,NBANDS,WTK)
+      INTEGER,INTENT(IN)      :: NBANDS
+      REAL(gq),INTENT(IN)     :: WTK,FERWE(NBANDS)
+      COMPLEX(gq),INTENT(IN)  :: VK(NBANDS,NBANDS)
+      COMPLEX(gq),INTENT(OUT) :: NAB(NBANDS,NBANDS)
+! LOCAL
+      INTEGER IB
+      COMPLEX(gq),ALLOCATABLE::VF(:,:)
+!
+      NAB=0
+      ALLOCATE(VF(NBANDS,NBANDS))
+      DO IB=1,NBANDS; VF(:,IB)=VK(:,IB)*FERWE(IB)*WTK; ENDDO
+      CALL ZGEMM('N','C',NBANDS,NBANDS,NBANDS,Z1,VF,NBANDS,VK,NBANDS,Z0,NAB,NBANDS) ! <b|psi>f<psi|a>
+      DEALLOCATE(VF)
+      RETURN
+!
+      END SUBROUTINE CALC_NAB_1K
+!
+!****************************************************************************
+! Calc converged onsite terms
+!****************************************************************************
+      SUBROUTINE CALC_ONSITE(MODE)
+      INTEGER,INTENT(IN) :: MODE
+! LOCAL
+      INTEGER NI,NIMAP
+!
+      GYZ(:)%HL%EGAMM=0; GYZ(:)%HL%EPOT2=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.EQ.NI)THEN
+          CALL CALC_EGAMM(GYZ(NI)%HL,GYZ(NI)%PJ)
+          IF(MODE>0)THEN
+            IF(GYZ(NI)%PJ%U_KKH%NROW>0)THEN
+              CALL DEALLOC_ZCSR(GYZ(NI)%PJ%U_KKH)
+            ENDIF
+            IF(GYZ(NI)%PJ%LMCFLY>0)THEN
+              CALL ZBM_LOAD(GYZ(NI)%HL%U,NI,0,0,1)
+            ENDIF
+            CALL CALC_UPOT (GYZ(NI)%HL)
+            IF(GYZ(NI)%HL%U%DIM>0)THEN
+              CALL DEALLOC_ZBM(GYZ(NI)%HL%U)
+            ENDIF
+          ENDIF
+        ELSE
+          GYZ(NI)%HL%EGAMM=GYZ(NIMAP)%HL%EGAMM
+          GYZ(NI)%HL%EPOT2=GYZ(NIMAP)%HL%EPOT2
+        ENDIF
+      ENDDO
+      CALL DSUM_ALL_MPI(GYZ(:)%HL%EGAMM,WH%NIONS)
+      CALL DSUM_ALL_MPI(GYZ(:)%HL%EPOT2,WH%NIONS)
+      ENG%GAMM=SUM(GYZ(:)%HL%EGAMM); ENG%POT2=SUM(GYZ(:)%HL%EPOT2)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" GYZ%HL%EGAMM:")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(10F12.5)')GYZ(:)%HL%EGAMM
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%GAMM:",F12.5)')ENG%GAMM
+      IF(MODE>0)THEN
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%POT2:",F12.5)')ENG%POT2
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(ENG%GAMM, "/E_GAMMA", log_file_id)
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(ENG%POT2, "/E_POT2_U", log_file_id)
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_ONSITE
+!
+!****************************************************************************
+! Calc physical occupations
+!****************************************************************************
+      SUBROUTINE CALC_NCPHY()
+      INTEGER NI,NIMAP
+      REAL :: TA1,TA2,TB1,TB2; INTEGER TIB1,TIB2,TIRATE
+!
+      CALL CPU_TIME(TA1); CALL SYSTEM_CLOCK(TIB1,TIRATE); TB1=REAL(TIB1,4)/REAL(TIRATE,4)
+      ! "CALC_NCPHY"
+      WH%NC_PHY=0
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.EQ.NI)THEN
+          CALL CALC_NCPHY_CO(GYZ(NI)%FS,GYZ(NI)%HL,GYZ(NI)%CO)
+        ELSE
+          GYZ(NI)%CO%NC_PHY=GYZ(NIMAP)%CO%NC_PHY
+        ENDIF
+      ENDDO
+      CALL ZSUM_ALL_MPI(WH%NC_PHY,WH%NA2MAX*WH%NA2MAX*WH%NIONS)
+      CALL ZOUT_MAT('NCP-UNSYM',WH%NC_PHY,GL%IO,1)
+      WH%COPY=WH%NC_PHY
+      CALL HM_EXPAND_ALLSYM("NCP")
+      CALL ZOUT_MAT('NCP-SYM',WH%NC_PHY,GL%IO,1)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX ERROR DUE TO SYMMETRIZATION = ",F12.6)')MAXVAL(ABS(WH%NC_PHY-WH%COPY))
+      CALL RENORM_NCPHY()
+      CALL MAP_WH_BND_R(WH%NC_PHY,BND%NC_PHY,.FALSE.)
+      CALL ZOUT_MAT('NCP_RENORM',WH%NC_PHY,GL%IO,1)
+      ! "CALC_NCPHY"
+      CALL CPU_TIME(TA2); CALL SYSTEM_CLOCK(TIB2,TIRATE); TB2=REAL(TIB2,4)/REAL(TIRATE,4)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL OUT_TIME_USE('CALC_NCPHY',TA2-TA1,TB2-TB1,GL%IO)
+      RETURN
+!
+      END SUBROUTINE CALC_NCPHY
+!
+!****************************************************************************
+! Renormalize NC_PHY
+!****************************************************************************
+      SUBROUTINE RENORM_NCPHY()
+      INTEGER NI
+      REAL(gq) SUM_KS,SUM_PHY,SUM_VAR
+!
+      DO NI=1,WH%NIONS
+        CALL TRACE_A(GYZ(NI)%CO%NKS   , GYZ(NI)%CO%DIM2, SUM_KS)
+        CALL TRACE_A(GYZ(NI)%CO%NC_PHY, GYZ(NI)%CO%DIM2, SUM_PHY)
+        CALL TRACE_A(GYZ(NI)%CO%NC_VAR, GYZ(NI)%CO%DIM2, SUM_VAR)
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," SUM_PHY-SUM_VAR=",F16.8                          )')NI,SUM_PHY-SUM_VAR
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(7X       ," SUM_PHY-SUM_KS =",F16.8," WOULD BE RENORMALIZED!")')   SUM_PHY-SUM_KS
+        GYZ(NI)%CO%NC_PHY=GYZ(NI)%CO%NC_PHY/SUM_PHY*SUM_KS ! Renormalized
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE RENORM_NCPHY
+!
+!****************************************************************************
+! Calc double counting energy
+!****************************************************************************
+      SUBROUTINE CALC_EDBL(MODE)
+      INTEGER,INTENT(IN) :: MODE
+! LOCAL
+      INTEGER NI
+      REAL(gq) UB,JB,NT,EDC2V
+!
+      DO NI=1,WH%NIONS
+        CALL CALC_CO_EDCLA1(GYZ(NI)%CO)
+      ENDDO
+      IF(GL%LDC.NE.0)THEN
+        DO NI=1,WH%NIONS
+          CALL CALC_CO_EDCUJ(GYZ(NI)%CO,GL%LDC)
+        ENDDO
+      ENDIF
+!
+      GYZ(:)%CO%EDC=GYZ(:)%CO%EDCLA1+GYZ(:)%CO%EDCUJ
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" EDCLA1(NI) ARRAY:")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(10F10.3)') GYZ(:)%CO%EDCLA1
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" EDCUJ(NI) ARRAY:")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(10F10.3)') GYZ(:)%CO%EDCUJ
+      IF(GL%LDC.EQ.2.OR.GL%LDC.EQ.12)THEN
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" EDCUJV(NI) ARRAY:")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(10F10.3)') GYZ(:)%CO%EDCUJV
+      ENDIF
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" EDC(NI) ARRAY:")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(10F10.3)') GYZ(:)%CO%EDC
+      ENG%DBLC=SUM(GYZ(:)%CO%EDC)
+      ENG%DC1 =SUM(GYZ(:)%CO%EDCLA1)
+      ENG%DC2 =SUM(GYZ(:)%CO%EDCUJ)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%DBLC:",F12.5)')ENG%DBLC
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%DC1 :",F12.5)')ENG%DC1
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%DC2 :",F12.5)')ENG%DC2
+      IF(MODE>0)THEN
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL gh5_write(ENG%DC2, "/E_DC2_U", log_file_id)
+      ENDIF
+      IF(GL%LDC.EQ.2.OR.GL%LDC.EQ.12)THEN
+      EDC2V=SUM(GYZ(:)%CO%EDCUJV)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ENG%DC2V:",F12.5)')EDC2V
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" DC_E_STD_TO_E_V:",F12.5)')EDC2V-ENG%DC2
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_EDBL
+!
+!****************************************************************************
+      SUBROUTINE CALC_DA0()
+      INTEGER I
+!
+      BND%R=0._gq
+      DO I=1,BND%NASOTOT; BND%R(I,I,:)=1._gq; ENDDO
+      CALL CALC_DA_BND()
+      RETURN
+!
+      END SUBROUTINE CALC_DA0
+!
+!****************************************************************************
+      SUBROUTINE CALC_DA0_PP()
+      INTEGER I
+!
+      CALL MAP_WH_BND_R(WH%D0,BND%D0,.TRUE.)
+! CMR3 begin
+      IF(GL%LFUNR==1)THEN
+        WH%D0=WH%D0*WH%PFPR
+      ENDIF
+! CMR3 end
+      CALL ZOUT_MAT('D0-UNSYM',WH%D0,GL%IO)
+      WH%COPY=WH%D0
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%D0,'D0-UNSYM','N',-1)
+      ENDIF
+      IF(SYM%MODE==10)THEN
+        CALL PAWSYM_ANN(WH%D0)
+        CALL ZOUT_MAT('D0-PAWSYM',WH%D0,GL%IO,1)
+      ENDIF
+      CALL HM_EXPAND_ALLSYM("DA0")
+      CALL ZOUT_MAT('D0-SYM',WH%D0,GL%IO)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX ERROR DUE TO SYMMETRIZATION = ",F12.6)')MAXVAL(ABS(WH%D0-WH%COPY))
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%D0,'D0-SYM','N',-1)
+        CALL CHK_MATRIX_TRANS('D0-SYMT',WH%D0,GL%IO,.TRUE.)
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_DA0_PP
+!
+!****************************************************************************
+      SUBROUTINE CALC_DA()
+!
+      IF(GL%LGREEN==0)THEN
+        CALL CALC_DA_BND()
+      ELSE
+        CALL CALC_DA_GREEN(GL%LGREEN)
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_DA
+!
+!****************************************************************************
+      SUBROUTINE CALC_DA_PP()
+!
+      CALL CALC_DA0_PP()
+      CALL D0_TO_D()
+      CALL ZOUT_MAT('D-SYM',WH%D,GL%IO)
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%D,'D-SYM','N',-1)
+        CALL CHK_MATRIX_TRANS('D-SYMT',WH%D,GL%IO,.TRUE.)
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_DA_PP
+!
+!****************************************************************************
+      SUBROUTINE CALC_DA_GREEN(MODE)
+      INTEGER,INTENT(IN) :: MODE
+! LOCAL
+      INTEGER I,NI,NSPIN,NASO
+      COMPLEX(gq),ALLOCATABLE::MU(:,:,:)
+!
+      NSPIN=BND%NSPIN
+      DO NI=1,WH%NIONS
+        NASO=GYZ(NI)%CO%DIMSO
+        IF(GF%WTYP==0)THEN
+          IF(MODE==1)THEN
+            ALLOCATE(MU(NASO,NASO,NSPIN)); MU=GYZ(NI)%CO%LB1+GYZ(NI)%CO%ETB
+            DO I=1,NASO; MU(I,I,:)=MU(I,I,:)-BND%EF; ENDDO
+            CALL GREEN_DA(GYZ(NI)%CO%GF,MU,GYZ(NI)%CO%RB,GYZ(NI)%CO%DB)
+            DEALLOCATE(MU)
+          ELSE
+            CALL GREEN_DA2(GYZ(NI)%CO%GF,GYZ(NI)%CO%RB,GYZ(NI)%CO%DB,BND%EF)
+          ENDIF
+        ELSEIF(GF%WTYP==1)THEN
+          CALL GREEN_DA_R1(GYZ(NI)%CO%GF,GYZ(NI)%CO%RB,GYZ(NI)%CO%DB,1)
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE CALC_DA_GREEN
+!
+!****************************************************************************
+      SUBROUTINE CALC_SELF_ENERGY_FULL()
+      INTEGER NI,NSPIN,NASO
+      COMPLEX(gq),ALLOCATABLE::MU(:,:,:)
+!
+      NSPIN=BND%NSPIN
+      DO NI=1,WH%NIONS
+        NASO=GYZ(NI)%CO%DIMSO
+        ALLOCATE(MU(NASO,NASO,NSPIN)); MU=GYZ(NI)%CO%LB1+GYZ(NI)%CO%ETB
+        CALL CALC_SELF_ENERGY(GYZ(NI)%CO%GF,GYZ(NI)%CO%RB,MU,BND%EF)
+        DEALLOCATE(MU)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE CALC_SELF_ENERGY_FULL
+!
+!****************************************************************************
+      SUBROUTINE CALC_DA_BND()
+      INTEGER ISYM,IVEC,IKS,IKP,IKPL,ISP,NKP,NBANDS,IA
+      INTEGER NEMIN,NEMAX,NSYM
+      REAL(gq)WTK
+      COMPLEX(gq),POINTER :: VK(:,:),HK0(:,:)
+      REAL(gq),POINTER    :: FERWE(:)
+!
+      NSYM=SYM%IDF-SYM%IDI+1
+      BND%D0=0; IKPL=0
+      WTK=1._gq/NSYM/BND%RSPO
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      NEMIN=BND%NE(2,IKP); NEMAX=BND%NE(3,IKP)
+      NBANDS=NEMAX-NEMIN+1
+      DO ISP=1,BND%NSPIN
+      FERWE=>BND%FERWE(NEMIN:NEMAX,IKP,ISP)
+      DO ISYM=SYM%IDI,SYM%IDF
+      HK0=>BND%HK0(1:NBANDS,1:NBANDS,ISYM,IKPL)
+      VK=>BND%VK(1:NBANDS,1:NBANDS,ISYM,IKPL,ISP)
+      CALL CALC_DA_1K(HK0,VK,FERWE,NBANDS,WTK,ISP)
+      ENDDO; ENDDO ! ISYM,ISP
+      ENDDO; ENDDO
+      CALL ZSUM_ALL_MPI(BND%D0,WH%NASOTOT*WH%NASOTOT*BND%NSPIN)
+      DO ISP=1,BND%NSPIN; BND%D0(:,:,ISP)=TRANSPOSE(BND%D0(:,:,ISP)); ENDDO
+      RETURN
+!
+      END SUBROUTINE CALC_DA_BND
+!
+!****************************************************************************
+! f_n <Psi_n|a> H_{A,B} R^+_{B,b} <b|Psi_n>
+!=H_{A,B} R^+_{B,b} <b|Psi_n> f_n <Psi_n|a>
+!****************************************************************************
+      SUBROUTINE CALC_DA_1K(HK0,VK,FERWE,NBANDS,WTK,ISP)
+      INTEGER,INTENT(IN)     :: NBANDS,ISP
+      REAL(gq),INTENT(IN)    :: WTK,FERWE(NBANDS)
+      COMPLEX(gq),INTENT(IN) :: HK0(NBANDS,NBANDS),VK(NBANDS,NBANDS)
+! LOCAL
+      INTEGER IA
+      INTEGER NASOT
+      COMPLEX(gq),ALLOCATABLE :: NABR(:,:),ZD(:,:)
+!
+      NASOT=BND%NASOTOT
+      ALLOCATE(NABR(NBANDS,NBANDS),ZD(NASOT,NASOT))
+      CALL CALC_NABR1_1K(NABR,VK,FERWE,NBANDS,WTK,ISP) ! R^+ <b|psi>f<psi|a>
+      ZD=0
+      CALL ZGEMM('N','N',NASOT,NASOT,NBANDS,Z1,HK0(1:NASOT,:),NASOT,NABR(:,1:NASOT),NBANDS,Z0,ZD,NASOT)
+      BND%D0(:,:,ISP)=BND%D0(:,:,ISP)+ZD
+      DEALLOCATE(ZD)
+      RETURN
+!
+      END SUBROUTINE CALC_DA_1K
+!
+!****************************************************************************
+! LGREEN=1: VK --H_eff^G, calc GF%G--quasiparticle G
+! LGREEN=2: VK0--H_bare,  calc GF%G--Coherent part G
+!****************************************************************************
+      SUBROUTINE SUM_GFK_FULL(MU)
+      REAL(gq),INTENT(IN) :: MU
+! LOCAL
+      INTEGER ISYM,IVEC,IKS,IKP,IKPL,ISP,NKP,NBANDS,IA
+      INTEGER NEMIN,NEMAX,NSYM,NBMAX,IW
+      REAL(gq)WTK
+      COMPLEX(gq) OMG
+      COMPLEX(gq),POINTER :: HK(:,:)
+      COMPLEX(gq),ALLOCATABLE :: GK(:,:)
+!
+      ! 'SUM_GFK_FULL'
+      NSYM=SYM%IDF-SYM%IDI+1
+      NBMAX=BND%NMAXIN
+      ALLOCATE(GK(NBMAX,NBMAX)); GK=0
+      GF%G=0; IKPL=0
+!
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      NEMIN=BND%NE(2,IKP); NEMAX=BND%NE(3,IKP)
+      NBANDS=NEMAX-NEMIN+1
+      WTK=KPT%WT(IKP)/NSYM
+      DO ISP=1,BND%NSPIN
+      DO ISYM=SYM%IDI,SYM%IDF
+      IF(GL%LGREEN==1)THEN
+        HK=>BND%VK(1:NBANDS,1:NBANDS,ISYM,IKPL,ISP)
+      ELSEIF(GL%LGREEN==2)THEN
+        HK=>BND%HK0(1:NBANDS,1:NBANDS,ISYM,IKPL)
+      ENDIF
+      DO IW=1,GF%NW
+        OMG=GF%W(IW)
+        IF(GL%LGREEN==1)THEN
+          CALL CALC_GF_1K(HK,GK,NBANDS,NBMAX,MU,OMG,BND%EBMAX,BND%NASOTOT)
+        ELSEIF(GL%LGREEN==2)THEN
+          CALL CALC_GF_1K(HK,GK,NBANDS,NBMAX,MU,OMG,BND%EBMAX,BND%NASOTOT,GF%M(:,:,IW,ISP))
+        ENDIF
+        GF%G(:,:,IW,ISP)=GF%G(:,:,IW,ISP)+GK*WTK
+      ENDDO
+      ENDDO; ENDDO ! ISYM,ISP
+      ENDDO; ENDDO
+      CALL ZSUM_ALL_MPI(GF%G,NBMAX*NBMAX*GF%NW*BND%NSPIN)
+      NULLIFY(HK); DEALLOCATE(GK)
+      ! 'SUM_GFK_FULL'
+      RETURN
+!
+      END SUBROUTINE SUM_GFK_FULL
+!
+!******************************************************************************
+! Quasi-particle impurity Green function
+!******************************************************************************
+      SUBROUTINE CALC_GF_IMP_ALL()
+      INTEGER I,IB
+!
+      IF(GF%WTYP==1)THEN
+        DO I=1,GF%NLR
+          IF(GF%NLR==1.OR.I==2)THEN
+            IB=GF%NBMAX
+          ELSE
+            IB=1
+          ENDIF
+          CALL GET_RENORM_GAMMA1(GF%GM(:,:,:,:,I),BND%R,GF%NBMAX,IB)
+        ENDDO
+      ENDIF
+      DO I=1,GF%NLR
+        IF(GF%NLR==1.OR.I==2)THEN
+          IB=GF%NBMAX
+        ELSE
+          IB=1
+        ENDIF
+        CALL GET_RENORM_HYBRIZ1(GF%D1,BND%R,GF%D(:,:,:,:,I),GF%NBMAX,IB)
+      ENDDO
+      IF(GL%LENSEMBLE==1)THEN ! Grand canonical ensemble
+        CALL CALC_GF_IMP(0._gq)
+      ELSE
+        CALL GREEN_FERMI_NV()
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE CALC_GF_IMP_ALL
+!
+!****************************************************************************
+      SUBROUTINE CALC_GF_IMP(MU)
+      REAL(gq),INTENT(IN) :: MU
+! LOCAL
+      INTEGER ISP,IW,ILR
+      COMPLEX(gq) H(GF%NBMAX,GF%NBMAX)
+!
+      DO ISP=1,GF%NSPIN; DO IW=1,GF%NW
+        H=BND%LA1(:,:,ISP)
+        DO ILR=1,GF%NLR
+          H=H+GF%D(:,:,IW,ISP,ILR)
+        ENDDO
+        CALL CALC_GF_1K(H,GF%G(:,:,IW,ISP),GF%NBMAX,GF%NBMAX,MU,GF%W(IW),100._gq,1) ! No \mu in G_imp
+      ENDDO; ENDDO
+      RETURN
+!
+      END SUBROUTINE CALC_GF_IMP
+!
+!****************************************************************************
+      SUBROUTINE CALC_NKS(MODE)
+      INTEGER,INTENT(IN) :: MODE
+! LOCAL
+      INTEGER IA,NI,NA2
+!
+      CALL CALC_NKS_ORTH(MODE)
+      CALL ZSUM_ALL_MPI(WH%NKS,WH%NIONS*WH%NA2MAX*WH%NA2MAX)
+      CALL CHK_NKS_NON_NEGATIVE()
+      RETURN
+!
+      END SUBROUTINE CALC_NKS
+!
+!****************************************************************************
+      SUBROUTINE CHK_NKS_NON_NEGATIVE()
+      INTEGER NI,I1
+      REAL(gq) RES
+!
+      DO NI=1,WH%NIONS; DO I1=1,GYZ(NI)%CO%DIM2
+        RES=REAL(WH%NKS(I1,I1,NI),gq)
+        IF(RES<-1.E-2_gq)THEN
+          WRITE(0,'(" ERROR in CHK_NKS_NON_NEGATIVE: Large negative NKS=",2F10.3)')WH%NKS(I1,I1,NI)
+          STOP
+        ENDIF
+        WH%NKS(I1,I1,NI)=MAX(ABS(WH%NKS(I1,I1,NI)),SMALL)
+      ENDDO; ENDDO
+      RETURN
+!
+      END SUBROUTINE CHK_NKS_NON_NEGATIVE
+!
+!****************************************************************************
+! Post processing
+!****************************************************************************
+      SUBROUTINE CALC_NKS_PP()
+! LOCAL
+      INTEGER IA,NI,NA2
+!
+      CALL ZOUT_MAT('NKS-UNSYM',WH%NKS,GL%IO,1)
+      WH%COPY=WH%NKS
+      IF(SYM%MODE==10)THEN
+        CALL PAWSYM_ANN(WH%NKS)
+        CALL ZOUT_MAT('NKS-PAWSYM',WH%NKS,GL%IO,1)
+      ENDIF
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%NKS,'NKS','V',0)
+      ENDIF
+      CALL HM_EXPAND_ALL('NKS'); CALL HM_EXPAND_BACK_ALL('NKS')
+      CALL ZOUT_MAT('NKS-SYM',WH%NKS,GL%IO,1)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX ERROR DUE TO SYMMETRIZATION = ",F12.6)')MAXVAL(ABS(WH%NKS-WH%COPY))
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%NKS,'NKS-SYM','V',0)
+        CALL CHK_MATRIX_TRANS('NKS-SYMT',WH%NKS,GL%IO,.TRUE.)
+      ENDIF
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2
+        GYZ(NI)%CO%NET=0
+        DO IA=1,NA2
+          GYZ(NI)%CO%NET=GYZ(NI)%CO%NET+REAL(WH%NKS(IA,IA,NI),gq)
+        ENDDO
+      ENDDO
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NELE_LOC TOTAL:")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(4X,5F10.5)')GYZ(:)%CO%NET
+      RETURN
+!
+      END SUBROUTINE CALC_NKS_PP
+!
+!****************************************************************************
+      SUBROUTINE HM_EXPAND_ALL(FLAG)
+      CHARACTER*3 FLAG
+! LOCAL
+      INTEGER NI
+!
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIMAP<NI)CYCLE
+        CALL HM_EXPAND_CO(GYZ(NI)%CO,FLAG,1)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE HM_EXPAND_ALL
+!
+!****************************************************************************
+      SUBROUTINE HM_EXPAND_BACK_ALL(FLAG)
+      CHARACTER*3 FLAG
+! LOCAL
+      INTEGER NI
+!
+      DO NI=1,WH%NIONS
+        CALL HM_EXPAND_CO(GYZ(NI)%CO,FLAG,-1)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE HM_EXPAND_BACK_ALL
+!
+!****************************************************************************
+      SUBROUTINE HM_EXPAND_ALLSYM(FLAG)
+      CHARACTER*3 FLAG
+      INTEGER MODE
+! LOCAL
+      INTEGER NI
+!
+      DO NI=1,WH%NIONS
+        CALL HM_EXPAND_COSYM(GYZ(NI)%CO,FLAG)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE HM_EXPAND_ALLSYM
+!
+!****************************************************************************
+      SUBROUTINE CALC_NKS_ORTH(MODE)
+      INTEGER,INTENT(IN) :: MODE
+!LOCAL
+      INTEGER NI
+!
+      WH%NKS=0
+      DO NI=1,WH%NIONS
+        CALL CALC_CO_NKS(GYZ(NI)%CO,MODE)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE CALC_NKS_ORTH
+!
+!****************************************************************************
+      SUBROUTINE D0_TO_D()
+      INTEGER NI
+!
+      DO NI=1,WH%NIONS
+        CALL CO_D0_TO_D(GYZ(NI)%CO)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE D0_TO_D
+!
+!****************************************************************************
+      SUBROUTINE CHK_W_ETA_ALL()
+      INTEGER NI
+      REAL(gq) NTOT(WH%NASOMAX,BND%NSPIN)
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      IF(GF%WTYP /= 1.OR.GL%LGREEN == 10)THEN
+        RETURN
+      ENDIF
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" GF%W NORMALIZATION CHECK:")')
+      DO NI=1,WH%NIONS
+        CALL GREEN_OCC_R1(0,1,GYZ(NI)%CO%GF,NELE=NTOT(1:GYZ(NI)%CO%DIMSO,:))
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," NORM=",14F10.6)')NI,NTOT(1:GYZ(NI)%CO%DIMSO,:)
+        IF(MAXVAL(ABS(NTOT(1:GYZ(NI)%CO%DIMSO,:)-1))>.001_gq)THEN
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WARNING! PLEASE INCREASE GF%NW!")')
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE CHK_W_ETA_ALL
+!
+!****************************************************************************
+      SUBROUTINE INI_WH_X()
+      INTEGER I,NI
+      LOGICAL LEXIST
+!
+      WH%LA1=WH%EL0 
+      WH%R=0; WH%NKS=0
+      DO I=1,WH%NA2MAX
+        IF(GL%LXGUESS==0)THEN
+          WH%R(I,I,:)=1._gq
+        ELSE
+          WH%R(I,I,:)=0.999_gq ! For sake of hybrd1, somehow it helps a bit.
+        ENDIF
+      ENDDO
+      INQUIRE(FILE='WH_RLNEF.INP',EXIST=LEXIST)
+      IF(LEXIST)THEN
+        CALL READ_WH_RLNEF(GL%IU)
+        CALL PRE_ADJUST_LA1()
+        BND%EF=WH%EF
+        CALL ZOUT_MAT('R-WH',WH%R,GL%IO)
+        CALL ZOUT_MAT('LA1-WH',WH%LA1,GL%IO,-1)
+        CALL ZOUT_MAT('NKS-WH',WH%NKS,GL%IO,1)
+      ENDIF
+      INQUIRE(FILE='WH_Bvec_Svec.INP',EXIST=LEXIST)
+      IF(LEXIST)THEN
+        CALL READ_WH_MATRIX_LIST(GL%IU, "WH_Bvec_Svec.INP", WH%COPY)
+        CALL ZOUT_MAT('B.V-INPUT',WH%COPY,GL%IO,-1)
+        WH%LA1 = WH%LA1 + WH%COPY
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO, '(" B.V added to LA1 to break spin symmetry.")')
+      ENDIF
+      CALL MODIFY_R_LA1_FROZEN()
+      CALL ZOUT_MAT('R-INI-FZ',WH%R,GL%IO)
+      CALL ZOUT_MAT('LA1-INI-FZ',WH%LA1,GL%IO)
+      WH%COPY=WH%R
+      CALL HM_EXPAND_ALL('RAA'); CALL HM_EXPAND_BACK_ALL('RAA')
+      CALL ZOUT_MAT('R-INI-SYM',WH%R,GL%IO)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX ERROR DUE TO SYMMETRIZATION = ",F12.6)')MAXVAL(ABS(WH%R-WH%COPY))
+      WH%COPY=WH%LA1
+      CALL HM_EXPAND_ALL('LA1'); CALL HM_EXPAND_BACK_ALL('LA1')
+      CALL ZOUT_MAT('LA1-INI-SYM',WH%LA1,GL%IO,-1)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX ERROR DUE TO SYMMETRIZATION = ",F12.6)')MAXVAL(ABS(WH%LA1-WH%COPY))
+      WH%COPY=WH%NKS
+      CALL HM_EXPAND_ALL('NKS'); CALL HM_EXPAND_BACK_ALL('NKS')
+      CALL ZOUT_MAT('NKS-WH',WH%NKS,GL%IO,1)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX ERROR DUE TO SYMMETRIZATION = ",F12.6)')MAXVAL(ABS(WH%NKS-WH%COPY))
+      RETURN
+!
+      END SUBROUTINE INI_WH_X
+!
+!****************************************************************************
+      SUBROUTINE GUTZ_SET_PROJ(MODE)
+      INTEGER,INTENT(IN) :: MODE
+! LOCAL
+      INTEGER NI
+!
+      !"GUTZ_SET_PROJ"
+      DO NI=1,WH%NIONS
+        IF(GYZ(NI)%HL%NIMAP.NE.NI)CYCLE; IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        IF(GYZ(NI)%PJ%LSET_MNSV)THEN
+          IF(MODE==0)THEN
+            CALL SET_PROJ_TYPE(GYZ(NI)%CO,GYZ(NI)%FS,GYZ(NI)%HL,GYZ(NI)%PJ)
+          ELSE
+            CALL READ_PROJ_TYPE(GL%IO,GYZ(NI)%CO,GYZ(NI)%FS,GYZ(NI)%HL,GYZ(NI)%PJ)
+          ENDIF
+        ELSE
+          CALL VAR_SETUP_MAP(NI,GYZ(NI)%HL%NTMAP)
+        ENDIF
+        CALL SET_PROJ_ATOM(GYZ(NI)%CO,GYZ(NI)%FS,GYZ(NI)%HL,GYZ(NI)%PJ)
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," DIM_PHIK=",I10," HL%DIM=",I10)')NI,GYZ(NI)%PJ%N_PHIK,GYZ(NI)%HL%DIM
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(6X," ID_PHIK_N=")')
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(10I10)')GYZ(NI)%PJ%ID_PHIK_N
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(6X," ID_PHIK_J=")')
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(10I10)')GYZ(NI)%PJ%ID_PHIK_J
+      ENDDO
+      !"GUTZ_SET_PROJ"
+      RETURN
+!
+      END SUBROUTINE GUTZ_SET_PROJ
+!
+!****************************************************************************
+      SUBROUTINE VAR_SETUP_MAP(NI,NTMAP)
+      INTEGER NI,NTMAP
+!
+      GYZ(NI)%HL%ID_FSC_N =>GYZ(NTMAP)%HL%ID_FSC_N
+      GYZ(NI)%HL%DIM      = GYZ(NTMAP)%HL%DIM
+      GYZ(NI)%HL%SEC_J    = GYZ(NTMAP)%HL%SEC_J
+      GYZ(NI)%HL%SEF_N    = GYZ(NTMAP)%HL%SEF_N
+      GYZ(NI)%PJ%N_PHIK   = GYZ(NTMAP)%PJ%N_PHIK
+      GYZ(NI)%PJ%SEC_N    = GYZ(NTMAP)%PJ%SEC_N
+      GYZ(NI)%HL%SEC_N    = GYZ(NTMAP)%HL%SEC_N
+      GYZ(NI)%PJ%ID_PHIK_N=>GYZ(NTMAP)%PJ%ID_PHIK_N
+      GYZ(NI)%PJ%ID_PHIK_J=>GYZ(NTMAP)%PJ%ID_PHIK_J
+      GYZ(NI)%PJ%SKIJ     =>GYZ(NTMAP)%PJ%SKIJ
+      GYZ(NI)%PJ%NVAR_KKP =>GYZ(NTMAP)%PJ%NVAR_KKP
+      GYZ(NI)%PJ%MKKP     =>GYZ(NTMAP)%PJ%MKKP
+      GYZ(NI)%HL%EVEC     = GYZ(NTMAP)%HL%EVEC
+      GYZ(NI)%PJ%LMCFLY   = GYZ(NTMAP)%PJ%LMCFLY
+      IF(GL%LGPRJ==11.OR.GL%LGPRJ==14.OR.GL%LGPRJ==15)THEN
+        GYZ(NI)%PJ%ID_SKIJ= GYZ(NTMAP)%PJ%ID_SKIJ
+      ENDIF
+      IF(GL%LPHISYM==1)THEN
+        GYZ(NI)%PJ%EVEC_SYM  = GYZ(NTMAP)%PJ%EVEC_SYM
+        GYZ(NI)%PJ%SEC_N_SYM = GYZ(NTMAP)%PJ%SEC_N_SYM
+        GYZ(NI)%PJ%N_PHIK_SYM=GYZ(NTMAP)%PJ%N_PHIK_SYM
+        GYZ(NI)%PJ%SKIJ_SYM  =>GYZ(NTMAP)%PJ%SKIJ_SYM
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE VAR_SETUP_MAP
+!
+!******************************************************************************
+      SUBROUTINE OUT_PAR_GL(NIONS,NTYP,IO)
+      INTEGER,INTENT(IN) :: NIONS,NTYP,IO
+! LOCAL
+      INTEGER NI,NT
+      CHARACTER*10 LCALC(6)
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      IF(GL%LMODEL==0)THEN
+        WRITE(GL%IO,'(" Lattice model.")')
+      ELSE
+        WRITE(GL%IO,'(" Impurity model.")')
+      ENDIF      
+      LCALC=''
+      SELECT CASE(GL%LSCF)
+      CASE(  1); LCALC(1)="GA"
+      CASE(  2); LCALC(1)="GA-BAND" ! Calc bands only
+      CASE(  3); LCALC(1)="1Iter-GA"
+      CASE(  4); LCALC(1)="PRT_PROJ" ! Print variational setup stuff.
+      CASE(  5); LCALC(1)="PRT_PRJ_VE" 
+      CASE(  6); LCALC(1)="GAPJ-SAVE" ! Run with fixed variational setup (generate if necessary)
+      CASE( -1); LCALC(1)="HF"
+      CASE(-11); LCALC(1)="GA:B-IN" ! Check R with B read in
+      CASE(105); LCALC(1)="GA FIX-C"
+      CASE(107); LCALC(1)="GEN R-VSP" ! Reduced variational setup
+      END SELECT
+      SELECT CASE(GL%LDIAPJ)
+      CASE( 1); LCALC(2)="DIAGONAL "
+      CASE DEFAULT; LCALC(2)="FULL "
+      END SELECT
+      SELECT CASE(GL%LGPRJ)
+      CASE( 1); LCALC(3)="  -NJ-PROJ"
+      CASE( 2); LCALC(3)="  -NJC-PRJ" ! Crystal field as perturbation
+      CASE( 3); LCALC(3)="  -NS-PROJ"
+      CASE( 4); LCALC(3)="   -NSZ-PJ"
+      CASE(11); LCALC(3)="     -N-PJ"
+      CASE(12); LCALC(3)=" -N-PJ(DG)"
+      CASE(14); LCALC(3)="-NSZ-PJ-II"
+      CASE(15); LCALC(3)="-NJZ-PJ-II"
+      CASE(21); LCALC(3)="   -NJR-PJ"
+      CASE(99); LCALC(3)="  LOCAL ED"
+      END SELECT
+      SELECT CASE(GL%LHUB)
+      CASE(-1); LCALC(4)=" INP-V2H"
+      CASE( 0); LCALC(4)=" INP-V2AO"
+      CASE( 1); LCALC(4)="SLATER"
+      CASE( 2); LCALC(4)="KANAMORI"
+      END SELECT
+      SELECT CASE(GL%LDC)
+      CASE(-1); LCALC(5)="HF DC"
+      CASE( 0); LCALC(5)="NO DC"
+      CASE( 1); LCALC(5)="STD DC"
+      CASE( 2); LCALC(5)="FIXDC1"
+      CASE( 3); LCALC(5)="FIXDC2"
+      CASE(12); LCALC(5)="VAR-FIXDC"
+      END SELECT
+      SELECT CASE(GL%LUNIT)
+      CASE( 0); LCALC(6)="   eV"
+      CASE DEFAULT; LCALC(6)="   Ryd."
+      END SELECT
+      WRITE(GL%IO,'(" CALC SET: ",6A10)')LCALC
+      IF(GL%LGREEN>0)THEN
+        WRITE(GL%IO,'(" WITH GREEN FUNCTION APPROACH.")')
+      ENDIF
+!
+      DO NT=1,NTYP
+        WRITE(GL%IO,'(" NT=",I2)')NT
+        CALL OUT_PAR(GYS(NT)%CO,GYS(NT)%FS,GYS(NT)%HL,IO)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE OUT_PAR_GL
+!
+!******************************************************************************
+      SUBROUTINE OUT_PAR(CO,FS,HL,IO)
+      INTEGER,INTENT(IN)           :: IO
+      TYPE (CORR_ORB),INTENT(IN)   :: CO
+      TYPE (FOCK_STATE),INTENT(IN) :: FS
+      TYPE(LOCAL_HAMIL),INTENT(IN) :: HL
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      WRITE(IO,'(" LOCAL INTERACTION PART   :")')
+      IF(GL%LBSCODE==0)THEN
+        WRITE(IO,'(" U              :",F9.4," eV.")')CO%U
+        WRITE(IO,'(" J              :",F9.4," eV.")')CO%J
+      ELSE
+        WRITE(IO,'(" U              :",F9.4," Ryd.",F9.4," eV.")')CO%U,CO%U*RYTOEV
+        WRITE(IO,'(" J              :",F9.4," Ryd.",F9.4," eV.")')CO%J,CO%J*RYTOEV
+      ENDIF
+      WRITE(IO,'(" FOCK SPACE PART:")')
+      WRITE(IO,'(" NA             :",I3)')FS%NA
+      WRITE(IO,'(" FS%OCC(1) L.B. :",I3)')FS%OCC(1)
+      WRITE(IO,'(" FS%OCC(2) U.B. :",I3)')FS%OCC(2)
+      WRITE(IO,'(" FS%DIM         :",I10)')FS%DIM
+      WRITE(IO,'(" HL%OCC(1) L.B. :",I3)')HL%OCC(1)
+      WRITE(IO,'(" HL%OCC(2) U.B. :",I3)')HL%OCC(2)
+      RETURN
+!
+      END SUBROUTINE OUT_PAR
+!
+!*************************************************************************************
+      SUBROUTINE GET_EL0()
+      INTEGER NI,IA,NA2
+      LOGICAL LREL0
+      CHARACTER(20) FMT
+!
+      !"GET_EL0"
+      IF(GL%LEL0==1)THEN
+        CALL READ_WH_MATRIX_LIST(GL%IU, "WH_EL0.INP", WH%EL0)
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WH%EL0 READ IN.")')
+      ELSEIF(GL%LMODEL==0)THEN
+        WH%EL0=0
+        DO NI=1,WH%NIONS
+!          CALL CALC_CO_EL0_UV(GYZ(NI)%CO)
+          CALL CALC_CO_EL0(GYZ(NI)%CO)
+        ENDDO
+        CALL ZSUM_ALL_MPI(WH%EL0,WH%NIONS*WH%NA2MAX*WH%NA2MAX)
+      ENDIF
+      CALL ZOUT_MAT('EL-UNSYM',WH%EL0,GL%IO,-1)
+      WH%COPY=WH%EL0
+      IF(SYM%MODE==10)THEN
+        CALL PAWSYM_ANN(WH%EL0)
+        CALL ZOUT_MAT('EL-PAWSYM',WH%EL0,GL%IO,-1)
+      ENDIF
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%EL0,'EL','N',0)
+      ENDIF
+      CALL HM_EXPAND_ALLSYM("EL0")
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(FMT,'("(4X",I0,"F8.4)")')NA2 *2
+        IF(GL%LSCF==5)THEN
+          WRITE(*,'(" NI=",I3," CURRENT EL0 =")')NI
+          WRITE(*,FMT)GYZ(NI)%CO%EL0
+          WRITE(*,'("PLEASE ENTER NEW EL0:")')
+          READ(*,*)GYZ(NI)%CO%EL0
+        ENDIF
+        GYZ(NI)%CO%ELC=0
+        DO IA=1,NA2; GYZ(NI)%CO%ELC=GYZ(NI)%CO%ELC+REAL(GYZ(NI)%CO%EL0(IA,IA),gq); ENDDO
+        GYZ(NI)%CO%ELC=GYZ(NI)%CO%ELC/NA2 ! Level center
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" NI=",I3," LOCAL ORBITAL LEVEL CENTER(ELC)=",F8.3)')NI,GYZ(NI)%CO%ELC
+      ENDDO
+      CALL ZOUT_MAT('EL-SYM',WH%EL0,GL%IO,-1)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX ERROR DUE TO SYMMETRIZATION = ",F12.6)')MAXVAL(ABS(WH%EL0-WH%COPY))
+      IF(GL%LCHKLOC>0)THEN
+        CALL CHK_EIGS_ANN(WH%EL0,'EL-SYM','N',0)
+        CALL CHK_MATRIX_TRANS('EL-SYMT',WH%EL0,GL%IO,.FALSE.)
+      ENDIF
+      IF(GL%LEL0==0)THEN
+        CALL WRT_WH_MATRIX_LIST(GL%IU, "WH_EL0.OUT", WH%EL0)
+      ENDIF
+      !"GET_EL0"
+      RETURN
+!
+      END SUBROUTINE GET_EL0
+!
+!*************************************************************************************
+      SUBROUTINE PRE_ADJUST_LA1()
+      INTEGER NI,NA2,I
+      REAL(gq) ELC_OLD, ELC_NEW
+!
+      IF(GL%LA1ADJUST==0)RETURN
+      IF(ABS(WH%COPY(1,1,1))<1.E4_gq)RETURN
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2
+        ELC_OLD=0; ELC_NEW=0
+        DO I=1,NA2
+          ELC_OLD=ELC_OLD+REAL(WH%COPY(I,I,NI),gq)
+          ELC_NEW=ELC_NEW+REAL(WH%EL0(I,I,NI),gq)
+        ENDDO
+        ELC_OLD=ELC_OLD/NA2; ELC_NEW=ELC_NEW/NA2
+        DO I=1,NA2
+          WH%LA1(I,I,NI)=WH%LA1(I,I,NI)+ELC_NEW-ELC_OLD
+        ENDDO
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE PRE_ADJUST_LA1
+!
+!*************************************************************************************
+      SUBROUTINE PAWSYM_ANN(ANN)
+      COMPLEX(gq),INTENT(INOUT) :: ANN(WH%NA2MAX,WH%NA2MAX,WH%NIONS)
+! LOCAL
+      INTEGER NI,NA2,NA1,L,ISP
+      COMPLEX(gq) R2N(WH%NA2MAX,WH%NA2MAX)
+!
+      IF(BND%ISO==2)THEN
+        STOP ' ERROR: PAWSYM_ANN NOT READY FOR ISO=2!'
+      ENDIF
+!
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2
+        R2N=0
+        R2N(1:NA2,1:NA2)=GYZ(NI)%CO%R2N
+        IF(MAXVAL(ABS(R2N(1:NA2,1:NA2)-GYZ(NI)%CO%R2N))>1.E-10_gq)THEN ! REAL/CMPLX
+          STOP ' ERROR IN PAWSYM_ANN: GYZ(NI)%CO%R2N IS NOT COMPATIBLE!'
+        ENDIF
+        CALL A_TRANS(ANN(1:NA2,1:NA2,NI),NA2,R2N,-1) ! Goto real spherical harmonics basis
+      ENDDO
+      NA1=GYZ(1)%CO%DIM; NA2=GYZ(1)%CO%DIM2  ! Roughly
+      L=(NA1-1)/2
+      DO ISP=1,BND%NSPIN
+        CALL ANNSYM1(ANN((ISP-1)*NA1+1:ISP*NA1,(ISP-1)*NA1+1:ISP*NA1,:),NA1,WH%NIONS,L)
+      ENDDO
+      IF(BND%NSPIN==1)THEN
+        ANN(NA1+1:NA2,NA1+1:NA2,:)=ANN(1:NA1,1:NA1,:)
+      ENDIF
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2
+        R2N=0
+        R2N(1:NA2,1:NA2)=GYZ(NI)%CO%R2N
+        CALL A_TRANS(ANN(1:NA2,1:NA2,NI),NA2,R2N,1) ! Goto "Natural" basis
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE PAWSYM_ANN
+!
+!****************************************************************************
+      SUBROUTINE LOCMAP_SYM()
+      INTEGER NI
+      INTEGER ROTMAP(SYM%NIOND,SYM%NROTK,SYM%NPCELL)
+!
+      ROTMAP=SYM%ROTMAP
+      DEALLOCATE(SYM%ROTMAP)
+      ALLOCATE(SYM%ROTMAP(WH%NIONS,SYM%NROTK,SYM%NPCELL)); SYM%ROTMAP=0
+      DO NI=1,WH%NIONS
+        SYM%ROTMAP(NI,:,:)=ROTMAP(GYZ(NI)%HL%NI0,:,:)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE LOCMAP_SYM
+!
+!*************************************************************************************
+! LMODE = 0: Hermitian matrix
+!         else: Non-hermitian, then use M * M^\gagger
+!*************************************************************************************
+      SUBROUTINE CHK_EIGS_ANN(ANN,STR,JOBZ,LMODE)
+      INTEGER,INTENT(IN) :: LMODE
+      COMPLEX(gq),INTENT(IN) :: ANN(WH%NA2MAX,WH%NA2MAX,WH%NIONS)
+      CHARACTER(*),INTENT(IN) :: STR
+      CHARACTER,INTENT(IN) :: JOBZ
+! LOCAL
+      INTEGER NI,NA2
+      REAL(gq) W(WH%NA2MAX)
+      CHARACTER(20) FMT
+      COMPLEX(gq) TMP(WH%NA2MAX,WH%NA2MAX)
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2;
+        WRITE(FMT,'("(",I0,"F18.14)")')NA2
+        TMP(1:NA2,1:NA2)=-ANN(1:NA2,1:NA2,NI)
+        IF(LMODE /= 0)THEN
+          TMP(1:NA2,1:NA2)=MATMUL(TMP(1:NA2,1:NA2),TRANSPOSE(CONJG(TMP(1:NA2,1:NA2))))
+        ENDIF
+        CALL ORBITAL_SPIN_TRANS(TMP,NA2,.FALSE.,BND%ISO) ! Orbital-fast <- Spin-fast
+        CALL HERMEV(JOBZ,'L',TMP(1:NA2,1:NA2),W(1:NA2),NA2)
+        W=-W
+        IF(LMODE /= 0)THEN
+          W=SQRT(ABS(W))
+        ENDIF
+        WRITE(GL%IO,'(" NI=",I3," EIGEN VALUES OF ",A9,":")')NI,STR
+        WRITE(GL%IO,'(14F10.4)')W(1:NA2)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE CHK_EIGS_ANN
+!
+!*************************************************************************************
+      SUBROUTINE RM_TB_EL0()
+      INTEGER NI,ISYM,IKP
+      INTEGER NASO,NA2,NBASE,NASOT
+      COMPLEX(gq) EL0(BND%NASOTOT,BND%NASOTOT)
+!
+      EL0=0; NBASE=1
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2; NASO=GYZ(NI)%CO%DIMSO
+        CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%EL0,NA2,.FALSE.,BND%ISO)
+        EL0(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1)=GYZ(NI)%CO%EL0(1:NASO,1:NASO)
+        CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%EL0,NA2,.TRUE.,BND%ISO)
+        NBASE=NBASE+NASO
+      ENDDO
+      NASOT=BND%NASOTOT
+      DO ISYM=SYM%IDI,SYM%IDF; DO IKP=1,KPT%DIML
+        BND%HK0(1:NASOT,1:NASOT,ISYM,IKP)=BND%HK0(1:NASOT,1:NASOT,ISYM,IKP)-EL0
+      ENDDO; ENDDO
+      RETURN
+!
+      END SUBROUTINE RM_TB_EL0
+!
+!*************************************************************************************
+      SUBROUTINE CHK_MATRIX_TRANS(STR,AM,IO,LTRANS)
+      INTEGER,INTENT(IN) :: IO
+      LOGICAL,INTENT(IN) :: LTRANS
+      CHARACTER(*),INTENT(IN) :: STR
+      COMPLEX(gq),INTENT(IN) :: AM(WH%NA2MAX,WH%NA2MAX,WH%NIONS)
+! LOCAL
+      INTEGER NI
+      COMPLEX(gq) BM(WH%NA2MAX,WH%NA2MAX,WH%NIONS), U(WH%NA2MAX,WH%NA2MAX)
+      COMPLEX(gq) ZAM(WH%NA2MAX,WH%NA2MAX)
+!
+      DO NI = 1, WH%NIONS
+        IF(LTRANS)THEN
+          U = TRANSPOSE(WH%N2N(:,:,NI))
+        ELSE
+          U = TRANSPOSE(CONJG(WH%N2N(:,:,NI)))
+        ENDIF
+        ZAM = AM(:,:,NI)
+        CALL UHAU(ZAM,U,WH%NA2MAX,WH%NA2MAX,BM(:,:,NI))
+      ENDDO
+      CALL ZOUT_MAT(STR,BM,IO)
+      RETURN
+!
+      END SUBROUTINE CHK_MATRIX_TRANS
+!
+!*************************************************************************************
+      SUBROUTINE DOUT_MAT(STR,AM,IO,MODE)
+      INTEGER,INTENT(IN) :: IO
+      CHARACTER(*),INTENT(IN) :: STR
+      REAL(gq),INTENT(IN) :: AM(WH%NA2MAX,WH%NA2MAX,WH%NIONS)
+      INTEGER,OPTIONAL :: MODE
+! LOCAL
+      INTEGER NI,DIM2,I
+      REAL(gq) RES
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      WRITE(IO,'("************",2X,A12,2X,"************")')STR
+      DO NI=1,WH%NIONS; DIM2=GYZ(NI)%CO%DIM2
+        WRITE(IO,'(" NI=",I3," NI_GLOBAL=",I3)')NI,GYZ(NI)%HL%NI0
+        CALL WRT_A(AM(1:DIM2,1:DIM2,NI),DIM2,IO)
+        IF(PRESENT(MODE))THEN
+          IF(MODE==1)THEN
+            RES=0; DO I=1,DIM2; RES=RES+AM(I,I,NI); ENDDO
+            WRITE(IO,'("   SUB_TOT=",2F10.6)')RES
+          ELSEIF(MODE==-1)THEN
+            WRITE(IO,'("   ORBITAL SPLITTING:")')
+            WRITE(IO,'(14F10.5)')(REAL(AM(I,I,NI)-AM(1,1,NI),gq),I=1,DIM2)
+          ENDIF
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE DOUT_MAT
+!
+!*************************************************************************************
+      SUBROUTINE ZOUT_MAT(STR,AM,IO,MODE)
+      INTEGER,INTENT(IN) :: IO
+      CHARACTER(*),INTENT(IN) :: STR
+      COMPLEX(gq),INTENT(IN) :: AM(WH%NA2MAX,WH%NA2MAX,WH%NIONS)
+      INTEGER,OPTIONAL::MODE
+! LOCAL
+      INTEGER NI,DIM2,I
+      COMPLEX(gq) RES
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      WRITE(IO,'("************",2X,A12,2X,"************")')STR
+      DO NI=1,WH%NIONS; DIM2=GYZ(NI)%CO%DIM2
+        WRITE(IO,'(" NI=",I3," NI_GLOBAL=",I3)')NI,GYZ(NI)%HL%NI0
+        CALL WRT_A(AM(1:DIM2,1:DIM2,NI),DIM2,IO)
+        IF(PRESENT(MODE))THEN
+          IF(MODE==1)THEN
+            RES=0; DO I=1,DIM2; RES=RES+AM(I,I,NI); ENDDO
+            WRITE(IO,'("   SUB_TOT=",2F10.6)')RES
+          ELSEIF(MODE==-1)THEN
+            WRITE(IO,'("   ORBITAL SPLITTING:")')
+            WRITE(IO,'(14F10.5)')(REAL(AM(I,I,NI)-AM(1,1,NI),gq),I=1,DIM2)
+          ENDIF
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE ZOUT_MAT
+!
+!*************************************************************************************
+      SUBROUTINE OUT_MAT2(STR,MB,IO,MODE)
+      INTEGER,INTENT(IN) :: IO,MODE
+      CHARACTER(*),INTENT(IN) :: STR
+      TYPE (MATRIX_BASIS),INTENT(IN) :: MB
+! LOCAL
+      INTEGER NI,DIM2,IHS
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      IF(MODE==1.AND.MB%DIMHST==WH%HM%DIMHST)RETURN
+      WRITE(IO,'("************",2X,A12,2X,"************")')STR
+      DO NI=1,WH%NIONS; DIM2=GYZ(NI)%CO%DIM2
+        WRITE(IO,'(" NI=",I3," NI_GLOBAL=",I3)')NI,GYZ(NI)%HL%NI0
+        DO IHS = 1, MIN(3,MB%DIM_HS(NI))
+          WRITE(IO,'(" INDEX_HS = ",I4)')IHS
+          CALL WRT_A(MB%HS(1:DIM2,1:DIM2,IHS,NI),DIM2,IO)
+        ENDDO
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE OUT_MAT2
+!
+!*************************************************************************************
+      SUBROUTINE DOUT_MAT_BK(STR,AM,IO,MODE)
+      INTEGER IO
+      CHARACTER(*) STR
+      REAL(gq) AM(BND%NASOTOT,BND%NASOTOT)
+      INTEGER,OPTIONAL::MODE
+! LOCAL
+      INTEGER NI,DIMSO,NBASE,I
+      REAL(gq) RES
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      WRITE(GL%IO,'("************",2X,A12,2X,"************")')STR
+      NBASE=0
+      DO NI=1,WH%NIONS; DIMSO=GYZ(NI)%CO%DIMSO
+        WRITE(GL%IO,'(" NI=",I3," NI_GLOBAL=",I3)')NI,GYZ(NI)%HL%NI0
+        CALL WRT_A(AM(NBASE+1:NBASE+DIMSO,NBASE+1:NBASE+DIMSO),DIMSO,IO)
+        IF(PRESENT(MODE))THEN
+          IF(MODE==1)THEN
+            RES=0; DO I=1,DIMSO; RES=RES+AM(NBASE+I,NBASE+I); ENDDO
+            WRITE(GL%IO,'("   SUB_TOT=",2F10.6)')RES
+          ELSEIF(MODE==-1)THEN
+            WRITE(GL%IO,'("   ORBITAL SPLITTING:")')
+            WRITE(GL%IO,'(14F10.5)')(REAL(AM(NBASE+I,NBASE+I)-AM(NBASE+1,NBASE+1),gq),I=1,DIMSO)
+          ENDIF
+        ENDIF
+        NBASE=NBASE+DIMSO
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE DOUT_MAT_BK
+!
+!*************************************************************************************
+      SUBROUTINE ZOUT_MAT_BK(STR,AM,IO,MODE)
+      INTEGER IO
+      CHARACTER(*) STR
+      COMPLEX(gq) AM(BND%NASOTOT,BND%NASOTOT)
+      INTEGER,OPTIONAL::MODE
+! LOCAL
+      INTEGER NI,DIMSO,NBASE,I
+      COMPLEX(gq) RES
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      WRITE(GL%IO,'("************",2X,A12,2X,"************")')STR
+      NBASE=0
+      DO NI=1,WH%NIONS; DIMSO=GYZ(NI)%CO%DIMSO
+        WRITE(GL%IO,'(" NI=",I3," NI_GLOBAL=",I3)')NI,GYZ(NI)%HL%NI0
+        CALL WRT_A(AM(NBASE+1:NBASE+DIMSO,NBASE+1:NBASE+DIMSO),DIMSO,IO)
+        IF(PRESENT(MODE))THEN
+          IF(MODE==1)THEN
+            RES=0; DO I=1,DIMSO; RES=RES+AM(NBASE+I,NBASE+I); ENDDO
+            WRITE(GL%IO,'("   SUB_TOT=",2F10.6)')RES
+          ELSEIF(MODE==-1)THEN
+            WRITE(GL%IO,'("   ORBITAL SPLITTING:")')
+            WRITE(GL%IO,'(14F10.5)')(REAL(AM(NBASE+I,NBASE+I)-AM(NBASE+1,NBASE+1),gq),I=1,DIMSO)
+          ENDIF
+        ENDIF
+        NBASE=NBASE+DIMSO
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE ZOUT_MAT_BK
+!
+!*************************************************************************************
+      SUBROUTINE CALC_BAND_ALL(LDIAG)
+      LOGICAL LDIAG
+      INTEGER ISYMI,ISYMF,ISP
+      INTEGER ISYM,IVEC,IKS,IKP,IKPL,NKP,NBANDS
+      COMPLEX(gq),POINTER :: HK(:,:),HK0(:,:),HK1(:,:)
+      REAL(gq),POINTER    :: EK(:)
+      COMPLEX(gq) :: R(BND%NASOTOT,BND%NASOTOT),LA1(BND%NASOTOT,BND%NASOTOT)
+      REAL :: TA1,TA2,TB1,TB2; INTEGER TIB1,TIB2,TIRATE
+!
+      CALL CPU_TIME(TA1); CALL SYSTEM_CLOCK(TIB1,TIRATE); TB1=REAL(TIB1,4)/REAL(TIRATE,4)
+      ISYMI=SYM%IDI; ISYMF=SYM%IDF
+      BND%EK=0; IKPL=0
+!
+      !$OMP PARALLEL DO FIRSTPRIVATE(IKPL) PRIVATE(IVEC,ISYM,NKP,ISP,IKS,IKP,NBANDS,HK0,HK1,HK,EK,R,LA1) SCHEDULE(STATIC,1)
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      DO ISYM=ISYMI,ISYMF
+      NBANDS=BND%NE(3,IKP)-BND%NE(2,IKP)+1
+      HK0=>BND%HK0(1:NBANDS,1:NBANDS,ISYM,IKPL)
+      IF(GL%LBNDU==1)THEN
+        HK1=>BND%HK1(1:NBANDS,1:NBANDS,ISYM,IKPL)
+      ENDIF
+      IF(ISYM/=SYM%IE)THEN
+        ALLOCATE(EK(NBANDS)); EK=0
+      ENDIF
+      DO ISP=1,BND%NSPIN
+      HK=>BND%VK(1:NBANDS,1:NBANDS,ISYM,IKPL,ISP)
+      IF(ISYM==SYM%IE)THEN
+        BND%EK(:,IKP,ISP)=BND%EK0(:,IKP)
+        EK=>BND%EK(BND%NE(2,IKP):BND%NE(3,IKP),IKP,ISP)
+      ENDIF
+      R=BND%R(1:BND%NASOTOT,1:BND%NASOTOT,ISP)
+      LA1=BND%LA1(1:BND%NASOTOT,1:BND%NASOTOT,ISP)+BND%ETA(1:BND%NASOTOT,1:BND%NASOTOT,ISP)
+      IF(GL%LBNDU==0)THEN
+        CALL CALC_BAND_1K(HK0,EK,HK,R,LA1,NBANDS,BND%NASOTOT,LDIAG)
+      ELSE
+        CALL CALC_BAND_1K(HK0,EK,HK,R,LA1,NBANDS,BND%NASOTOT,LDIAG,HK1=HK1)
+      ENDIF
+      ENDDO ! ISP
+      IF(ISYM/=SYM%IE)DEALLOCATE(EK)
+      ENDDO ! ISYM
+      ENDDO; ENDDO
+      !$OMP END PARALLEL DO
+      NULLIFY(HK,HK0,EK)
+!
+      CALL DSUM_ALL_MPI(BND%EK,BND%NMAX*KPT%DIM*BND%NSPIN)
+      CALL CPU_TIME(TA2); CALL SYSTEM_CLOCK(TIB2,TIRATE); TB2=REAL(TIB2,4)/REAL(TIRATE,4)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL OUT_TIME_USE('CALC_BAND_AL',TA2-TA1,TB2-TB1,GL%IO)
+      RETURN
+!
+      END SUBROUTINE CALC_BAND_ALL
+!
+!*************************************************************************************
+      SUBROUTINE CALC_BAND_1K(HK0,EK,HK,R,LA1,NBANDS,NASOT,LDIAG,HK1)
+      LOGICAL LDIAG
+      INTEGER NBANDS,NASOT
+      REAL(gq) EK(NBANDS)
+      COMPLEX(gq) R(NASOT,NASOT),LA1(NASOT,NASOT)
+      COMPLEX(gq) HK(NBANDS,NBANDS),HK0(NBANDS,NBANDS)
+      COMPLEX(gq),OPTIONAL :: HK1(NBANDS,NBANDS)
+!
+      CALL CALC_HAMIL_1K(HK0,HK,R,LA1,NBANDS,NASOT)
+      IF(PRESENT(HK1)) HK=HK+HK1
+      EK=0
+      IF(LDIAG) CALL HERMEV('V','U',HK,EK,NBANDS)
+      RETURN
+!
+      END SUBROUTINE CALC_BAND_1K
+!
+!*************************************************************************************
+      SUBROUTINE CALC_HAMIL_1K(HK0,HK,R,LA1,NBANDS,NASOT)
+      INTEGER NBANDS,NASOT
+      COMPLEX(gq) HK(NBANDS,NBANDS),HK0(NBANDS,NBANDS)
+      COMPLEX(gq) R(NASOT,NASOT),LA1(NASOT,NASOT)
+! Local
+      INTEGER IA
+!
+      HK=HK0
+      CALL ANNXB('N',R,HK(1:NASOT,:),NASOT,NBANDS)
+      CALL ANMXBMM('C',HK(:,1:NASOT),R,NBANDS,NASOT) ! RHR^+
+      HK(1:NASOT,1:NASOT)=HK(1:NASOT,1:NASOT)+LA1
+      RETURN
+!
+      END SUBROUTINE CALC_HAMIL_1K
+!
+!=============================================================================
+! Possibly non-orthogonal projector analysis
+!=============================================================================
+      SUBROUTINE PRE_ANALYSIS()
+      REAL(gq) NELECT_FZ
+!
+      CALL CALC_LOC_OVLP()
+      IF(GL%LBNDU==1)THEN
+        CALL CALC_LOC_HR2()
+      ELSE
+        CALL CALC_LOC_HR()
+      ENDIF
+      NELECT_FZ=BND%NELET_FROZEN; BND%NELET_FROZEN=0
+      IF(GL%LEFERMI==0)THEN
+        IF(GL%LENSEMBLE==0)THEN
+          CALL GUTZ_FERMI(GL%IO)
+        ELSE
+          CALL SET_FERMI_WEIGHT(BND%EF)
+        ENDIF
+      ENDIF
+      BND%NELET_FROZEN=NELECT_FZ
+      CALL CALC_NKS_NO()
+      RETURN
+!
+      END SUBROUTINE PRE_ANALYSIS
+!
+!=============================================================================
+      SUBROUTINE CALC_LOC_OVLP()
+      INTEGER IVEC,IKP,IKPL,IKS,NKP,ISYM,NBANDS,NSYM,I
+      REAL(gq) WTK
+      COMPLEX(gq) SR0(BND%NASOTOT,BND%NASOTOT)
+!
+      SR0=0; IKPL=0
+      NSYM=SYM%IDF-SYM%IDI+1
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      NBANDS=BND%NE(3,IKP)-BND%NE(2,IKP)+1
+      WTK=KPT%WT(IKP)/NSYM
+      DO ISYM=SYM%IDI,SYM%IDF
+        CALL ZGEMM('C','N',BND%NASOTOT,BND%NASOTOT,NBANDS,Z1, &
+                  &BND%UK(1:NBANDS,:,ISYM,IKPL),NBANDS, &
+                  &BND%UK(1:NBANDS,:,ISYM,IKPL),NBANDS, &
+                  &Z0,BND%SK(:,:,ISYM,IKPL),BND%NASOTOT)
+        SR0=SR0+BND%SK(:,:,ISYM,IKPL)*WTK
+      ENDDO ! ISYM
+      ENDDO; ENDDO
+      CALL ZSUM_ALL_MPI(SR0,BND%NASOTOT*BND%NASOTOT)
+      CALL ZOUT_MAT_BK('SR0',SR0,GL%IO)
+      ! Sanity check
+      DO I=1,BND%NASOTOT
+        IF(ABS(SR0(I,I))<0.5_gq)THEN
+          WRITE(0,*) " SEVERE WARNING in SR0! Check projector!"
+          WRITE(GL%IU,*) " SEVERE WARNING in SR0! Check projector!"
+        ENDIF
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE CALC_LOC_OVLP
+!
+!=============================================================================
+      SUBROUTINE ROTATE_BNDU(TRANSB)
+      INTEGER MODE
+      CHARACTER*1 TRANSB
+! LOCAL
+      INTEGER IVEC,IKP,IKPL,IKS,NKP,ISYM,NBANDS,NI,NBASE,NASO,NA2
+!
+      IKPL=0
+      !$OMP PARALLEL DO FIRSTPRIVATE(IKPL) PRIVATE(IVEC,ISYM,NKP,IKS,IKP,NBANDS,NBASE,NI,NASO,NA2) SCHEDULE(STATIC,1)
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      NBANDS=BND%NE(3,IKP)-BND%NE(2,IKP)+1
+      DO ISYM=SYM%IDI,SYM%IDF
+      NBASE=1
+      DO NI=1,WH%NIONS
+        NASO=GYZ(NI)%CO%DIMSO; NA2=GYZ(NI)%CO%DIM2
+        IF(GL%LB2N==1)THEN  ! Like VASP interface 
+          CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%B2N,NA2,NA2,.FALSE.,BND%ISO,LURIGHT=.TRUE.) ! orbital faster
+          CALL ANMXBMM(TRANSB,BND%UK(1:NBANDS,NBASE:NBASE-1+NASO,ISYM,IKPL),GYZ(NI)%CO%B2N(1:NASO,1:NASO),NBANDS,NASO)
+          CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%B2N,NA2,NA2,.TRUE.,BND%ISO,LURIGHT=.TRUE.) ! spin faster
+        ELSE
+          CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%N2N,NA2,NA2,.FALSE.,BND%ISO,LURIGHT=.TRUE.) ! orbital faster
+          CALL ANMXBMM(TRANSB,BND%UK(1:NBANDS,NBASE:NBASE-1+NASO,ISYM,IKPL),GYZ(NI)%CO%N2N(1:NASO,1:NASO),NBANDS,NASO)
+          CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%N2N,NA2,NA2,.TRUE.,BND%ISO,LURIGHT=.TRUE.) ! spin faster
+        ENDIF
+        NBASE=NBASE+NASO
+      ENDDO; ENDDO
+      ENDDO; ENDDO
+      !$OMP END PARALLEL DO
+      RETURN
+!
+      END SUBROUTINE ROTATE_BNDU
+!
+!===============================================================================
+! Calcuate local one-body using eigen-value and eigen-vecotr of the Hamiltonian.
+!===============================================================================
+      SUBROUTINE CALC_LOC_HR()
+      INTEGER IVEC,IKP,IKPL,IKS,NKP,ISYM,NBANDS,NSYM,I
+      REAL(gq) WTK
+      COMPLEX(gq) :: HR0(BND%NASOTOT,BND%NASOTOT)
+      COMPLEX(gq) :: EV(BND%NMAXIN,BND%NASOTOT),HKL(BND%NASOTOT,BND%NASOTOT)
+!
+      HR0=0; IKPL=0
+      NSYM=SYM%IDF-SYM%IDI+1
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      NBANDS=BND%NE(3,IKP)-BND%NE(2,IKP)+1
+      WTK=KPT%WT(IKP)/NSYM
+      DO ISYM=SYM%IDI,SYM%IDF
+        DO I=1,NBANDS; EV(I,:)=BND%EK0(BND%NE(2,IKP)-1+I,IKP)*BND%UK(I,:,ISYM,IKPL); ENDDO
+        CALL ZGEMM('C','N',BND%NASOTOT,BND%NASOTOT,NBANDS,Z1,&
+                  &BND%UK(1:NBANDS,:,ISYM,IKPL),NBANDS, &
+                  &EV(1:NBANDS,:),NBANDS,Z0,HKL,BND%NASOTOT)
+        HR0=HR0+HKL*WTK
+      ENDDO ! ISYM
+      ENDDO; ENDDO
+      CALL ZSUM_ALL_MPI(HR0,BND%NASOTOT*BND%NASOTOT)
+      CALL ZOUT_MAT_BK('HR0',HR0,GL%IO,-1)
+      RETURN
+!
+      END SUBROUTINE CALC_LOC_HR
+!
+!=============================================================================
+! Calcuate local one-body using Hamiltonian matrix
+!=============================================================================
+      SUBROUTINE CALC_LOC_HR2()
+      INTEGER IVEC,IKS,IKP,IKPL,NKP,ISYM,NBANDS,NSYM,I
+      REAL(gq) WTK
+      COMPLEX(gq) :: HR0(BND%NASOTOT,BND%NASOTOT)
+      COMPLEX(gq) :: HKL(BND%NASOTOT,BND%NASOTOT)
+!
+      HR0=0; IKPL=0
+      NSYM=SYM%IDF-SYM%IDI+1
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      NBANDS=BND%NE(3,IKP)-BND%NE(2,IKP)+1
+      WTK=KPT%WT(IKP)/NSYM
+      DO ISYM=SYM%IDI,SYM%IDF
+        CALL UHAU(BND%HK0(1:NBANDS,1:NBANDS,ISYM,IKPL),BND%UK(1:NBANDS,:,ISYM,IKPL),NBANDS,BND%NASOTOT,HKL)
+        HR0=HR0+HKL*WTK
+      ENDDO ! ISYM
+      ENDDO; ENDDO
+      CALL ZSUM_ALL_MPI(HR0,BND%NASOTOT*BND%NASOTOT)
+      CALL ZOUT_MAT_BK('HR0',HR0,GL%IO,-1)
+      RETURN
+!
+      END SUBROUTINE CALC_LOC_HR2
+!
+!=============================================================================
+      SUBROUTINE CALC_NKS_NO()
+      INTEGER IVEC,IKS,IKP,IKPL,NKP,ISYM,NBANDS,NSYM,I
+      REAL(gq) WTK
+      COMPLEX(gq) :: NKS0(BND%NASOTOT,BND%NASOTOT)
+      COMPLEX(gq) :: NKL(BND%NASOTOT,BND%NASOTOT)
+!
+      NKS0=0; IKPL=0
+      NSYM=SYM%IDF-SYM%IDI+1
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      NBANDS=BND%NE(3,IKP)-BND%NE(2,IKP)+1
+      WTK=1._gq/NSYM/BND%RSPO
+      DO ISYM=SYM%IDI,SYM%IDF
+        CALL CALC_NKS_NO1K(BND%FERWE(BND%NE(2,IKP):BND%NE(3,IKP),IKP,1), &
+                           &BND%UK(1:NBANDS,:,ISYM,IKPL),BND%SK(:,:,ISYM,IKPL), &
+                           &NKL,NBANDS,BND%NASOTOT)
+        NKS0=NKS0+NKL*WTK
+      ENDDO ! ISYM
+      ENDDO; ENDDO
+      CALL ZSUM_ALL_MPI(NKS0,BND%NASOTOT*BND%NASOTOT)
+      CALL ZOUT_MAT_BK('NK0',NKS0,GL%IO,1)
+      RETURN
+!
+      END SUBROUTINE CALC_NKS_NO
+!
+!=============================================================================
+      SUBROUTINE CALC_E_HYBRD()
+      INTEGER NI
+!
+      ENG%HYBRD=REAL(SUM(WH%R*(WH%D0)),gq)
+!
+      RETURN
+!
+      END SUBROUTINE CALC_E_HYBRD
+!
+!=============================================================================
+      SUBROUTINE GREEN2_CALC_ND()
+      REAL(gq) VALUES(GF2%NV), EPSREL, EPSABS, XRNG(2) 
+      EXTERNAL :: GUTZ_INTEGRAND
+! LOCAL
+      INTEGER NI, ISP, I, I1, J, J1, IADD, NASO, NA2, IA
+      REAL(gq) NTOT(WH%NASOMAX,BND%NSPIN)
+!
+      XRNG = (/0, 1/)
+      EPSREL = 1.E-3_gq; EPSABS = 1.E-8_gq
+      CALL GCUBATR_1(GF2%NV, GUTZ_INTEGRAND, XRNG, VALUES, EPSREL, EPSABS, GF2%NW, GL%IO)
+      IADD = 0
+      DO NI = 1, WH%NIONS
+        NASO = GYZ(NI)%CO%DIMSO; NA2 = GYZ(NI)%CO%DIM2
+        DO ISP=1,GF2%NSPIN
+        DO I=1,NASO; I1 = I + NASO*(ISP - 1)
+        DO J=I,NASO; J1 = J + NASO*(ISP - 1)
+          IADD = IADD + 1
+          GYZ(NI)%CO%NKS(I1, J1) = VALUES(IADD)
+          IF (I == J) CYCLE
+          IADD = IADD + 1
+          GYZ(NI)%CO%NKS(I1, J1) = GYZ(NI)%CO%NKS(I1, J1) + DCMPLX(0._gq, VALUES(IADD))
+          GYZ(NI)%CO%NKS(J1, I1) = CONJG(GYZ(NI)%CO%NKS(I1, J1))
+        ENDDO; ENDDO; ENDDO
+        DO ISP=1,GF2%NSPIN; DO I=1,NASO; I1 = I + NASO*(ISP - 1)
+          IADD = IADD + 1
+          NTOT(I, ISP) = VALUES(IADD)
+        ENDDO; ENDDO
+        IF(BND%ISPO.EQ.1) GYZ(NI)%CO%NKS(1+NASO:,1+NASO:)=GYZ(NI)%CO%NKS(1:NASO,1:NASO)
+        CALL ORBITAL_SPIN_TRANS(GYZ(NI)%CO%NKS,NA2,.TRUE.,BND%ISO)
+!
+        DO ISP=1,GF2%NSPIN; DO I=1,NASO; DO J=1,NASO
+          IADD = IADD + 1
+          GYZ(NI)%CO%DB(I, J, ISP) = VALUES(IADD)
+          IADD = IADD + 1
+          GYZ(NI)%CO%DB(I, J, ISP) = GYZ(NI)%CO%DB(I, J, ISP) + DCMPLX(0._gq, VALUES(IADD))
+        ENDDO; ENDDO; ENDDO
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO, '(" ADAPTIVE INTEGRATION CHECK: NI = ", I3)') NI
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO, '(10F16.8)')NTOT(1:NASO, :)
+        IF(MINVAL(NTOT(1:NASO, :)) < .9999_gq)THEN
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WARNING: ADAPTIVE INTEGRATION NOT ACCURATE!")')
+        ENDIF
+      ENDDO
+!
+      END SUBROUTINE GREEN2_CALC_ND
+!
+!=============================================================================
+      SUBROUTINE CALC_GREEN2_NV()
+      INTEGER NI, ISP, I, J, NASO
+!
+      GF2%NV = 0
+      DO NI = 1, WH%NIONS
+        NASO = GYZ(NI)%CO%DIMSO
+        GF2%NV = GF2%NV + (NASO + 3)*NASO/2*BND%NSPIN &
+                     &  + (NASO - 1)*NASO/2*BND%NSPIN &
+                     &  + NASO*NASO*BND%NSPIN *2
+      ENDDO
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO, '(" GREENFUN2%NV = ", I5)')GF2%NV
+      RETURN
+!
+      END SUBROUTINE CALC_GREEN2_NV
+!
+!=============================================================================
+!   f_n <psi_n|a'> [S^(-1)]_{a',a} S^(-1)]_{b,b'} <b'|psi_n>
+! = S^(-1)]_{b,b'} <b'|psi_n> f_n <psi_n|a'> [S^(-1)]_{a',a}
+!=============================================================================
+      SUBROUTINE CALC_NKS_NO1K(FERWE,UK,SK,NKL,NBANDS,NAST)
+      INTEGER NBANDS,NAST
+      REAL(gq) FERWE(NBANDS)
+      COMPLEX(gq) UK(NBANDS,NAST),SK(NAST,NAST),NKL(NAST,NAST)
+! LOCAL
+      INTEGER I
+      COMPLEX(gq) :: EV(NBANDS,NAST),SKI(NAST,NAST),ZBUF(NAST,NAST)
+!
+      DO I=1,NBANDS; EV(I,:)=FERWE(I)*UK(I,:); ENDDO
+      CALL ZGEMM('C','N',NAST,NAST,NBANDS,Z1,UK,NBANDS,EV,NBANDS,Z0,NKL,NAST) ! <b'|Psi_n> f_n <psi_n|a'>
+      SKI=SK
+      CALL INV(SKI,NAST) ! SK^(-1)
+      CALL ZGEMM('N','N',NAST,NAST,NAST,Z1,SKI,NAST,NKL,NAST,Z0,ZBUF,NAST) 
+      CALL ZGEMM('N','N',NAST,NAST,NAST,Z1,ZBUF,NAST,SKI,NAST,Z0,NKL,NAST)
+      NKL=TRANSPOSE(NKL)
+      RETURN
+!
+      END SUBROUTINE CALC_NKS_NO1K
+!
+!=============================================================================
+! ORTHOGONALIZE LOCAL PROJECTOR
+!=============================================================================
+      SUBROUTINE ORTH_LOC_PROJ()
+      INTEGER IVEC,IKS,IKP,IKPL,NKP,ISYM,NBANDS
+!
+      IKPL=0
+      !$OMP PARALLEL DO FIRSTPRIVATE(IKPL) PRIVATE(IVEC,ISYM,NKP,IKS,IKP,NBANDS) SCHEDULE(STATIC,1)
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+      NBANDS=BND%NE(3,IKP)-BND%NE(2,IKP)+1
+      DO ISYM=SYM%IDI,SYM%IDF
+        CALL ORTH_LOC_PROJ1(BND%UK(1:NBANDS,:,ISYM,IKPL),BND%SK(:,:,ISYM,IKPL),NBANDS,BND%NASOTOT)
+      ENDDO ! ISYM
+      ENDDO; ENDDO
+      !$OMP END PARALLEL DO
+      DEALLOCATE(BND%SK)
+      RETURN
+!
+      END SUBROUTINE ORTH_LOC_PROJ
+!
+!=============================================================================
+      SUBROUTINE ORTH_LOC_PROJ1(U,SK,NBANDS,NAST)
+      INTEGER NBANDS,NAST
+      COMPLEX(gq) U(NBANDS,NAST),SK(NAST,NAST)
+! LOCAL
+      INTEGER J1,J2
+      COMPLEX(gq) U_(NBANDS,NAST)
+      COMPLEX(gq),ALLOCATABLE :: SNH(:,:)
+!
+      ALLOCATE(SNH(NAST,NAST)); SNH=0
+      CALL ATOFA(SK,SNH,NAST,-12,D1,.TRUE.)
+      U_=U; U=0
+      DO J1=1,NAST; DO J2=1,NAST
+        U(:,J1)=U(:,J1)+U_(:,J2)*SNH(J2,J1)
+      ENDDO; ENDDO
+      DEALLOCATE(SNH)
+      RETURN
+!
+      END SUBROUTINE ORTH_LOC_PROJ1
+!
+!=============================================================================
+      SUBROUTINE READ_NELF1()
+      INTEGER NI
+      COMPLEX(gq) NPHY(WH%NA2MAX,WH%NA2MAX)
+!
+      IF(GL%LDC/=2.AND.GL%LDC/=12.AND.GL%LDC/=-12)RETURN
+      OPEN(GL%IU,FILE="GL_NELF1.INP",STATUS='OLD',ERR=100)
+      IF(GL%LDC==2.OR.GL%LDC==12)THEN
+        READ(GL%IU,*) GYZ(:)%CO%NELF1
+      ELSE
+        DO NI=1,WH%NIONS
+          READ(GL%IU,*)NPHY
+          WH%NPHY_FIX(:,:,NI)=NPHY
+        ENDDO
+        CALL ZOUT_MAT('NPHY_FIX',WH%NPHY_FIX,GL%IO,1)
+      ENDIF
+      CLOSE(GL%IU)
+100   CONTINUE
+      IF(GL%LDC==2.OR.GL%LDC==12)THEN
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ATOM DEPENDENT NELF1 (OVERWRITE NEL_FIX_VDC1):")')
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(5F12.4)')GYZ(:)%CO%NELF1
+      ENDIF
+      RETURN
+!
+      END SUBROUTINE READ_NELF1
+!
+!=============================================================================
+      SUBROUTINE UPDATE_NELF1()
+      INTEGER NI
+      REAL(gq) NDIFF(WH%NIONS)
+      COMPLEX(gq) NDIFF2(WH%NA2MAX*WH%NA2MAX*WH%NIONS),DIFF(1)
+      COMPLEX(gq) NPHY(WH%NA2MAX,WH%NA2MAX)
+      CHARACTER(40) FMT
+!
+      WRITE(FMT,'(A,I3,A)')"(",WH%NA2MAX,'("(",F18.12,",",F18.12,")"))'
+      IF(GL%LDC/=2.AND.GL%LDC/=12.AND.GL%LDC/=-12)RETURN
+      IF(GL%LDC==2.OR.GL%LDC==12)THEN
+        NDIFF=GYZ(:)%CO%NET-GYZ(:)%CO%NELF1
+        DIFF=NDIFF(MAXLOC(ABS(NDIFF)))
+      ELSE
+        NDIFF2=RESHAPE(WH%NC_PHY-WH%NPHY_FIX,(/WH%NA2MAX*WH%NA2MAX*WH%NIONS/))
+        DIFF=NDIFF2(MAXLOC(ABS(NDIFF2)))
+      ENDIF
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" MAX NELF1 DIFF=",2F14.8)')DIFF
+      GL%DCV_ERROR = ABS(DIFF(1))
+      IF(GL%LDC/=12.AND.GL%LDC/=-12)RETURN
+      IF(GL%LDC==12)THEN
+        GYZ(:)%CO%NELF1=GYZ(:)%CO%NELF1+GL%DCMIX_A*NDIFF
+      ELSE
+        WH%NPHY_FIX=WH%NPHY_FIX+GL%DCMIX_A* &
+          &RESHAPE(NDIFF2,(/WH%NA2MAX,WH%NA2MAX,WH%NIONS/))
+      ENDIF
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      OPEN(GL%IU,FILE="GL_NELF1.OUT",STATUS='REPLACE')
+      IF(GL%LDC==12)THEN
+        WRITE(GL%IU,*) GYZ(:)%CO%NELF1
+      ELSE
+        DO NI=1,WH%NIONS
+          NPHY=WH%NPHY_FIX(:,:,NI)
+          WRITE(GL%IU,FMT)NPHY
+        ENDDO
+      ENDIF
+      CLOSE(GL%IU)
+      RETURN
+!
+      END SUBROUTINE UPDATE_NELF1
+!
+!=============================================================================
+      SUBROUTINE SET_DMFTU_BNDU(U,NBANDS,NASOMAX,NIONS,ISYM,IKP)
+      INTEGER NBANDS,NASOMAX,NIONS,ISYM,IKP
+      COMPLEX(gq) U(NBANDS,NASOMAX,NIONS)
+! LOCAL
+      INTEGER NI,NASO,ISYM_
+!
+      ISYM_=ISYM-SYM%IDI+1
+      DO NI=1,WH%NIONS
+        NASO=GYZ(NI)%CO%DIMSO
+        GYZ(NI)%CO%UK(1:NBANDS,:,ISYM_,IKP)=U(:,1:NASO,NI)
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE SET_DMFTU_BNDU
+!****************************************************************************
+! Check magnetic moment for the case of spin-polarized calculations.
+!****************************************************************************
+      SUBROUTINE CHK_MAG_MOMENT()
+      INTEGER ISP,IKP
+      REAL(gq) NEL(2)
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      IF(BND%NSPIN==1.OR.BND%ISO==2)RETURN
+      NEL=0
+      DO ISP=1,BND%NSPIN; DO IKP=1,KPT%DIM
+        NEL(ISP) = NEL(ISP) + SUM(BND%FERWE(:,IKP,ISP))*KPT%WT(IKP)
+      ENDDO; ENDDO
+      WRITE(GL%IO,'(" TOTAL (QUASI-PARTICLE) MAGNETIC MOMENT = ", F12.4)')NEL(2)-NEL(1)
+      RETURN
+!
+      END SUBROUTINE CHK_MAG_MOMENT
+!
+!****************************************************************************
+! Calculate bare/renormalized occupation matrix of the original KS orbitals 
+!****************************************************************************
+      SUBROUTINE CALC_KSWT(MODE)
+      INTEGER MODE
+! LOCAL
+      INTEGER IVEC,IKS,IKP,IKPL,NKP,NBANDS,I,ISYM,ISP
+      INTEGER NEMIN,NEMAX
+      REAL(gq) SUMWT(2),SUM1,SUM2,WTK,WTK0,MAXOFFDIAG
+      COMPLEX(gq),POINTER :: VK(:,:),KSWT(:,:),UK(:,:)
+      REAL(gq),POINTER    :: FERWE(:)
+!
+      ! "CALC_KSWT"
+      IF(MODE==0) ALLOCATE(BND%CWT(BND%NMAXIN,BND%NMAXIN,KPT%DIML))
+      WTK=1._gq/BND%RSPO; ISYM=SYM%IE
+      BND%CWT=0; SUMWT=0; MAXOFFDIAG=0; IKPL=0
+!
+      !$OMP PARALLEL DO FIRSTPRIVATE(IKPL) PRIVATE(IVEC,NKP,IKS,I,IKP,NEMIN,NEMAX,NBANDS,KSWT,WTK0,FERWE,VK,UK,SUM1,SUM2) SCHEDULE(STATIC,1) REDUCTION(+:SUMWT) REDUCTION(MAX:MAXOFFDIAG)
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+        NEMIN=BND%NE(2,IKP); NEMAX=BND%NE(3,IKP)
+        NBANDS=NEMAX-NEMIN+1
+        KSWT=>BND%CWT(1:NBANDS,1:NBANDS,IKPL)
+        WTK0=KPT%WT(IKP)
+        DO ISP=1,BND%NSPIN
+        FERWE=>BND%FERWE(NEMIN:NEMAX,IKP,ISP)
+        VK=>BND%VK(1:NBANDS,1:NBANDS,ISYM,IKPL,ISP)
+        UK=>BND%UK0(1:NBANDS,1:NBANDS,ISYM,IKPL)
+        CALL CALC_KSWT_1K(KSWT,VK,UK,FERWE,NBANDS,WTK,WTK0,ISP,MODE)
+        SUM1=SUM(FERWE)
+        SUMWT(1)=SUMWT(1)+SUM1
+        ENDDO ! ISP
+        KSWT=KSWT*BND%RSPO
+        SUM2=0
+        DO I=1,NBANDS; SUM2=SUM2+REAL(KSWT(I,I),gq); ENDDO
+        SUMWT(2)=SUMWT(2)+SUM2
+        DO I=1,NBANDS-1; MAXOFFDIAG=MAX(MAXOFFDIAG,MAXVAL(ABS(KSWT(I+1:,I)))); ENDDO
+        IF(BND%ISO>BND%ISO_IN)THEN
+          CALL ORBITAL_SPIN_TRANS(BND%CWT(1:NBANDS,1:NBANDS,IKPL),NBANDS,.FALSE.,BND%ISO_IN)
+          BND%CWT(1:NBANDS,1:NBANDS,IKPL)=BND%CWT(1:NBANDS,1:NBANDS,IKPL)*BND%ISO/BND%ISO_IN
+        ENDIF
+      ENDDO; ENDDO
+      !$OMP END PARALLEL DO
+      NULLIFY(VK,FERWE,KSWT)
+      CALL DSUM_ALL_MPI(SUMWT,2)
+      CALL DMAX1_ALL_MPI(MAXOFFDIAG)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("MODE=",I2," CORRELATED SUBSPACE, SUM_FERWT=",F15.7," SUM_KSWT=",F15.7)')MODE,SUMWT
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("      MAX OFF DIAGONAL KS.WT=",F12.6)')MAXOFFDIAG
+      SUM1 = SUMWT(1)-SUMWT(2)
+      IF(ABS(SUM1)>1.E-4_gq)THEN
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" WARNING: TOO LARGE SUM_FERWT-SUM_KSWT=",F12.5,"!")')SUM1
+        IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(0,'(" WARNING: TOO LARGE SUM_FERWT-SUM_KSWT=",F12.5,"!")')SUM1
+      ENDIF
+      ! "CALC_KSWT"
+      RETURN
+!
+      END SUBROUTINE CALC_KSWT
+!
+!****************************************************************************
+! Density matrix <a|psi>f_psi<psi|b>
+!****************************************************************************
+      SUBROUTINE CALC_KSWT_1K(KSWT,VK,UK,FERWE,NBANDS,WTK,WTK0,ISP,MODE)
+      INTEGER NBANDS,ISP,MODE
+      REAL(gq) FERWE(NBANDS),WTK,WTK0
+      COMPLEX(gq) VK(NBANDS,NBANDS),KSWT(NBANDS,NBANDS),UK(NBANDS,NBANDS)
+! LOCAL
+      COMPLEX(gq),ALLOCATABLE :: NABR(:,:)
+!
+      ALLOCATE(NABR(NBANDS,NBANDS)); NABR=0
+      IF(MODE==0)THEN
+        CALL CALC_NABR_1K(NABR,VK,FERWE,NBANDS,WTK,WTK0,ISP) ! <psi|a><b|psi>
+        NABR=TRANSPOSE(NABR) ! <a|psi><psi|b>
+      ELSE
+        CALL CALC_NAB_1K(NABR,VK,FERWE,NBANDS,WTK)
+      ENDIF
+      CALL UHAU(NABR,UK,NBANDS,NBANDS,TRUL='N',TRUR='C')
+      KSWT=KSWT+NABR ! Density matrix <a|psi>f_psi<psi|b>
+      DEALLOCATE(NABR)
+      RETURN
+!
+      END SUBROUTINE CALC_KSWT_1K
+!
+!****************************************************************************
+! FOR WIEN_DMFT2
+!****************************************************************************
+      SUBROUTINE WRT_KSWT()
+      REAL(8) VNORM1
+      INTEGER IVEC,IKP,IKPL,IKS,NKP,NBANDS,IU,ISYM,ID
+      INTEGER NEMIN,NEMAX
+      COMPLEX(8),POINTER :: KSWT(:,:)
+!
+      VNORM1=1.d0
+      IF(BND%ISO_IN.EQ.2.AND.BND%ISPIN_IN.EQ.1)VNORM1=.5d0
+!
+      IKPL=0
+      DO IVEC=1,GP%NVEC
+      IF(GP%LKPVEC)THEN; ID=GP%KVEC(IVEC,1); ELSE; ID=GP%MYRANK; ENDIF
+      IU=GL%IU+IVEC
+      OPEN(IU,FILE=TRIM(ADJUSTL(FILE_NAME(ID,0,0,-2))),STATUS='REPLACE',FORM="UNFORMATTED",ACCESS="SEQUENTIAL")
+      WRITE(IU)BND%EF
+      WRITE(IU)ENG%DBLC+ENG%GAMM
+      WRITE(IU)ENG%BAND
+      IF(GP%LKPVEC)THEN; NKP=GP%KVEC(IVEC,2); ELSE; NKP=KPT%DIM; ENDIF
+      DO IKS=1,NKP
+        IF(GP%LKPVEC)THEN
+          IKP=GP%KVEC(IVEC,3)+IKS
+          IF(GP%LOMP)THEN
+            IKPL=IKP
+          ELSE
+            IKPL=IKPL+1
+          ENDIF
+        ELSE
+          IKP=IKS
+          IF(GP%LOMP)THEN
+            IKPL=IKP
+          ELSE
+            IKPL=IKP-GP%MYRANK*KPT%DIML
+          ENDIF
+        ENDIF
+        IF(IKPL.LE.0)CYCLE; IF(IKPL.GT.KPT%DIML)EXIT
+        NEMIN=(BND%NE(2,IKP)-1)*BND%ISO_IN/BND%ISO+1
+        NEMAX=BND%NE(3,IKP)*BND%ISO_IN/BND%ISO
+        NBANDS =NEMAX-NEMIN+1
+        KSWT=>BND%CWT(1:NBANDS,1:NBANDS,IKPL)
+        KSWT=KSWT/VNORM1 ! To be consistent with dmft2
+        WRITE(IU)NEMIN,NEMAX
+        WRITE(IU)KSWT
+      ENDDO
+      CLOSE(IU)
+      ENDDO
+      NULLIFY(KSWT)
+      RETURN
+!
+      END SUBROUTINE WRT_KSWT
+!
+!*************************************************************
+! FOR VASP
+!*************************************************************
+      SUBROUTINE DIAG_KSWT()
+      INTEGER IVEC,IKP,IKPL,IKS,NKP,NBANDS
+      INTEGER NEMIN,NEMAX
+      COMPLEX(8),POINTER :: KSWT(:,:)
+!
+      BND%FERWER=0; IKPL=0
+      !$OMP PARALLEL DO FIRSTPRIVATE(IKPL) PRIVATE(IVEC,NKP,IKS,IKP,NEMIN,NEMAX,NBANDS,KSWT) SCHEDULE(STATIC,1)
+      DO IVEC=1,GP%NVEC;   IF(GP%LKPVEC)THEN;     NKP=GP%KVEC(IVEC,2);   ELSE;     NKP=KPT%DIM;   ENDIF;   DO IKS=1,NKP;   IF(GP%LKPVEC)THEN;     IKP=GP%KVEC(IVEC,3)+IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKPL+1;    ENDIF;   ELSE;     IKP=IKS;     IF(GP%LOMP)THEN;       IKPL=IKP;     ELSE;       IKPL=IKP-GP%MYRANK*KPT%DIML;     ENDIF;   ENDIF;   IF(IKPL.LE.0) CYCLE;   IF(IKPL.GT.KPT%DIML) EXIT
+        NEMIN=(BND%NE(2,IKP)-1)*BND%ISO_IN/BND%ISO+1
+        NEMAX=BND%NE(3,IKP)*BND%ISO_IN/BND%ISO
+        NBANDS=NEMAX-NEMIN+1
+        BND%FERWER(1:NEMIN-1,IKP,1)=1._gq
+        KSWT=>BND%CWT(1:NBANDS,1:NBANDS,IKPL)
+        KSWT=-KSWT ! Eigen-value correct order
+        CALL HERMEV('V','L',KSWT,BND%FERWER(NEMIN:NEMAX,IKP,1),NBANDS)
+        BND%FERWER(NEMIN:NEMAX,IKP,1)=-BND%FERWER(NEMIN:NEMAX,IKP,1)/BND%RSPO/KPT%WT(IKP)
+      ENDDO; ENDDO
+      !$OMP END PARALLEL DO
+      NULLIFY(KSWT)
+      RETURN
+!
+      END SUBROUTINE DIAG_KSWT
+!
+!****************************************************************************
+! FOR VASP
+!****************************************************************************
+      SUBROUTINE WRT0_KSWT(MODE)
+      INTEGER MODE
+! LOCAL
+      INTEGER IVEC,IKP,IKPL,IKS,NKP,NBANDS,I,IU,ID
+      INTEGER NEMIN,NEMAX,NBTOT
+      COMPLEX(8),POINTER :: KSWT(:,:)
+!
+      IKPL=0
+      DO IVEC=1,GP%NVEC
+      IF(GP%LKPVEC)THEN; ID=GP%KVEC(IVEC,1); ELSE; ID=GP%MYRANK; ENDIF
+      OPEN(IU,FILE=TRIM(ADJUSTL(FILE_NAME(ID,0,0,MODE))),STATUS='REPLACE',FORM="UNFORMATTED",ACCESS="SEQUENTIAL")
+      WRITE(IU)ENG%TB
+      IF(GP%LKPVEC)THEN; NKP=GP%KVEC(IVEC,2); ELSE; NKP=KPT%DIM; ENDIF
+      DO IKS=1,NKP
+        IF(GP%LKPVEC)THEN
+          IKP=GP%KVEC(IVEC,3)+IKS
+          IF(GP%LOMP)THEN; IKPL=IKP; ELSE; IKPL=IKPL+1; ENDIF
+        ELSE
+          IKP=IKS
+          IF(GP%LOMP)THEN; IKPL=IKP; ELSE; IKPL=IKP-GP%MYRANK*KPT%DIML; ENDIF
+        ENDIF
+        IF(IKPL.LE.0)CYCLE; IF(IKPL.GT.KPT%DIML)EXIT
+        NEMIN=(BND%NE(2,IKP)-1)*BND%ISO_IN/BND%ISO+1
+        NEMAX=BND%NE(3,IKP)*BND%ISO_IN/BND%ISO
+        NBTOT=BND%NE(1,IKP)*BND%ISO_IN/BND%ISO
+        NBANDS=NEMAX-NEMIN+1
+        KSWT=>BND%CWT(1:NBANDS,1:NBANDS,IKPL)
+        WRITE(IU)NBTOT,NEMIN,NEMAX
+        WRITE(IU)BND%FERWER(1:NBTOT,IKP,1)
+        WRITE(IU)KSWT
+      ENDDO; ENDDO
+      CLOSE(IU)
+      NULLIFY(KSWT)
+      RETURN
+!
+      END SUBROUTINE WRT0_KSWT
+!
+!*************************************************************
+      SUBROUTINE SET_NIL()
+      INTEGER NI,NJ,NIMAP,NIS
+!
+      NIS=0; GYZ(:)%HL%NIL=0
+      GYZ(:)%PJ%LSET_MNSV=.FALSE.
+      GYZ(:)%PJ%LSAVE_MNSV=.FALSE.
+      DO NI=1,WH%NIONS
+        NIMAP=GYZ(NI)%HL%NIMAP
+        IF(NIMAP.EQ.NI)THEN
+          IF(GP%MYRANK.EQ.MOD(NIS,GP%NPROCS).OR.GP%LOMP)THEN
+            GYZ(NI)%HL%NIL=NI
+            GYZ(NI)%HL%NTMAP=GYZ(NI)%HL%NT
+            GYZ(NI)%PJ%LSET_MNSV=.TRUE.
+            GYZ(NI)%PJ%LSAVE_MNSV=.TRUE.
+            DO NJ=1,NI-1
+              IF(GYZ(NJ)%HL%NIL==0) CYCLE
+              IF(GYZ(NJ)%HL%NT==GYZ(NI)%HL%NT)THEN
+                GYZ(NI)%HL%NTMAP=NJ
+                GYZ(NI)%PJ%LSET_MNSV=.FALSE.
+                EXIT
+              ENDIF
+            ENDDO
+          ENDIF
+          NIS=NIS+1
+        ELSE
+          IF(GYZ(NIMAP)%HL%NIL.GT.0) GYZ(NI)%HL%NIL=NI
+        ENDIF
+      ENDDO
+!
+      RETURN
+!
+      END SUBROUTINE SET_NIL
+!
+!*************************************************************
+      SUBROUTINE MAP_WH_BND_R(X,Y,LBACK)
+      COMPLEX(gq) X(WH%NA2MAX,WH%NA2MAX,WH%NIONS),Y(WH%NASOTOT,WH%NASOTOT,BND%NSPIN)
+      LOGICAL LBACK
+! LOCAL
+      INTEGER NI,ISP
+      INTEGER NA2,NASO,NBASE,NSPIN
+      COMPLEX(gq) BUF(GL%NA2MAX,GL%NA2MAX)
+!
+      NBASE=1; NSPIN=BND%NSPIN
+      DO NI=1,WH%NIONS
+        NA2=GYZ(NI)%CO%DIM2; NASO=GYZ(NI)%CO%DIMSO; BUF=0
+        IF(.NOT.LBACK)THEN
+          BUF(1:NA2,1:NA2)=X(1:NA2,1:NA2,NI)
+          CALL ORBITAL_SPIN_TRANS(BUF(1:NA2,1:NA2),NA2,.FALSE.,BND%ISO)
+          DO ISP=1,NSPIN
+            Y(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,ISP)=BUF((ISP-1)*NASO+1:ISP*NASO,(ISP-1)*NASO+1:ISP*NASO)
+          ENDDO
+        ELSE
+          DO ISP=1,NSPIN
+            BUF((ISP-1)*NASO+1:ISP*NASO,(ISP-1)*NASO+1:ISP*NASO)=Y(NBASE:NBASE+NASO-1,NBASE:NBASE+NASO-1,ISP)
+          ENDDO
+          IF(BND%ISPO==1)BUF(1+NASO:NA2,1+NASO:NA2)=BUF(1:NASO,1:NASO)
+          CALL ORBITAL_SPIN_TRANS(BUF(1:NA2,1:NA2),NA2,.TRUE.,BND%ISO)
+          X(1:NA2,1:NA2,NI)=BUF(1:NA2,1:NA2)
+        ENDIF
+        NBASE=NBASE+NASO
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE MAP_WH_BND_R
+!
+!*************************************************************
+      SUBROUTINE GUTZ_FROZEN_RUN()
+!     
+      CALL INI_WH_X()
+      CALL MAP_WH_BND_R(WH%R,BND%R,.FALSE.)
+      CALL ZOUT_MAT('R-IN',WH%R,GL%IO)
+      CALL MAP_WH_BND_R(WH%LA1,BND%LA1,.FALSE.)
+      WH%R1 = WH%R
+      CALL ZOUT_MAT('LA1',WH%LA1,GL%IO)
+      CALL CALC_BAND_ALL(GL%LGREEN==0)
+      IF(GL%LEFERMI==0)THEN
+        IF(GL%LENSEMBLE==0)THEN
+          CALL GUTZ_FERMI(GL%IO)
+        ELSE
+          CALL SET_FERMI_WEIGHT(BND%EF)
+        ENDIF
+      ENDIF
+      CALL BND_MODIFY_FROZEN()
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" GA FERMI LEVEL=",F16.8)')BND%EF
+      CALL CALC_NKS(GL%LGREEN)
+      CALL CALC_NKS_PP()
+      CALL EVAL_SL_VEC_ALL(1)
+      CALL REGULARIZE_NKS(0)
+      CALL MAP_WH_BND_R(WH%NKS,BND%NKS,.FALSE.)
+      CALL CALC_DA()
+      CALL CALC_ISIMIX(0)
+      CALL CALC_DA_PP()
+      CALL CALC_VDC() ! Calculate V_DC
+      CALL CALC_LA(2) ! Solve Lambda^{c} (-V_DC)
+      CALL CALC_LC(0)  ! Solve {c}
+      CALL UPDATE_R_ALL()
+      RETURN
+!
+      END SUBROUTINE GUTZ_FROZEN_RUN
+!
+!*************************************************************
+      SUBROUTINE RECORD_PJ_C()
+      INTEGER NI
+!
+      DO NI = 1, WH%NIONS
+        IF (GYZ(NI)%HL%NIMAP /= NI) CYCLE
+        IF(GYZ(NI)%HL%NIL.EQ.0)CYCLE
+        GYZ(NI)%PJ%C_BEST = GYZ(NI)%PJ%C
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE RECORD_PJ_C
+!
+!*************************************************************
+      SUBROUTINE CALC_GF_ZOMG(ZOMG)
+      COMPLEX(gq),INTENT(IN) :: ZOMG
+! LOCAL
+      INTEGER I,IB,ISP,ILR
+      COMPLEX(gq) H(GF2%NBMAX,GF2%NBMAX)
+!
+      CALL GET_BARE_HYBRIZ21(GF2%D1,ZOMG,GF2%DS)
+      DO I=1,GF2%NLR
+        IF(GF2%NLR==1.OR.I==2)THEN
+          IB=GF2%NBMAX
+        ELSE
+          IB=1
+        ENDIF
+        CALL GET_RENORM_GAMMA21(GF2%GM(:,:,:,I),ZOMG,BND%R,GF2%NBMAX,IB)
+        CALL GET_RENORM_GAMMA11(GF2%GM1R(:,:,:,I),ZOMG,BND%R,GF2%NBMAX,IB)
+        CALL GET_RENORM_HYBRIZ21(GF2%D1,BND%R,GF2%D(:,:,:,I),GF2%NBMAX,IB)
+        CALL GET_RENORM_HYBRIZ11(GF2%D1,BND%R,GF2%D1R(:,:,:,I),GF2%NBMAX,IB)
+      ENDDO
+      DO ISP=1,GF2%NSPIN
+        H=BND%LA1(:,:,ISP)
+        DO ILR=1,GF2%NLR
+          H=H+GF2%D(:,:,ISP,ILR)
+        ENDDO
+        CALL CALC_GF_1K(H,GF2%G(:,:,ISP),GF2%NBMAX,GF2%NBMAX,0._gq,ZOMG,100._gq,1) ! No \mu in G_imp
+      ENDDO
+      RETURN
+!
+      END SUBROUTINE CALC_GF_ZOMG
+!
+!************************************************************* 
+      SUBROUTINE PLOT_SPECTRAL_DENSITY_1()
+      INTEGER I
+      INTEGER,PARAMETER :: NW=10000
+      REAL(gq) RFAC,SUM1,SUM2
+      COMPLEX(gq) ZOMG,G(GF2%NBMAX,GF2%NBMAX)
+!
+      IF(GP%MYRANK.NE.GP%MASTER) RETURN
+      IF(GL%LGREEN/=10)RETURN
+!
+      RFAC = GF2%WMAX - GF2%WMIN
+      OPEN(GL%IU,FILE='AW_IMP.OUT',STATUS='REPLACE')
+      SUM1=0; SUM2=0
+      DO I=-NW/2, 3*NW/2
+        ZOMG = DCMPLX(REAL(I,gq)/NW*RFAC+GF2%WMIN, GF2%ETA)
+        CALL CALC_GF_ZOMG(ZOMG)
+        G=MATMUL(TRANSPOSE(CONJG(BND%R(:,:,1))),MATMUL(GYZ(1)%CO%GF2%G(:,:,1),BND%R(:,:,1)))
+        WRITE(GL%IU,'(F16.8,2E14.4)')DBLE(ZOMG),-AIMAG(G(1,1))/PI, &
+            &-AIMAG(GYZ(1)%CO%GF2%G(1,1,1))/PI
+        SUM1=SUM1-AIMAG(G(1,1))/PI*RFAC/NW
+        SUM2=SUM2-AIMAG(GYZ(1)%CO%GF2%G(1,1,1))/PI*RFAC/NW
+      ENDDO
+      CLOSE(GL%IU)
+      WRITE(GL%IO,'(" PLOT_SPECTRAL_DENSITY_1: SUM=",F20.10," SUM_QP=",F20.10)')SUM1,SUM2
+      WRITE(0,'(" PLOT_SPECTRAL_DENSITY_1: SUM=",F20.10," SUM_QP=",F20.10)')SUM1,SUM2
+      RETURN
+!
+      END SUBROUTINE PLOT_SPECTRAL_DENSITY_1
+!
+!
+      END MODULE GUTZ
+!
+!*************************************************************
+      SUBROUTINE GUTZ_FCN1(N,X,FVEC,IFLAG)
+      USE gprec; USE GUTZ
+      IMPLICIT NONE
+      INTEGER N,IFLAG
+      REAL(gq) X(N),FVEC(N)
+! LOCAL
+      REAL(gq) MAXERR,X_TMP(WH%HM_R%DIMHST_RED*GL%RMODE)
+      INTEGER I,NXR
+      REAL :: TA1,TA2,TB1,TB2; INTEGER TIB1,TIB2,TIRATE
+!
+      ! 'GUTZ_FCN1'
+      CALL CPU_TIME(TA1); CALL SYSTEM_CLOCK(TIB1,TIRATE); TB1=REAL(TIB1,4)/REAL(TIRATE,4)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("************ WH%X ************")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(5F14.8)')X
+      GL%ITER1=GL%ITER1+1
+      NXR=WH%HM_R%DIMHST_RED*GL%RMODE
+      CALL X_TO_R_COEF(X,.FALSE.)
+      CALL HM_EXPAND_BACK_ALL('RAA')
+      IF(GL%LSOLVER==30)THEN
+        CALL X_TO_H_COEF(X(NXR+1:N),WH%NKS_COEF,.FALSE.)
+        CALL HM_EXPAND_BACK_ALL('NKS')
+      ELSE
+        CALL X_TO_H_COEF(X(NXR+1:N),WH%LA1_COEF,.FALSE.)
+        CALL HM_EXPAND_BACK_ALL('LA1')
+      ENDIF
+! CMR3 begin
+      WH%R1 = WH%R
+      IF(GL%LFUNR==1)THEN
+        WH%R    = SQRT(WH%R)  ! FUN: SQRT(R)
+        WH%PFPR = 1._gq/2/WH%R  ! p_f(R) / p_R
+      ELSE
+        WH%PFPR = 0
+      ENDIF
+! CMR3 end
+      CALL MAP_WH_BND_R(WH%R,BND%R,.FALSE.)
+      CALL ZOUT_MAT('R1-IN',WH%R1,GL%IO)
+      CALL ZOUT_MAT('R-IN',WH%R,GL%IO)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL WRT_WH_RLNEF(GL%IU, "WH_RLNEF.LAST")
+!
+      IF(GL%LSOLVER==3.OR.GL%LSOLVER==30)THEN
+        CALL GUTZ_SOLVE_LA1()
+      ELSE
+        CALL MAP_WH_BND_R(WH%LA1,BND%LA1,.FALSE.)
+        CALL ZOUT_MAT('LA1',WH%LA1,GL%IO)
+        IF(GL%LGREEN == 10)THEN
+          CALL GREEN2_CALC_ND()
+        ELSE
+          IF(GL%LMODEL==0)THEN
+            CALL CALC_BAND_ALL(GL%LGREEN==0)
+            IF(GL%LGREEN==0)THEN
+              IF(GL%LEFERMI==0)THEN
+                IF(GL%LENSEMBLE==0)THEN
+                  CALL GUTZ_FERMI(GL%IO)
+                ELSE
+                  CALL SET_FERMI_WEIGHT(BND%EF)
+                ENDIF
+              ENDIF
+              CALL BND_MODIFY_FROZEN()
+            ELSE
+              CALL GREEN_FERMI_NV()
+              IF(GL%LGREEN==2)THEN
+                CALL CALC_SELF_ENERGY_FULL()
+              ENDIF
+              CALL SUM_GFK_FULL(BND%EF)
+            ENDIF
+            CALL CALC_MUP_DN()
+            IF(BND%NSPIN==2)THEN
+              IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" TOTAL MAGNETIC MOMENT: ",F8.3)')BND%MUP_DN
+            ENDIF
+          ELSE
+            CALL CALC_GF_IMP_ALL()
+          ENDIF
+          IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" GA FERMI LEVEL=",F16.8)')BND%EF
+          CALL CALC_NKS(GL%LGREEN)
+        ENDIF
+      ENDIF
+!
+      CALL CALC_NKS_PP()
+      CALL EVAL_SL_VEC_ALL(1)
+      CALL REGULARIZE_NKS(0)
+      CALL MAP_WH_BND_R(WH%NKS,BND%NKS,.FALSE.)
+      IF(GL%LGREEN /= 10)THEN
+        CALL CALC_DA()
+      ENDIF
+      CALL CALC_ISIMIX(0)
+      CALL CALC_DA_PP()
+!
+      CALL CALC_VDC() ! Calculate V_DC
+      CALL CALC_LA(2) ! Solve Lambda^{c} (-V_DC)
+      IF(GL%LSCF==2)THEN
+        IFLAG=-1; RETURN
+      ENDIF
+      IF(GL%LSOLVER==2)THEN
+        CALL OPTIMIZE_LA2()
+        CALL CALC_LA(1)
+      ELSE
+        CALL CALC_LC(0)  ! Solve {c}
+      ENDIF
+      CALL UPDATE_R_ALL()
+      CALL X_TO_R_COEF(X_TMP,.TRUE.)
+      FVEC(1:NXR)=X_TMP-X(1:NXR)
+      IF(GL%LSOLVER==2)THEN
+        CALL X_TO_H_COEF(FVEC(NXR+1:N),WH%LA1_COEF,.TRUE.)
+        FVEC(NXR+1:N) =  FVEC(NXR+1:N)-X(NXR+1:N)
+      ELSE
+        ! For mixing scheme
+        CALL X_TO_H_COEF(FVEC(NXR+1:N),WH%NCV_COEF,.TRUE.)
+        CALL X_TO_H_COEF(X_TMP(1:WH%HM_L%DIMHST_RED),WH%NKS_COEF,.TRUE.)
+        FVEC(NXR+1:N) = -FVEC(NXR+1:N)+X_TMP(1:WH%HM_L%DIMHST_RED)
+      ENDIF
+      CALL CPU_TIME(TA2); CALL SYSTEM_CLOCK(TIB2,TIRATE); TB2=REAL(TIB2,4)/REAL(TIRATE,4)
+      IF(GP%MYRANK.EQ.GP%MASTER) CALL OUT_TIME_USE('GUTZ_FCN1',TA2-TA1,TB2-TB1,GL%IO)
+! Set back the input values
+      CALL X_TO_R_COEF(X,.FALSE.)
+      CALL HM_EXPAND_BACK_ALL('RAA')
+      IF(GL%LSOLVER==30)THEN
+        CALL X_TO_H_COEF(X(NXR+1:N),WH%NKS_COEF,.FALSE.)
+        CALL HM_EXPAND_BACK_ALL('NKS')
+      ELSE
+        CALL X_TO_H_COEF(X(NXR+1:N),WH%LA1_COEF,.FALSE.)
+        CALL HM_EXPAND_BACK_ALL('LA1')
+      ENDIF
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("************ DIF_X ************")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(5F14.8)')FVEC
+      MAXERR=MAXVAL(ABS(FVEC))
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(0,'(" ITER1=",I7," MAXERR=",F14.8)')GL%ITER1,MAXERR
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ITER1=",I7," MAXERR=",F14.8)')GL%ITER1,MAXERR
+      IF(MAXERR < GL%MAXERROR)THEN
+        GL%MAXERROR = MAXERR
+        IF(GP%MYRANK.EQ.GP%MASTER) CALL WRT_WH_RLNEF(GL%IU, "WH_RLNEF.BEST")
+      ENDIF
+      IF(GL%ITER1==1)THEN
+        CALL RECORD_PJ_C()
+      ENDIF
+      CALL CALC_PJRHO(0)
+      CALL CALC_ENG(0)
+      IF(MAXERR < GL%RTOL)IFLAG=-1
+      IF(GL%ITER1.GE.GL%NMAX_ITER.OR.GL%ITER1==-1)IFLAG=-1
+      IF(GL%LSCF==3)IFLAG=-1
+      ! 'GUTZ_FCN1'
+      RETURN
+!
+      END SUBROUTINE GUTZ_FCN1
+!
+!*************************************************************
+      SUBROUTINE OPTIMIZE_LA2()
+      USE gprec; USE GUTZ
+      IMPLICIT NONE
+      REAL(gq) X(WH%HM_L%DIMHST_RED),FVEC(WH%HM_L%DIMHST_RED)
+      REAL(gq),PARAMETER :: RTOL=1.E-10_gq,EPSFCN=1.E-10_gq
+      EXTERNAL :: GUTZ_FCN_NCVAR
+!
+      GL%ITER_LA2=0
+      CALL X_TO_H_COEF(X,WH%LA2_COEF,.TRUE.)
+      CALL GHYBRD(GUTZ_FCN_NCVAR,WH%HM_L%DIMHST_RED,X,FVEC,RTOL,EPSFCN,GL%IO)
+      RETURN
+!
+      END SUBROUTINE OPTIMIZE_LA2
+! 
+!*************************************************************
+      SUBROUTINE GUTZ_FCN1_NIL(N,X,FVEC,RPAR,IPAR,ITRMF)
+      USE gprec; USE GUTZ
+      INTEGER N,IPAR(*),ITRMF
+      REAL(gq) X(N),FVEC(N),RPAR(*)
+! LOCAL
+      INTEGER IFLAG
+!
+      CALL GUTZ_FCN1(N,X,FVEC,IFLAG)
+      ITRMF=0
+      RETURN
+!
+      END SUBROUTINE GUTZ_FCN1_NIL
+!
+!*************************************************************
+      SUBROUTINE GFERMI_FCN(N,X,FVEC,IFLAG)
+      USE gprec; USE GUTZ
+      IMPLICIT NONE
+      INTEGER N
+      INTEGER IFLAG
+      REAL(gq) X(N),FVEC(N)
+! LOCAL
+      REAL(gq) DIFF,NELE
+!
+      GL%ITER_GF=GL%ITER_GF+1
+      IF(GL%LMODEL==0)THEN
+        CALL SUM_GFK_FULL(X(1))
+        CALL GREEN_OCC(0,GF,NELE=NELE)
+      ELSE
+        CALL CALC_GF_IMP(X(1))
+        CALL GREEN_OCC_R1(1,1,GF,NELET=NELE)
+      ENDIF
+      NELE=NELE*BND%RSPO
+      FVEC(1)=NELE-BND%NELEL
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(0    ,'(" ITER_GF=",I3," MU=",F12.6," NELE=",F14.8," BND%NELEL=",F14.8)')GL%ITER_GF,X(1),NELE,BND%NELEL
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ITER_GF=",I3," MU=",F12.6," NELE=",F14.8," BND%NELEL=",F14.8)')GL%ITER_GF,X(1),NELE,BND%NELEL
+      RETURN
+!
+      END SUBROUTINE GFERMI_FCN
+!
+!====================================
+! V2=A*V1
+!====================================
+      SUBROUTINE PHIK_AV(N,V1,V2)
+      USE GUTZ; USE gprec
+      IMPLICIT NONE
+      INTEGER N
+      COMPLEX(gq) V1(N),V2(N)
+! LOCAL
+      INTEGER NI
+      !
+!
+      !
+      NI=GL_NI
+      GYZ(NI)%PJ%ITER=GYZ(NI)%PJ%ITER+1
+      IF(GYZ(NI)%PJ%LMCFLY<0)THEN
+        CALL ZCSR_SYAMUX_SK('L',GYZ(NI)%PJ%FHL,V1,V2)
+      ELSE
+        IF(GYZ(NI)%PJ%U_KKH%NROW>0)THEN
+          CALL ZCSR_SYAMUX_SK('L',GYZ(NI)%PJ%U_KKH,V1,V2)
+        ELSE
+          CALL APPLY_UKKH_FOCK(GYZ(NI)%HL,GYZ(NI)%PJ,V1,V2)
+        ENDIF
+        CALL ACT_ZBMC(N,V1,V2,GYZ(NI)%CO,GYZ(NI)%HL,GYZ(NI)%PJ)
+      ENDIF
+      !
+      RETURN
+!
+      END SUBROUTINE PHIK_AV
+!
+!====================================
+      SUBROUTINE PHIK_AV_M(V1,V2,K,primme)
+      USE GUTZ; USE gprec
+      IMPLICIT NONE
+      integer K
+      integer(8) primme
+      COMPLEX(gq) V1(*),V2(*)
+! LOCAL
+      INTEGER NI, n, i
+      !
+!
+      !
+      NI=GL_NI; N=GYZ(NI)%PJ%N_PHIK
+      do i = 1, K
+        call PHIK_AV(N, V1(N*(i - 1) + 1), V2(N*(i - 1) + 1))
+      enddo
+      RETURN
+!
+      END SUBROUTINE PHIK_AV_M
+!
+!*************************************************************
+      SUBROUTINE GUTZ_FCN_PJS(V,N,FUN)
+      USE gprec; USE GUTZ
+      IMPLICIT NONE
+      INTEGER N
+      COMPLEX(gq) V(N)
+      REAL(gq) FUN
+! LOCAL
+      INTEGER NI
+      REAL(gq) TR
+      COMPLEX(gq) VP(N)
+      COMPLEX(gq),EXTERNAL::ZDOTC
+!
+      NI=GL_NI
+      TR=ZDOTC(N,V,1,V,1)
+      GYZ(NI)%PJ%C=V/SQRT(TR)
+      CALL CALC_PJ_RHO(GYZ(NI)%HL,GYZ(NI)%PJ,0)
+      CALL CALC_NCPHY_CO(GYZ(NI)%FS,GYZ(NI)%HL,GYZ(NI)%CO)
+      CALL CALC_P0_FS(GYZ(NI)%CO,GYZ(NI)%FS,GYZ(NI)%HL)
+      CALL CALC_PROJ_ENS(GYZ(NI)%HL)
+      CALL PHIK_AV(N,GYZ(NI)%PJ%C,VP)
+      FUN=REAL(ZDOTC(N,GYZ(NI)%PJ%C,1,VP,1)-GYZ(NI)%HL%PJ_ENS*KPT%DELTA,gq)
+      RETURN
+!
+      END SUBROUTINE GUTZ_FCN_PJS
+!
+!*************************************************************
+      SUBROUTINE GUTZ_FCN_NK(N,X,FVEC,IFLAG)
+      USE gprec; USE GUTZ
+      IMPLICIT NONE
+      INTEGER N,IFLAG
+      REAL(gq) X(N),FVEC(N)
+! LOCAL
+      INTEGER I
+      REAL(gq),PARAMETER::RCUT=1.E-8_gq
+      REAL(gq) X_NKS(WH%HM_L%DIMHST_RED)
+      REAL(gq) MAXERR
+!
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("************ WH%LA1 ************")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(5F14.8)')X
+      GL%ITER_LA1=GL%ITER_LA1+1
+      CALL X_TO_H_COEF(X,WH%LA1_COEF,.FALSE.)
+      CALL X_TO_H_COEF(X_NKS,WH%NKS_COEF,.TRUE.)
+      CALL HM_EXPAND_BACK_ALL('LA1')
+      CALL MAP_WH_BND_R(WH%LA1,BND%LA1,.FALSE.)
+      CALL ZOUT_MAT('LA1',WH%LA1,GL%IO)
+      IF(GL%LMODEL==0)THEN
+        CALL CALC_BAND_ALL(GL%LGREEN==0)
+        IF(GL%LGREEN==0)THEN
+          IF(GL%LEFERMI==0)THEN
+            IF(GL%LENSEMBLE==0)THEN
+              CALL GUTZ_FERMI(GL%IO)
+            ELSE
+              CALL SET_FERMI_WEIGHT(BND%EF)
+            ENDIF
+          ENDIF
+          CALL BND_MODIFY_FROZEN()
+        ELSE
+          CALL GREEN_FERMI_NV()
+          IF(GL%LGREEN==2)THEN
+            CALL CALC_SELF_ENERGY_FULL()
+          ENDIF
+          CALL SUM_GFK_FULL(BND%EF)
+        ENDIF
+      ELSE
+        CALL CALC_GF_IMP_ALL()
+      ENDIF
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" GA FERMI LEVEL=",F16.8)')BND%EF
+      CALL CALC_NKS(GL%LGREEN)
+      CALL CALC_NKS_PP()
+      CALL EVAL_SL_VEC_ALL(1)
+      CALL X_TO_H_COEF(FVEC,WH%NKS_COEF,.TRUE.)
+      FVEC=FVEC-X_NKS
+      CALL X_TO_H_COEF(X_NKS,WH%NKS_COEF,.FALSE.)
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("************ DIF_NK ************")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(5F14.8)')FVEC
+      MAXERR=MAXVAL(ABS(FVEC))
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(0    ,'(" ITER_LA1=",I7," MAXERR=",F14.8)')GL%ITER_LA1,MAXERR
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ITER_LA1=",I7," MAXERR=",F14.8)')GL%ITER_LA1,MAXERR
+      IF(MAXERR.LT.RCUT)IFLAG=-1
+      IF(GL%ITER_LA1.GE.GL%NMAX_ITER)IFLAG=-1
+      RETURN
+!
+      END SUBROUTINE GUTZ_FCN_NK
+!
+!*************************************************************
+      SUBROUTINE GUTZ_FCN_NCVAR(N,X,FVEC,IFLAG)
+      USE gprec; USE GUTZ
+      IMPLICIT NONE
+      INTEGER N,IFLAG
+      REAL(gq) X(N),FVEC(N)
+! LOCAL
+      INTEGER I
+      REAL(gq),PARAMETER::RCUT=1.E-8_gq
+      REAL(gq) X_NKS(WH%HM_L%DIMHST_RED)
+      REAL(gq) MAXERR
+!
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("************ WH%LA2 ************")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(5F14.8)')X
+      GL%ITER_LA2=GL%ITER_LA2+1
+      CALL X_TO_H_COEF(X,WH%LA2_COEF,.FALSE.)
+      CALL HM_EXPAND_BACK_ALL('LA2')
+      CALL CALC_LC(1)
+      CALL X_TO_H_COEF(X_NKS,WH%NKS_COEF,.TRUE.)
+      CALL X_TO_H_COEF(FVEC,WH%NCV_COEF,.TRUE.)
+      FVEC=FVEC-X_NKS
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'("************DIF_NC_NK************")')
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(5F14.8)')FVEC
+      MAXERR=MAXVAL(ABS(FVEC))
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(0    ,'(" ITER_LA2=",I7," MAXERR=",F14.8)')GL%ITER_LA2,MAXERR
+      IF((GP%MYRANK.EQ.GP%MASTER).AND.(OMP_GET_THREAD_NUM()==0)) WRITE(GL%IO,'(" ITER_LA2=",I7," MAXERR=",F14.8)')GL%ITER_LA2,MAXERR
+      IF(MAXERR.LT.RCUT)IFLAG=-1
+      IF(GL%ITER_LA2.GE.GL%NMAX_ITER)IFLAG=-1
+      RETURN
+!
+      END SUBROUTINE GUTZ_FCN_NCVAR
+!
+!*************************************************************
+      FUNCTION GUTZ_INTEGRAND(NV, ROMG) RESULT(VALUES)
+      USE gprec; USE GUTZ
+      IMPLICIT NONE
+      INTEGER, INTENT(IN) :: NV
+      REAL(gq), DIMENSION(:), INTENT(IN) :: ROMG
+      REAL(gq), DIMENSION(NV) :: VALUES
+!
+      INTEGER I,J,ISP,ILR,NI,NASO,IADD,IB
+      REAL(gq) RFAC
+      COMPLEX(gq) H(GF2%NBMAX,GF2%NBMAX),ZOMG
+      REAL(gq) NTOT(WH%NASOMAX,BND%NSPIN)
+!
+      RFAC = GF2%WMAX - GF2%WMIN
+      ZOMG = DCMPLX(ROMG(1)*RFAC + GF2%WMIN, GF2%ETA)
+      CALL CALC_GF_ZOMG(ZOMG)
+      WH%NKS=0; BND%D0=0; IADD=0
+      DO NI=1,WH%NIONS
+        NASO = GYZ(NI)%CO%DIMSO
+        CALL GREEN2_OCC_R1(1,1,GYZ(NI)%CO%GF2,ZOMG,OCC=GYZ(NI)%CO%NKS(1:NASO*BND%NSPIN,1:NASO*BND%NSPIN))
+        CALL GREEN2_OCC_R1(0,1,GYZ(NI)%CO%GF2,ZOMG,NELE=NTOT(1:NASO,:))
+        CALL GREEN2_DA_R1(GYZ(NI)%CO%GF2,ZOMG,GYZ(NI)%CO%RB,GYZ(NI)%CO%DB,1)
+! Mott? CALL GREEN2_DA_R2(GYZ(NI)%CO%GF2,ZOMG,GYZ(NI)%CO%RB,GYZ(NI)%CO%DB)
+        DO ISP=1,GF2%NSPIN; DO I=1,NASO; DO J=I,NASO
+          IADD = IADD + 1
+          VALUES(IADD) = REAL (GYZ(NI)%CO%NKS(I + NASO*(ISP - 1), J + NASO*(ISP - 1)))
+          IF (I == J) CYCLE
+          IADD = IADD + 1
+          VALUES(IADD) = AIMAG(GYZ(NI)%CO%NKS(I + NASO*(ISP - 1), J + NASO*(ISP - 1)))
+        ENDDO; ENDDO; ENDDO
+        DO ISP=1,GF2%NSPIN; DO I=1,NASO
+          IADD = IADD + 1
+          VALUES(IADD) = NTOT(I, ISP)
+        ENDDO; ENDDO
+        DO ISP=1,GF2%NSPIN; DO I=1,NASO; DO J=1,NASO
+          IADD = IADD + 1
+          VALUES(IADD) = REAL (GYZ(NI)%CO%DB(I, J, ISP))
+          IADD = IADD + 1
+          VALUES(IADD) = AIMAG(GYZ(NI)%CO%DB(I, J, ISP))
+        ENDDO; ENDDO; ENDDO
+      ENDDO
+      VALUES = VALUES*RFAC
+      IF(IADD /= NV)THEN
+        WRITE(0, '(" FETAL ERROR IN GUTZ_INTEGRAND: IADD = ", I5, " v.s. NV = ", I5)')IADD, NV
+        STOP
+      ENDIF
+      RETURN
+!
+      END FUNCTION GUTZ_INTEGRAND

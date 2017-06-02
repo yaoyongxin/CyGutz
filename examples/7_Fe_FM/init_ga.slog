@@ -1,0 +1,48 @@
+The executed commant line is:
+/home/ykent/WIEN_GUTZ/bin/tools/Gutzwiller/init_ga.py
+ Cell:  
+[[-1.43325067  1.43325067  1.43325067]
+ [ 1.43325067 -1.43325067  1.43325067]
+ [ 1.43325067  1.43325067 -1.43325067]]
+ Symbols:  ['Fe']
+ Scaled_positions:  
+[[ 0.  0.  0.]]
+ Mapping-table equivalent atoms:  [0]
+ Labels correlated atoms:  [0]
+ Orbital angular momentums of correlated electrons:  ['d']
+ Take into accout SOC or not:  ['n']
+ Take into accout crystal-fields or not:  ['y']
+ Cut-off distance for symmetry analysis:  -1.0
+ LGPRJ = 14:  Assuming  $[\phi,N] = [\phi,S_z] = 0$  (SOC neglected, magnetism and crystal field allowed)
+( the value of n0 will be overwritten by GL_NELF1.INP & GL_NELF1.OUT during the calculation )
+self_energy  0
+[[ 1  0  2  0  3  0  4  0  5  0]
+ [ 0 26  0 27  0 28  0 29  0 30]
+ [ 6  0  7  0  8  0  9  0 10  0]
+ [ 0 31  0 32  0 33  0 34  0 35]
+ [11  0 12  0 13  0 14  0 15  0]
+ [ 0 36  0 37  0 38  0 39  0 40]
+ [16  0 17  0 18  0 19  0 20  0]
+ [ 0 41  0 42  0 43  0 44  0 45]
+ [21  0 22  0 23  0 24  0 25  0]
+ [ 0 46  0 47  0 48  0 49  0 50]]
+
+ Please run ga_init_dmft.py with the following parameters.
+
+ QUESTION: Specify qsplit for each correlated orbital (default = 0)
+ ANSWER:  3
+
+ QUESTION: Do you want to group any of these orbitalsinto cluster-DMFT problems? (y/n)
+ ANSWER:  n
+
+ QUESTION: Enter the correlated problemsforming each unique correlated problem,separated by spaces (ex: 1,3 2,4 5-8)
+ ANSWER: 1
+
+ QUESTION: Broken symmetry run? (y/n)
+ ANSWER: n
+
+ QUESTION: Is this a spin-orbit run? (y/n)
+ ANSWER: n
+
+
+

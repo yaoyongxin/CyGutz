@@ -1,0 +1,22 @@
+# all comments must be in lower case, including the key words quoted!
+# one key word per line.
+LSCF = 1     # (always generate variational setup and run)
+LGPRJ = 11     # (variational setup)
+BNDISO = 2     # (flag to run code without soc using jj basis)
+LEIGV = 1     # (exact diagonalization, ZHEEV)
+LDC = 0     # (No double counting.)
+LHUB = 0     # (V2AO.INP read in (no spin index.))
+LCLUSTER = 0     # (Single-atom impurity.)
+LSOLVER = 1     # (quasi-newton method)
+NMAX_ITER = 100000     # (maximum number of quasi-newton iterations)
+
+ATOM TYPE INFO
+1       # number of different types of correlated atoms
+NT = 1         # (comment line) label correlated type of atom
+0 0         # u,j of g electrons of x
+2            # number of g orbitals (no spin)
+0 4         # valence range chosen
+
+ATOM INFO
+1        # nions (total number of correlated atoms, equivalent or not)
+1 1 1         # itype, ni0, nimap

@@ -1,0 +1,22 @@
+# One key word per line.
+LSCF        =  1         # Always generate variational setup for a new run.
+RTOL        =  1e-06     # Tolerance for solving {R, \lambda} equations.   
+LGPRJ       =  1         # Variational setup.                              
+LEIGV       =  5         # PRIMEE (Iterative MultiMethod Eigensolver).     
+LDC         =  12        # Standard D.C., n0 updated in charge loop.       
+LNEWTON     =  0         # Modified Powell hybrid method (HYDRD1).         
+LHUB        =  1         # Slater-Condo parametrization.                   
+LCLUSTER    =  0         # Single-atom impurity.                           
+LSOLVER     =  1         # Solve {R, \lambda} equations.                   
+NMAX_ITER   =  100000    # Maximum CyGutz iterations.                      
+
+ATOM TYPE INFO
+1                        # Number of types of correlated atoms.            
+NT          =  1         # The type of correlated atom.                    
+6.0     0.7              # U,J of f electrons of Ce                        
+7                        # Number of f orbitals (no spin).                 
+0       4       1.0      # Valence range chosen & n0.                      
+
+ATOM INFO
+1                        # NIONS (total correlated atoms, equivalent or not).
+1       1       1        # itype, ni_global, nimap                         

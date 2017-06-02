@@ -1,0 +1,14 @@
+      SUBROUTINE CPUTIM(TIME)
+      DOUBLE PRECISION   TIME
+!
+      CALL CLOCK(TIME)
+!
+!        End of 'CPUTIM'
+!
+      END
+      SUBROUTINE WALLTIM(DSEC)
+      DOUBLE PRECISION DSEC
+      DSEC=0.0D0
+      RETURN
+      END
+

@@ -1,0 +1,31 @@
+Calculating Ce in /home/ykent/WIEN_GUTZ/bin/examples/3_Ce_soc/test
+on hal2011.cmpgroup.ameslab.gov with PID 24293
+
+
+
+Ce.broyd* files removed!
+
+   start        Mon Feb  1 14:20:43 2016 with lapw0 (1/100 to go)
+
+   cycle 0 	Mon Feb  1 14:20:43 2016 20/20 to go
+
+>lapw0      ( 14:20:43 ) 0.771u 0.018s 0:00.83 93.9%	0+0k 0+0io 0pf+0w
+>lapw1      ( 14:20:44 ) 5.782u 0.092s 0:06.52 90.0%	0+0k 0+0io 0pf+0w
+>lapwso     ( 14:20:50 ) 1.709u 0.121s 0:05.25 34.6%	0+0k 0+0io 0pf+0w
+>dmft1      ( 14:20:56 ) 1.04user 0.08system 0:02.47elapsed 45%CPU (0avgtext+0avgdata 0maxresident)k
+>CyGutz     ( 14:20:58 ) 37.44user 0.65system 0:41.68elapsed 91%CPU (0avgtext+0avgdata 0maxresident)k
+>dmft2      ( 14:21:40 ) 10.84user 0.06system 0:11.56elapsed 94%CPU (0avgtext+0avgdata 0maxresident)k
+>lcore      ( 14:21:52 ) 0.013u 0.002s 0:00.24 4.1%	0+0k 0+0io 0pf+0w
+>mixer      ( 14:21:52 ) 0.021u 0.006s 0:00.19 10.5%	0+0k 0+0io 0pf+0w
+:ENERGY convergence:  1.0
+:CHARGE convergence:  0.000552
+>lapw0      ( 14:21:52 ) 0.756u 0.016s 0:00.90 84.4%	0+0k 0+0io 0pf+0w
+>lapw1      ( 14:21:53 ) 5.772u 0.091s 0:06.48 90.4%	0+0k 0+0io 0pf+0w
+>lapwso     ( 14:22:00 ) 1.705u 0.121s 0:04.75 38.3%	0+0k 0+0io 0pf+0w
+>dmft1      ( 14:22:05 ) 1.04user 0.07system 0:02.78elapsed 40%CPU (0avgtext+0avgdata 0maxresident)k
+>CyGutz     ( 14:22:08 ) 56.35user 0.71system 1:03.58elapsed 89%CPU (0avgtext+0avgdata 0maxresident)k
+>dmft2      ( 14:23:11 ) 10.91user 0.06system 0:11.06elapsed 99%CPU (0avgtext+0avgdata 0maxresident)k
+>lcore      ( 14:23:22 ) 0.008u 0.003s 0:00.08 0.0%	0+0k 0+0io 0pf+0w
+>mixer      ( 14:23:23 ) 0.020u 0.009s 0:00.20 10.0%	0+0k 0+0io 0pf+0w
+:ENERGY convergence:  1.00000761449e-07
+:CHARGE convergence:  0.0004059

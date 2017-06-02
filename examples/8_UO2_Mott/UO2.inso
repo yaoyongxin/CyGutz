@@ -1,0 +1,6 @@
+WFFIL
+4  0  0                 llmax,ipr,kpot
+-10  4.5                Emin, Emax
+    0 0 1                           h,k,l (direction of magnetization)
+ 0                       number of atoms with RLO
+0 0      number of atoms without SO, atomnumbers

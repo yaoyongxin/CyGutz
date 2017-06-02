@@ -1,0 +1,44 @@
+#!/bin/csh -f 
+#
+unalias rm
+
+set name     = $0
+set name     = $name:t 		#name of this script-file
+
+switch ($1)
+case -[H|h]
+  goto help
+  breaksw
+case -[D|d]
+  shift
+  set savedir = $1
+default
+  set savedir = "WorkCyGutz"
+endsw
+
+if !(-d $savedir) then
+	mkdir -p $savedir
+endif
+
+foreach i ( `ls *.INP *.kgen`)
+  cp $i $savedir/
+end
+
+exit(0)
+
+help:
+cat << theend 
+
+PROGRAM:	$0
+
+PURPOSE:	saving the necessary input files for CyGutz calculations.
+
+USAGE:		$name [FLAGS]
+
+FLAGS:
+-h           ->	help
+-d directory -> save calculation in directory specified
+theend
+
+exit(1)
+ 
