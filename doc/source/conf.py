@@ -19,6 +19,7 @@ import os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../../tools/Gutzwiller'))
+sys.path.insert(0, os.path.abspath('../../tools/Model'))
 sys.path.insert(0, os.path.abspath('../../examples/1_1D_1_band_Hubbard_Model'))
 sys.path.insert(0, os.path.abspath('../../examples/2_1D_bilayer_Model'))
 

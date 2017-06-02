@@ -1,42 +1,58 @@
-Installation
-============
+Installation of CyGutz with WIEN2k and model interfaces
+=======================================================
 
 Prerequisites
 -------------
 
+CyGutz consists of programs, executables, and scripts, written in Fortran90, c (c++) and Python2.7. Before you start the installation, you must make sure that the following packages are installed in your system.
+
 * Linux
-* Fortran compiler and blas/lapack libs. The following have been tested.
+* WIEN2k (http://www.wien2k.at/)
+* Fortran, C, CXX compiler and blas/lapack library. The following have been tested.
 
-  * ifort and mkl 
-  * gcc, gfortran >= 4.8 and openblas. 
+  * ifort, icc, icpc,  and mkl (recommended)
+  * gcc, g++, gfortran >= 4.8 and openblas. 
 
-* HDF5 lib. https://www.hdfgroup.org/HDF5/release/obtain5.html
-* python >= 2.5
+* MPI 
+  
+  * Intel MPI, (mpiifort, mpiicc, mpiicpc, mpirun, etc. Check https://software.intel.com/en-us/qualify-for-free-software)
+  * open MPI (mpif90, mpicc, mpicxx, mpirun, etc. Check https://www.open-mpi.org/)
+
+* HDF5 library (sequential version, compiled using the **same Fortran90 compiler** with flags **enable-fortran and enable-fortran2003**. Check for details at https://www.hdfgroup.org/HDF5/release/obtain5.html)
+* python = 2.7
 * numpy >= 1.5.0
 * scipy >= 0.9.0
 * h5py  >= 2.5.0
 * matplotlib >= 1.4.3
-* ase >= 3.3.1. https://wiki.fysik.dtu.dk/ase/download.html
-* pyspglib >= 1.7.2. http://spglib.sourceforge.net
+* ase >= 3.3.1 (https://wiki.fysik.dtu.dk/ase/download.html)
+* pyspglib >= 1.7.2 (http://spglib.sourceforge.net/python-spglib.html#python-spglib)
+* pymatgen >= 3.3.5 (http://pymatgen.org/#guided-install)
+
+A convenient way to install python and the related packages is Anaconda (https://www.continuum.io/downloads).
 
 Build and install
 -----------------
-The default directory the CyGutz package will be installed is ``~/WIEN_GUTZ/bin``. 
-It will be automatically created. 
-The makefiles need to be checked for consistency with your machines. 
-Thet are ``Gutzwiller_Slave_Boson_Solver/Makefile.in`` and 
-``Interface/WIEN2k/Makefile.in``. Then one can run the following command at the top directory to install it::
 
-    $ ./install.sh
+The compilation ans installation consist of three simple steps: 
 
-The output of the installation script expalins how the code is compiled and installed.
-With a successful installation, you will see excutible files ``dmft, dmft2, CyGutz`` 
-and other python scripts and a directory ``tools`` located in ``~/WIEN_GUTZ/bin``.
+* Download CyGutz here at https://bitbucket.org/yxcode/cygutz_release/downloads, unzip it and cd to that directory (``yxcode-cygutz_release-*``). 
+* Check and make sure the path to compilers, their options, and libraries are correctly set by typing::
 
-In order to run LDA + Gutzwiller/Slave Boson, WIEN2k needs to be installed separately.
-Please refer to user guide of WIEN2k for details. 
+  $ vi ./Makefile.in
 
-Testing
--------
+or try to find the suitable ``Makefile.in`` in directory ``template_makefile.in``.
 
-To be added.
+* Run the following command at the top directory to install it::
+
+    $ make clean  # Optional, clean any previous installation.
+    $ ./install.sh 
+    $ source ~/.bashrc  # Get the environment variable ${WIEN_GUTZ_ROOT}
+
+Explanations on the scripts and Makefile.in
+-------------------------------------------
+
+* By default, ``${WIEN_GUTZ_ROOT}=${HOME}/WIEN_GUTZ/bin`` will be set in your .bashrc file.
+* Key executables ``CyGutz`` and ``dmft, dmft2`` for the WIEN2k interface are located at ``${WIEN_GUTZ_ROOT}``.
+* Useful initialization and analysis scripts are located at ``${WIEN_GUTZ_ROOT}/tools``.
+* We use sequential version of mkl, so set ``WLIBS = -mkl=sequential``
+* It is a must to set correctly the base path of the hdf5 library. For instance, ``HDF5_BASE = /home/ykent/OPT/lib/hdf5-1.8.15-intel/``. 

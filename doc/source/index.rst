@@ -11,9 +11,13 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   license
    install
+   overview
+   inoutput
    tutorials
    tools
+   faq
 
 Indices and tables
 ==================
@@ -22,6 +26,6 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. [1] Phase Diagram and Electronic Structure of Praseodymium and Plutonium. 
+.. _[1]: Phase Diagram and Electronic Structure of Praseodymium and Plutonium. 
    Nicola Lanata, Yongxin Yao, Cai-Zhuang Wang, Kai-Ming Ho, and Gabriel Kotliar
    Phys. Rev. X 5, 011008 (2015)

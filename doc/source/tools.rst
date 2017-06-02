@@ -10,6 +10,18 @@ Initialization
 .. automodule:: usrqa
    :members:
 
+Tight-binding model
+-------------------
+
+.. automodule:: tbASE
+   :members:
+
+.. automodule:: tbGutz
+   :members:
+
+.. automodule:: gl_interface
+   :members:
+
 Material class
 --------------
 
@@ -25,11 +37,11 @@ Symmetry analysis
 Multiplets analysis
 -------------------
 
-.. automodule:: multiplets_analysis
+.. automodule:: multiplets_analysis_lib
    :members:
 
-Embeding Hamiltonian
---------------------
+Embedding Hamiltonian
+---------------------
 
 .. automodule:: embed_test
    :members:

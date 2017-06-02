@@ -1,6 +1,0 @@
--6.000000 6.000000 0 -12 # hybridization Emin and Emax, measured from FS, renormalize for interstitials, projection type
-1                        # number of nonequivalent correlated problems
-  1   1                  # iucp, cix's
-1                        # number of correlated atoms
-1     1   0              # iatom, nL, locrot
-  3   4   1              # L, qsplit, cix
