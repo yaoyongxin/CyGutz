@@ -22,7 +22,18 @@
 *.a
 *.lib
 
+# Compile options
+Makefile.in
+
 # Executables
 *.exe
 *.out
 *.app
+dmft1
+dmft2
+CyGutz
+exe_*
+
+# Directory
+doc/build
+Gutzwiller_Slave_Boson_Solver/include
