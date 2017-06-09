@@ -19,10 +19,10 @@ and ``dmft2``.
 in directory ``ksum`` of the Wien2K interface. 
 It is modified version the Kristjan Haule's DMFT-Wien2K interface 
 by Yongxin Yao.
-It generates the generic Kohn-Sham-Hubbard (_`KSH`) Hamiltonian based on the 
-KS band energies and wave functions (_`WF`), 
+It generates the generic Kohn-Sham (_`KS`) -Hubbard (_`KSH`) Hamiltonian 
+based on the `KS`_ band energies and wave functions (_`WF`), 
 as well as local projectors, which are expressed in term of 
-the KS WFs.
+the `KS`_ `WF`_ s.
 
 **Input files**
 
@@ -79,7 +79,7 @@ The output files are now in hdf5 format.
     * ``/NE_LIST`` --  array of (kptdim x 3). With
 
       * NE_LIST[:,1]: total number of bands at each k-point
-      * NE_LIST[:,2/3]: the first/last band WF included to expand
+      * NE_LIST[:,2/3]: the first/last band `WF`_ included to expand
         the local ''correlated'' orbitals.
     
     * ``/delta`` -- broadening factor of Gaussian or Fermi smearing function.
@@ -91,7 +91,7 @@ The output files are now in hdf5 format.
       (2 for spin-polarized DFT calculation, which has not been explored.)
     * ``/kptfname`` -- ``case.kgen`` file name. Exclusively for Wien2k.
     * ``/kptwt`` -- k-points weight.
-    * ``/nbmax`` -- maximal number of band WFs across all the k-points.
+    * ``/nbmax`` -- maximal number of band `WF`_ s across all the k-points.
     * ``/nelectron`` -- number of valence electrons for the `KSH`_ model.
     * ``/symnop`` -- number of symmetry operations.
     * ``/symie`` -- the index of the identity operator in the list of 
@@ -99,7 +99,7 @@ The output files are now in hdf5 format.
 
 * ``BAREHAM_0.h5``
   HDF5 file storing the `KSH`_ Hamiltonian matrix for each k-point, 
-  and the associated unitary transformation from KS WF basis (_`KSWB`)
+  and the associated unitary transformation from `KS`_ `WF`_ basis (_`KSWB`)
   to the `KSH`_ model basis (_`KSHB`) composed of local orbitals 
   and the complement set at the identity symmetry operation. 
   In OpenMPI or OpenMP jobs, file ``BAREHAM_x.h5`` with x from 0 to num_cpu-1
@@ -128,7 +128,7 @@ The output files are now in hdf5 format.
       at the first k-points and first symmetry operation.
     * ``T_PSIK0_TO_HK0_BASIS`` -- unitary transformation from `KSWB`_ 
       to `KSHB` basis.
-    * ``/IKP_1/ek0`` -- list of all of the KS band energies 
+    * ``/IKP_1/ek0`` -- list of all of the `KS`_ band energies 
       at the first k-point.
  
 ``CyGutz``
@@ -151,34 +151,23 @@ one can see datasets like::
 
   /IMPURITY_1/DB_TO_SAB    Dataset {10, 10}
   /IMPURITY_1/HS           Dataset {2, 10, 10}
-  /IMPURITY_1/JGENERATOR   Dataset {3, 10, 10}
   /IMPURITY_1/LX           Dataset {10, 10}
   /IMPURITY_1/LY           Dataset {10, 10}
   /IMPURITY_1/LZ           Dataset {10, 10}
   /IMPURITY_1/SIGMA_STRUCT Dataset {10, 10}
-  /IMPURITY_1/SP_ROTATIONS Dataset {48, 10, 10}
   /IMPURITY_1/SX           Dataset {10, 10}
   /IMPURITY_1/SY           Dataset {10, 10}
   /IMPURITY_1/SZ           Dataset {10, 10}
   /IMPURITY_1/V2E          Dataset {10, 10, 10, 10}
-  /IMPURITY_1/lie_even_params Dataset {24, 3}
-  /IMPURITY_1/lie_odd_params Dataset {48, 3}
-  /IMPURITY_1/nsym_odd     Dataset {1}
-  /IMPURITY_1/rotations    Dataset {24, 3, 3}
-  /ITYP_IMP                Dataset {1}
   /dc_j_avg                Dataset {1}
   /dc_mode                 Dataset {1}
   /dc_nelf_list            Dataset {1}
   /dc_u_avg                Dataset {1}
-  /dim_hs_imp              Dataset {1}
   /gamix                   Dataset {1}
   /giembeddiag             Dataset {1}
   /gimix                   Dataset {1}
   /gmaxiter                Dataset {1}
-  /gnbreset                Dataset {1}
-  /iso                     Dataset {1}
   /ispin                   Dataset {1}
-  /na2_imp                 Dataset {1}
   /num_imp                 Dataset {1}
   /nval_bot_ityp           Dataset {1}
   /nval_top_ityp           Dataset {1}
@@ -189,54 +178,86 @@ For the main datasets:
     symmetry-adapted basis (_`SAB`). 
   * ``HS`` -- matrix basis set to expand all the local one-body quantities, 
     including quasi-particle density matrix (_`DM`), `H1E`_, etc.
-
-* ``GL.INP``
-    Multiple-line file contains the key control parameters of ``CyGutz``. 
-    Since there is comments for each line in that file 
-    and explanations are also when running ``init_ga.py``, 
-    I would repeat here.
-
-* ``WH_HS.INP``
-    File storing the list of hermitian matrix basis set compatible with 
-    local rotation operations. The basis set is used to expand all the 
-    local quantities.
-
-* ``WH_SIGMA_STRUCT.INP``
-    File storing the list of self-energy structures.
-
-* ``WH_N2N.INP``
-    File storing the list of additional unitary transformations 
-    which transforms the local `d/f`-orbitals from the representation 
-    specified in ``case.indmfl`` to the symmetry-adapted representation.
-
-Some input file will be generated after the first execution of ``CyGutz``,
-to provide possibly better `initial guess` of the G-RISB equations.
-
-* ``GL_NELF1.INP``
-    File storing the list of number of local `d/f`-electrons 
-    for interaction double counting.
-
-* ``WH_RLNEF.INP``
-    File storing the solution {R, :math:`\lambda`} of the G-RISB equation.
+  * ``/LX(Y,Z)`` -- the representation of x(y,z)-component of L angular
+    momentum operator in the single-particle `SAB`_ basis.
+  * ``/SX(Y,Z)`` -- the representation of x(y,z)-component of spin operator 
+    in the single-particle `SAB`_ basis.
+  * ``/SIGMA_STRUCT`` -- index matrix of the local one-body quantities, 
+    which identifies the zero and equivalent elements.
+  * ``/V2E`` -- Coulomb matrix defined in chemist's convention, i.e., 
+ 
+    .. math::
+        V_{i,j,k,l} = \int{d\mathbf{r}\int{d\mathbf{r}\prime
+        \phi_{i}^{\dagger}(\mathbf{r})\phi_{j}(\mathbf{r}) 
+        V_{\text{H}} (|\mathbf{r}-\mathbf{r}\prime|)
+        \phi_{k}^{\dagger}(\mathbf{r}\prime)\phi_{l}(\mathbf{r}\prime)}}
+  
+  * ``/dc_j(u)_avg`` -- list of average J(U) for the double counting term.
+  * ``/dc_mode`` -- flag for the double counting correction (_`DC`), with
+    * 0: no `DC`_;
+    * 1: fully localized limit (_`FLL`) `DC`_ with local orbital 
+      occupation (_`Nf`) self-consistently determined;
+    * 12: `FLL`_-`DC`_ with `Nf`_ only updated in the outer 
+    electron density self-consistent loop.
+  * ``/dc_nelf_list`` -- for dc_mode=12, it provides the list of `Nf`_
+    which are fixed at each electron density iteration.
+  * ``/gamix`` -- mixing ratio parameter for the Broyden method.
+  * ``/giembeddiag`` -- flag for method to solve the embedding Hamiltonian.
+    * -3: valence truncation ED with S=0 (spin-singlet) constraint;
+    * -1: valence truncation ED.
+  * ``/gimix`` -- flag for the method to solve the Gutzwiller nonlinear eqns.
+    *  0: modified Powell hybrid method (HYDRD1);
+    * -1: Broyden method (could be faster but not as robust).
+  * ``/gmaxiter`` -- maximally allowed number of Gutzwiller iterations.
+  * ``/ispin`` -- flag for spin degeneracy.
+    * 1: spin-restricted solution;
+    * 2: spin-unrestricted solution.
+  * ``/num_imp`` -- number impurities.
+  * ``/nval_bot(top)_ityp`` -- list of valence trucation range.
 
 **Output files**
 
 * ``GUTZ.LOG`` 
-    Main ``CyGutz`` output text file. It contains some detailed information 
-    at each cycle of the G-RISB solution. Important local quantities, energies,
-    valence block histograms, etc., are printed. The file will be renamed
-    to ``GL_LOG.OUT`` before the next charge iteration.
+  Main ``CyGutz`` output text file. 
+  It contains some detailed information at each cycle of the G-RISB solution. 
+  Important local quantities, energies, 
+  valence block histograms, etc., are printed. 
+  The file will be renamed to ``SAVE_GUTZ.LOG`` 
+  before the next electro density iteration.
 
-* ``KSWT_myrank.DAT``
-    This binary file is generated for each processor involved 
-    in the calculation. It stores the renormalized occupation matrix of the 
-    LDA bands for every symmetry rotations and k-points in the group.
+* ``KSWT_0.h5``
+  HDF5 file storing the Gutzwiller renormalized occupation matrix 
+  of the original `KS`_ band `WF`_ s at each k-point. 
+  The file has the structure like::
 
-* ``WH_RLNEF.OUT``
-    File storing the solution {R, :math:`\lambda`} of the G-RISB equation.
+    /IKP_1/KSWT              Dataset {6, 6}
+    /IKP_1/nemax             Dataset {1}
+    /IKP_1/nemin             Dataset {1}
+    ...
+    /e_band                  Dataset {1}
+    /e_fermi                 Dataset {1}
+    /e_gamma_dc              Dataset {1}
 
-* ``WH_EL0.OUT``
-    File storing the list of one-body part of the local Hamiltonians.
+  with 
+  * ``/IKP_1/KSWT`` -- Gutzwiller renormalized occupation matrix
+    of a set of the original `KS`_ band `WF`_ s at the first k-point.
+  * ``/IKP_1/nemin(nemax)`` -- the starting and ending index 
+    of the above set of `KS`_ band `WF`_ s.
+  * ``/e_band`` -- Gutzwiller renormalized band energy.
+  * ``/e_fermi`` -- Gutzwiller renormalized Fermi level.
+  * ``/e_gamma_dc`` -- Gutzwiller renormalized onsite energy.
+
+* ``WH_RL_OUT.h5``
+  HDF5 file storing the solution of the Gutzwiller nonlinear eqns.
+  Rename it to ``WH_RL_INP.h5`` and it can serve as the starting point 
+  for the new Gutzwiller iteration. 
+  It is usually a good idea. 
+  But in rare cases, it might not be a good initial guess, 
+  as the Gutzwiller solver could hardly converge. 
+  Then one can try the default initial condition by removing it.
+  
+* ``GLOG.h5``
+  HDF5 file storing some data for analysis.
 
 ``dmft2``
 ---------
@@ -250,6 +271,5 @@ by Yongxin Yao.
 
 **Input files**
 
-Besides the input files generated by Wien2K, it also needs 
-the ``KSWT_0.h5`` file.
-
+Besides the input files generated by Wien2K, 
+it also needs the ``KSWT_0.h5`` file.

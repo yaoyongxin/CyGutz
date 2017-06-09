@@ -215,8 +215,8 @@ def h5save_usr_qa_setup(material, log):
                             '\n Please provide interaction parameters U,J ' +
                             '\n separated by a space (eV): ')
                     try:
-                        UJ = [np.float(x) for x in
-                                answer.split()[:2]]
+                        answer = answer.split()
+                        UJ = [np.float(answer[i]) for i in range(2)]
                         break
                     except:
                         pass
