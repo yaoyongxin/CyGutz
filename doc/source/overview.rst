@@ -8,7 +8,7 @@ The Density Functional Theory implementation within WIEN2k
 consists of several steps depicted in the figure 
 (Check http://www.wien2k.at/) 
 
-.. image:: /images/WIEN2kFC.png
+.. image:: _images/WIEN2kFC.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -50,7 +50,7 @@ following closely the DFT+DMFT code
 (Check http://hauleweb.rutgers.edu/). 
 The process looks like that: 
 
-.. image:: /images/WIENGAFC.png
+.. image:: _images/WIENGAFC.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -78,7 +78,7 @@ using Gutzwiller-Slave-Boson method
 The steps to reach self-consistent solutions are as follows:
 
 
-.. image:: /images/CyGutzFC.png
+.. image:: _images/CyGutzFC.png
    :alt: alternate text
    :scale: 100 %
    :align: center
