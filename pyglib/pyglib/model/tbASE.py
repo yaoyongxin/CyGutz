@@ -1,3 +1,5 @@
+# Author: Xiaoyu Deng, Yongxin Yao
+
 '''
 A Tight-Binding model interface, using ASE Atoms as bases.
 Following the convention in Wannier90, H(R) is based on unit cell,
@@ -47,7 +49,7 @@ class AtomsTB(Atoms):
           orbitals: list
             orbitals names, list with each item
             is a list of orbital names on each atom,
-            for example, [["s"],["s","p"]]
+            for example, [("s"),("s","p")]
           spindeg: bool
             spin degeneracy, if TRUE spin=["up"];
             if False, spin=["up","down"]

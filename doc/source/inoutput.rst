@@ -19,10 +19,10 @@ and ``dmft2``.
 in directory ``ksum`` of the Wien2K interface. 
 It is modified version the Kristjan Haule's DMFT-Wien2K interface 
 by Yongxin Yao.
-It generates the generic Kohn-Sham (_`KS`) -Hubbard (_`KSH`) Hamiltonian 
-based on the `KS`_ band energies and wave functions (_`WF`), 
+It generates the generic Kohn-Sham-Hubbard (KSH) Hamiltonian 
+based on the KS band energies and wave functions (WF), 
 as well as local projectors, which are expressed in term of 
-the `KS`_ `WF`_ s.
+the KS WFs.
 
 **Input files**
 
@@ -41,7 +41,7 @@ The output files are now in hdf5 format.
 
 * ``GPARAMBANDS.h5``
   HDF5 file storing the main parameters for the DFT calculation,
-  along with the local one-body part of the `KSH`_ Hamiltonian (_`H1E`). 
+  along with the local one-body part of the KSH Hamiltonian (H1E). 
   The dataset structure of the file can be easily seen by typing::
 
     $ h5ls -r GPARAMBANDS.h5
@@ -72,35 +72,35 @@ The output files are now in hdf5 format.
       of the local Hamiltonian of the first impurity (e.g., Fe atom).
     * ``T_SPHERICALHARMONICS_TO_LOCALBASIS1`` -- unitary transformation 
       (5x5 matrix) from complex spherical harmonics basis (CSH)
-      to default local basis (_`DB`), which can be still the same CSH 
-      if spin-orbit coupling (_`soc`) is not considered, 
+      to default local basis (DB), which can be still the same CSH 
+      if spin-orbit coupling (SOC) is not considered, 
       or relativistic harmonics otherwise.
     * ``/kptdim`` -- dimension of k-points.
     * ``/NE_LIST`` --  array of (kptdim x 3). With
 
       * NE_LIST[:,1]: total number of bands at each k-point
-      * NE_LIST[:,2/3]: the first/last band `WF`_ included to expand
+      * NE_LIST[:,2/3]: the first/last band WF included to expand
         the local ''correlated'' orbitals.
     
     * ``/delta`` -- broadening factor of Gaussian or Fermi smearing function.
     * ``/ismear`` -- gaussian smearing (ismear=0) or Fermi smearing (-1) or
       tetra-hedron method (-5) 
       will be used for the brillouin zone integration.
-    * ``/iso`` -- 1 without `soc`_ and 2 with `soc`_.
+    * ``/iso`` -- 1 without SOC and 2 with SOC.
     * ``/ispin`` -- 1 for paramagnetic DFT calculation. 
       (2 for spin-polarized DFT calculation, which has not been explored.)
     * ``/kptfname`` -- ``case.kgen`` file name. Exclusively for Wien2k.
     * ``/kptwt`` -- k-points weight.
-    * ``/nbmax`` -- maximal number of band `WF`_ s across all the k-points.
-    * ``/nelectron`` -- number of valence electrons for the `KSH`_ model.
+    * ``/nbmax`` -- maximal number of band WF s across all the k-points.
+    * ``/nelectron`` -- number of valence electrons for the KSH model.
     * ``/symnop`` -- number of symmetry operations.
     * ``/symie`` -- the index of the identity operator in the list of 
       symmetry operations.
 
 * ``BAREHAM_0.h5``
-  HDF5 file storing the `KSH`_ Hamiltonian matrix for each k-point, 
-  and the associated unitary transformation from `KS`_ `WF`_ basis (_`KSWB`)
-  to the `KSH`_ model basis (_`KSHB`) composed of local orbitals 
+  HDF5 file storing the KSH Hamiltonian matrix for each k-point, 
+  and the associated unitary transformation from KS WF basis (KSWB)
+  to the KSH model basis (KSHB) composed of local orbitals 
   and the complement set at the identity symmetry operation. 
   In OpenMPI or OpenMP jobs, file ``BAREHAM_x.h5`` with x from 0 to num_cpu-1
   will be present.
@@ -124,11 +124,11 @@ The output files are now in hdf5 format.
   The indices of KPOINTS (e.g., IKP_1) of SYMMETRY operations (e.g., ISYM_1)
   are one-based. With
 
-    * ``/IKP_1/ISYM_1/HK0`` -- the bare `KSH`_ one-particle Hamiltonian matrix 
+    * ``/IKP_1/ISYM_1/HK0`` -- the bare KSH one-particle Hamiltonian matrix 
       at the first k-points and first symmetry operation.
-    * ``T_PSIK0_TO_HK0_BASIS`` -- unitary transformation from `KSWB`_ 
-      to `KSHB` basis.
-    * ``/IKP_1/ek0`` -- list of all of the `KS`_ band energies 
+    * ``T_PSIK0_TO_HK0_BASIS`` -- unitary transformation from KSWB 
+      to KSHB basis.
+    * ``/IKP_1/ek0`` -- list of all of the KS band energies 
       at the first k-point.
  
 ``CyGutz``
@@ -174,14 +174,14 @@ one can see datasets like::
 
 For the main datasets:
 
-  * ``/DB_TO_SAB`` -- unitary transformation from `DB`_ basis to the 
-    symmetry-adapted basis (_`SAB`). 
+  * ``/DB_TO_SAB`` -- unitary transformation from DB basis to the 
+    symmetry-adapted basis (SAB). 
   * ``HS`` -- matrix basis set to expand all the local one-body quantities, 
-    including quasi-particle density matrix (_`DM`), `H1E`_, etc.
+    including quasi-particle density matrix (DM), H1E, etc.
   * ``/LX(Y,Z)`` -- the representation of x(y,z)-component of L angular
-    momentum operator in the single-particle `SAB`_ basis.
+    momentum operator in the single-particle SAB basis.
   * ``/SX(Y,Z)`` -- the representation of x(y,z)-component of spin operator 
-    in the single-particle `SAB`_ basis.
+    in the single-particle SAB basis.
   * ``/SIGMA_STRUCT`` -- index matrix of the local one-body quantities, 
     which identifies the zero and equivalent elements.
   * ``/V2E`` -- Coulomb matrix defined in chemist's convention, i.e., 
@@ -193,13 +193,13 @@ For the main datasets:
         \phi_{k}^{\dagger}(\mathbf{r}\prime)\phi_{l}(\mathbf{r}\prime)}}
   
   * ``/dc_j(u)_avg`` -- list of average J(U) for the double counting term.
-  * ``/dc_mode`` -- flag for the double counting correction (_`DC`), with
-    * 0: no `DC`_;
-    * 1: fully localized limit (_`FLL`) `DC`_ with local orbital 
-      occupation (_`Nf`) self-consistently determined;
-    * 12: `FLL`_-`DC`_ with `Nf`_ only updated in the outer 
+  * ``/dc_mode`` -- flag for the double counting correction (DC), with
+    * 0: no DC;
+    * 1: fully localized limit (FLL) DC with local orbital 
+      occupation (Nf0) self-consistently determined;
+    * 12: FLL-DC with Nf0 only updated in the outer 
     electron density self-consistent loop.
-  * ``/dc_nelf_list`` -- for dc_mode=12, it provides the list of `Nf`_
+  * ``/dc_nelf_list`` -- for dc_mode=12, it provides the list of Nf0
     which are fixed at each electron density iteration.
   * ``/gamix`` -- mixing ratio parameter for the Broyden method.
   * ``/giembeddiag`` -- flag for method to solve the embedding Hamiltonian.
@@ -227,7 +227,7 @@ For the main datasets:
 
 * ``KSWT_0.h5``
   HDF5 file storing the Gutzwiller renormalized occupation matrix 
-  of the original `KS`_ band `WF`_ s at each k-point. 
+  of the original KS band WFs at each k-point. 
   The file has the structure like::
 
     /IKP_1/KSWT              Dataset {6, 6}
@@ -240,9 +240,9 @@ For the main datasets:
 
   with 
   * ``/IKP_1/KSWT`` -- Gutzwiller renormalized occupation matrix
-    of a set of the original `KS`_ band `WF`_ s at the first k-point.
+    of a set of the original KS band WF s at the first k-point.
   * ``/IKP_1/nemin(nemax)`` -- the starting and ending index 
-    of the above set of `KS`_ band `WF`_ s.
+    of the above set of KS band WF s.
   * ``/e_band`` -- Gutzwiller renormalized band energy.
   * ``/e_fermi`` -- Gutzwiller renormalized Fermi level.
   * ``/e_gamma_dc`` -- Gutzwiller renormalized onsite energy.

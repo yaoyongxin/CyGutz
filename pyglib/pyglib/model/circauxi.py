@@ -1,4 +1,4 @@
-'''One band with circular dos and auxilliary orbitals.
+'''One band with semi-circular dos and auxilliary orbitals.
 '''
 
 import numpy as np
