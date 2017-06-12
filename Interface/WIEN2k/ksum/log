@@ -1,0 +1,126 @@
+trafo.f:3.1:
+
+subroutine trafo(l,pseudo,T)                                            
+ 1
+Error: Non-numeric character in statement label at (1)
+trafo.f:3.1:
+
+subroutine trafo(l,pseudo,T)                                            
+ 1
+Error: Unclassifiable statement at (1)
+trafo.f:4.3:
+
+  IMPLICIT NONE                                                         
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:4.3:
+
+  IMPLICIT NONE                                                         
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:5.3:
+
+  integer, intent(in) :: L                                              
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:5.3:
+
+  integer, intent(in) :: L                                              
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:6.3:
+
+  logical, intent(in) :: pseudo                                         
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:6.3:
+
+  logical, intent(in) :: pseudo                                         
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:7.3:
+
+  complex*16, intent(out) :: T(2*L+1,2*L+1)                             
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:7.3:
+
+  complex*16, intent(out) :: T(2*L+1,2*L+1)                             
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:14.3:
+
+  complex*16 :: img, czero                                              
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:14.3:
+
+  complex*16 :: img, czero                                              
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:15.3:
+
+  complex*16 :: TF(1:2*L+1,1:2*L+1), sum                                
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:15.3:
+
+  complex*16 :: TF(1:2*L+1,1:2*L+1), sum                                
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:16.3:
+
+  logical    :: unitary                                                 
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:16.3:
+
+  logical    :: unitary                                                 
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:17.3:
+
+  integer    :: ipr, m, m1, m2, m3, sh                                  
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:17.3:
+
+  integer    :: ipr, m, m1, m2, m3, sh                                  
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:18.3:
+
+  real*8     :: s2, s3, s5, s8, a, b                                    
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:18.3:
+
+  real*8     :: s2, s3, s5, s8, a, b                                    
+   1
+Error: Unclassifiable statement at (1)
+trafo.f:19.3:
+
+  ipr=-1                                                                
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:20.3:
+
+  img=(0.D0,1.D0)                                                       
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:21.3:
+
+  s2=sqrt(2.D0)                                                         
+   1
+Error: Non-numeric character in statement label at (1)
+trafo.f:21.4:
+
+  s2=sqrt(2.D0)                                                         
+    1
+Error: Invalid character in name at (1)
+trafo.f:22.3:
+
+  T(:,:)=0                                                              
+   1
+Error: Non-numeric character in statement label at (1)
+Fatal Error: Error count reached limit of 25.
