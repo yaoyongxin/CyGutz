@@ -1,6 +1,12 @@
 Tutorial
 ========
 
+Added note: the code was recently used in the ``Theory Winter School`` 
+hosted by the National High Magnetic Field Laboratory.
+See https://nationalmaglab.org/news-events/events/for-scientists/winter-theory-school. 
+The lecture and handson notes can be downloaded here (https://nationalmaglab.org/images/news_events/searchable_docs/winterschool/2017/talk_lanata.pdf).
+
+
 Single Band Hubbard Model
 -------------------------
 In this example, you will learn how to setup a simple 1-D Hubbard model with nearest neighbor hopping, and perform Gutzwiller-Slave-Boson calculations.
@@ -13,7 +19,7 @@ In this example, you will learn how to setup a simple 1-D Hubbard model with nea
 
 The results are shown in the following figure, where Mott transition is identified by Z reaching zero near U/t=10.
 
-.. image:: /images/1DZEU.png
+.. image:: _images/1DZEU.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -105,7 +111,7 @@ DOS plot for :math:`\alpha`-Ce
 ------------------------------
 In this example, you will learn how to plot the density of states of Ce after the self-consistent calculation in the previous example, as shown in the following figure:
 
-.. image:: /images/CeDOS.png
+.. image:: _images/CeDOS.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -120,7 +126,7 @@ Eigen-values of the local reduced density matrix for :math:`\alpha`-Ce
 ----------------------------------------------------------------------
 In this example, you will learn how to plot the eigen-values of the local reduced many-body density matrix using the exponential form \rho=exp(-F), as shown in the figure below:
 
-.. image:: /images/CeMultipletsJJ.png
+.. image:: _images/CeMultipletsJJ.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -135,7 +141,7 @@ Band structure calculation for :math:`\alpha`-Ce
 ------------------------------------------------
 In this example, you will learn how to plot the band structure of Ce, as shown in the following figure:
 
-.. image:: /images/CeBands.png
+.. image:: _images/CeBands.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -304,7 +310,7 @@ within LDA + Gutzwiller Slave-Boson method.
    :download:`plot_spin_dos.py <../../examples/7_Fe_FM/plot_spin_dos.py>`, 
    as shown below.
 
-.. image:: /images/FeDOS.png
+.. image:: _images/FeDOS.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -314,7 +320,7 @@ within LDA + Gutzwiller Slave-Boson method.
    :download:`plot_spin_bands.py <../../examples/7_Fe_FM/plot_spin_bands.py>`
    can be used to generate the figure below.
 
-.. image:: /images/FeBands.png
+.. image:: _images/FeBands.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -323,7 +329,7 @@ within LDA + Gutzwiller Slave-Boson method.
    The density of states below can be obtained with the script
    :download:`plot_spin_dos.py <../../examples/7_Fe_FM/plot_dos_SOC.py>`.
 
-.. image:: /images/FeDOS_SOC.png
+.. image:: _images/FeDOS_SOC.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -331,7 +337,7 @@ within LDA + Gutzwiller Slave-Boson method.
 8) And the band structure can be plotted with 
    :download:`plot_spin_dos.py <../../examples/7_Fe_FM/plot_bands_SOC.py>`.
 
-.. image:: /images/FeBands_SOC.png
+.. image:: _images/FeBands_SOC.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -519,7 +525,7 @@ on equal footing.
    multiplets, please refer `/chi_label` in file `multiplets.h5` with
    proper group theory tables.
 
-.. image:: /images/UO2Hist.png
+.. image:: _images/UO2Hist.png
    :alt: alternate text
    :scale: 100 %
    :align: center

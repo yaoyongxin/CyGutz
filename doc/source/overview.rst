@@ -6,7 +6,7 @@ DFT-LDA
 
 The Density Functional Theory implementation within WIEN2k consists of several steps depicted in the figure (Check http://www.wien2k.at/) 
 
-.. image:: /images/WIEN2kFC.png
+.. image:: _images/WIEN2kFC.png
    :alt: alternate text
    :scale: 100 %
    :align: center
@@ -36,7 +36,7 @@ LDA + Gutzwiller-Slave-Boson
 
 The LDA+G inserts two new steps (dmft1 and CyGutz) and replaces lapw2 with dmft2 step, following vlosely the DFT+DMFT code (Check http://hauleweb.rutgers.edu/). The process looks like that: 
 
-.. image:: /images/WIENGAFC.png
+.. image:: _images/WIENGAFC.png
    :alt: alternate text
    :scale: 100 %
    :align: center

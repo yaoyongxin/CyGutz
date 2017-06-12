@@ -35,7 +35,9 @@ Build and install
 
 The compilation ans installation consist of three simple steps: 
 
-* Download CyGutz here at https://bitbucket.org/yxcode/cygutz_release/downloads, unzip it and cd to that directory (``yxcode-cygutz_release-*``). 
+* Download CyGutz here at 
+  https://codeload.github.com/yaoyongxin/CyGutz/zip/0-1-alpha.
+  unzip it and cd to that directory (``CyGutz-0-1-alpha``). 
 * Check and make sure the path to compilers, their options, and libraries are correctly set by typing::
 
   $ vi ./Makefile.in
