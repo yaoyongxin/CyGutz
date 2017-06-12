@@ -33,6 +33,7 @@ module gtime
     real(q),parameter::s_per_m=60._4,s_per_h=3600._4
     character(100) fmt
 
+    if(io<0)return
     time=ttag%ta(2,i)-ttag%ta(1,i)
     nh=int(time/s_per_h); time=mod(time,s_per_h)
     nm=int(time/s_per_m); time=mod(time,s_per_m)

@@ -59,6 +59,7 @@ module bandstru
     use gconstant, only: d0,d1,z0,z1,zi,iu_kgen
     use ghdf5_base
     use warehouse
+    use gtime
     implicit none
 
     type band_stru
@@ -155,7 +156,6 @@ module bandstru
     call gh5_read(sym%nop,'/symnop',f_id)
     call gh5_read(sym%ie,'/symie',f_id)
     call gh5_read_wh_matrix_list('/H1E',wh%na2_imp,wh%h1e)
-
     call rotate_h1e_list()
     call calc_herm_matrices_pp(wh%h1e,'h1e',wh%hm,.false.,io,-1)
     call gh5_close(f_id)
@@ -717,12 +717,8 @@ module bandstru
     complex(q),pointer :: hk(:,:)
     real(q),pointer :: ek_list(:,:,:)
     complex(q) :: r(wh%nasotot,wh%nasotot),la1(wh%nasotot,wh%nasotot)
-    real ta1,ta2,tb1,tb2
-    integer tib1,tib2,tirate
-      
-    call cpu_time(ta1)
-    call system_clock(tib1,tirate)
-    tb1=real(tib1,4)/real(tirate,4)
+     
+    call set_time_point(1,2)
 
 #ifdef mpi_mode
     allocate(ek_list(bnd%nmax,kpt%dim,wh%nspin))
@@ -777,12 +773,8 @@ module bandstru
 #endif
     nullify(ek_list)
 
-    call cpu_time(ta2)
-    call system_clock(tib2,tirate)
-    tb2=real(tib2,4)/real(tirate,4)
-    if(io>0)then
-        call out_time_use('calc_band_al',ta2-ta1,tb2-tb1,io)
-    endif
+    call set_time_point(2,2)
+    call print_time_usage('calc_band_all',2,io)
     return 
 
     end subroutine calc_band_all
@@ -818,13 +810,8 @@ module bandstru
     complex(q),allocatable,target::uk(:)
     complex(q),target::utrans(wh%nasomax**2)
     real(q),pointer :: p_ferwe(:)
-    real ta1,ta2,tb1,tb2
-    integer tib1,tib2,tirate
-      
-    call cpu_time(ta1)
-    call system_clock(tib1,tirate)
-    tb1=real(tib1,4)/real(tirate,4)
-
+     
+    call set_time_point(1,2)
     allocate(uk(bnd%nmaxin**2)); uk=0
     sumwt=0
     maxoffdiag=0
@@ -916,12 +903,8 @@ module bandstru
         endif
     endif
 
-    call cpu_time(ta2)
-    call system_clock(tib2,tirate)
-    tb2=real(tib2,4)/real(tirate,4)
-    if(io>0)then
-        call out_time_use('calc_kswt',ta2-ta1,tb2-tb1,io)
-    endif
+    call set_time_point(2,2)
+    call print_time_usage('calc_kswt',2,io)
     return 
 
     end subroutine calc_kswt

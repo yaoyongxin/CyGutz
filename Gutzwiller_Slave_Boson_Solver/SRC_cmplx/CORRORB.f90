@@ -67,7 +67,7 @@ module corrorb
                 &r(:,:),r0(:,:),z(:,:),d(:,:),d0(:,:), &
                 &la1(:,:),la2(:,:),h1e(:,:), &
                 &sx(:,:),sy(:,:),sz(:,:),lx(:,:),ly(:,:),lz(:,:),&
-                &hs_l(:,:,:),v2e(:,:,:,:),r_coef(:)
+                &hs_l(:,:,:),v2e(:,:,:,:),r_coef(:),v_j2e(:,:,:,:)
         real(q),pointer :: nks_coef(:),la1_coef(:),ncv_coef(:)
         real(q) :: s_val(3,2),l_val(3,2)  !< one-body operator
         complex(q),pointer :: db2sab(:,:)=>null()
@@ -160,6 +160,32 @@ module corrorb
     return
 
     end subroutine co_nks_patch_order
+
+
+    subroutine calc_co_la1_hf(co)
+    type(corr_orb) co
+
+    co%la1=0
+    call get_hf_pot(co%dim2,co%nks,co%v_j2e,co%la1)
+    co%la1=co%la1+co%h1e
+    return
+
+    end subroutine calc_co_la1_hf
+
+
+    subroutine calc_co_eu2_hf(co, eu2)
+    type(corr_orb) co
+    real(q),intent(out)::eu2
+
+    complex(q) vhf(co%dim2,co%dim2)
+
+    vhf=0
+    call get_hf_pot(co%dim2,co%nks,co%v_j2e,vhf)
+    eu2=sum(vhf*co%nks)/2
+    return
+
+    end subroutine calc_co_eu2_hf
+
 
       
 end module corrorb

@@ -4,16 +4,15 @@ Welcome to CyGutz user guide!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+  :maxdepth: 2
 
-   introduction
-   license
-   install
-   overview
-   inoutput
-   tutorials
-   tools
-   faq
+  introduction
+  license
+  install
+  overview
+  inoutput
+  tutorials
+
 
 Indices and tables
 ==================

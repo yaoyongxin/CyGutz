@@ -65,7 +65,7 @@ module gkernel
     
     type gk_mem
         integer::imix,iembeddiag,nx,nx1,nx2
-        integer::iter=0,nbreset=0,max_iter
+        integer::iter=0,nbreset=0,max_iter,giter=-1
         real(8)::amix,rtol=1.e-6_q
         real(8)::maxerr=1.e4_q,etot
         real(8),pointer::x(:),fvec(:)
@@ -80,10 +80,39 @@ module gkernel
     integer,intent(in)::io
 
     call init_g_solver(io)
-    call init_wh_x(io,0.999_q)
+    if(gkmem%iembeddiag==10)then
+        call init_wh_x(io,1._q)
+    else
+        call init_wh_x(io,.99_q)
+    endif
     return
 
     end subroutine init_gkernel
+
+
+    subroutine init_newton_rl()
+    
+    !! initialize solution {R,\lambda} vector
+    gkmem%nx1=wh%hm_r%dimhst*wh%r_factor
+    gkmem%nx2=wh%hm_l%dimhst
+    gkmem%nx=gkmem%nx1+gkmem%nx2
+    allocate(gkmem%x(gkmem%nx),gkmem%fvec(gkmem%nx))
+    gkmem%x(1:gkmem%nx1)=transfer(wh%r_coef,gkmem%x(1:gkmem%nx1))
+    gkmem%x(1+gkmem%nx1:)=wh%la1_coef
+    return
+
+    end subroutine init_newton_rl
+
+
+    subroutine init_newton_n()
+
+    !! initialize solution {n} vector
+    gkmem%nx=wh%hm%dimhst
+    allocate(gkmem%x(gkmem%nx),gkmem%fvec(gkmem%nx))
+    gkmem%x=wh%nks_coef
+    return
+
+    end subroutine init_newton_n
 
 
     subroutine g_newton_solver(io,av)
@@ -92,24 +121,27 @@ module gkernel
 
     real(q),parameter :: rtol=1.e-10_q,epsfcn=1.e-10_q
 
-    !< initialize solution {R,\lambda} vector
-    gkmem%nx1=wh%hm_r%dimhst*wh%r_factor
-    gkmem%nx2=wh%hm_l%dimhst
-    gkmem%nx=gkmem%nx1+gkmem%nx2
+    !! If {n} as the variables like lda+u
+    if(gkmem%iembeddiag==10)then
+        call init_newton_n()
+    else
+        call init_newton_rl()
+    endif
+
     if(gkmem%nbreset==0)then
         gkmem%nbreset=gkmem%nx
     endif
+
+    !! For full Mott-localized solution
     if(gkmem%nx<=0)then
         call g_rl_onecycle()
         return
     endif
-    allocate(gkmem%x(gkmem%nx),gkmem%fvec(gkmem%nx))
+
     if(io>0)then
         write(io,'(" solving nonlinear equations with dim_x = ",I0)')gkmem%nx
     endif
 
-    gkmem%x(1:gkmem%nx1)=transfer(wh%r_coef,gkmem%x(1:gkmem%nx1))
-    gkmem%x(1+gkmem%nx1:)=wh%la1_coef
     select case(gkmem%imix)
     case(0)
         do 
@@ -171,12 +203,8 @@ module gkernel
     integer,intent(in)::io
 
     integer i,imap
-    real ta1,ta2,tb1,tb2
-    integer tib1,tib2,tirate
 
-    call cpu_time(ta1)
-    call system_clock(tib1,tirate)
-    tb1=real(tib1,4)/real(tirate,4)
+    call set_time_point(1,4)
 
 #ifdef mpi_mode
     wh%nc_phy=0; wh%nc_var=0; wh%r0=0; wh%eu2=0
@@ -201,12 +229,9 @@ module gkernel
     call sum_all_mpi(wh%r0,wh%na2112)
     call sum_all_mpi(wh%eu2,wh%num_imp)
 #endif
-    call cpu_time(ta2)
-    call system_clock(tib2,tirate)
-    tb2=real(tib2,4)/real(tirate,4)
-    if(io>0)then
-        call out_time_use('solve_hembed',ta2-ta1,tb2-tb1,io)
-    endif
+
+    call set_time_point(2,4)
+    call print_time_usage('solve_hembed',4,io)
     return
 
     end subroutine solve_hembed_list
@@ -304,43 +329,62 @@ module gkernel
     end subroutine solve_hembed
 
 
+    subroutine calc_total_energy()
+    real(q) etot
+    integer io
+
+    io=gp%io
+    call calc_et1_list()
+    call calc_ebnd()
+    call calc_edcla1()
+    call calc_edc_list()
+    if(gkmem%iembeddiag==10)then
+        call calc_eu2_hf_list()
+    endif
+    etot=bnd%eband-wh%edcla1-sum(dc%e)+sum(wh%eu2)+sum(wh%et1)
+    if(io>0)then
+        write(io,'(" e_total_model = ",f0.7)')etot
+        if(gkmem%iter>1)then
+            write(io,'(" e_total_model diff = ",f0.7)')etot-gkmem%etot
+        endif
+    endif
+    gkmem%etot=etot
+    return
+
+    end subroutine calc_total_energy
+
+
 end module gkernel
 
 
-subroutine g_fcn_rl(n,x,fvec,iflag)
+subroutine g_fcn(n,x,fvec,iflag)
     use gprec
     use gkernel
     implicit none
     integer,intent(in)::n
     integer,intent(out)::iflag
-    real(8),intent(inout)::x(n)
+    real(8),intent(in)::x(n)
     real(8),intent(out)::fvec(n)
 
     integer io
     real(q) maxerr
-    real ta1,ta2,tb1,tb2
-    integer tib1,tib2,tirate
 
-    call cpu_time(ta1)
-    call system_clock(tib1,tirate)
-    tb1=real(tib1,4)/real(tirate,4)
+    call set_time_point(1,3)
 
     io=gp%io
     gkmem%iter=gkmem%iter+1
+
     if(io>0)then
         write(io,'(/,"cygutz iteration = ", i0)')gkmem%iter
         write(io,'("********** wh%x **********")')
         write(io,'(5f14.8)')x
     endif
-    
-    ! x to {r_coef, la1_coef}
-    wh%r_coef=transfer(x(1:gkmem%nx1),wh%r_coef)
-    wh%la1_coef=x(1+gkmem%nx1:)
 
-    call g_rl_onecycle()
-
-    fvec(1:gkmem%nx1)=transfer(wh%r_coef,fvec(1:gkmem%nx1))-x(1:gkmem%nx1)
-    fvec(1+gkmem%nx1:)=wh%nks_coef-wh%ncv_coef
+    if(gkmem%iembeddiag==10)then
+        call g_fcn_n(n,x,fvec)
+    else
+        call g_fcn_rl(n,x,fvec)
+    endif
 
     maxerr=maxval(abs(fvec))
     if(io>0)then
@@ -359,13 +403,37 @@ subroutine g_fcn_rl(n,x,fvec,iflag)
 
     ! Stop criteria
     if(maxerr<gkmem%rtol)iflag=-1
-    if(gkmem%iter>=gkmem%max_iter)iflag=-1
-    call cpu_time(ta2)
-    call system_clock(tib2,tirate)
-    tb2=real(tib2,4)/real(tirate,4)
-    if(io>0)then
-        call out_time_use('gfcn_rl',ta2-ta1,tb2-tb1,io)
+    ! trade-off
+    if(maxerr<gkmem%rtol*10)then
+        if(gkmem%giter==-1)then
+            gkmem%giter=gkmem%iter
+        elseif(gkmem%iter-gkmem%giter>n*3)then
+            iflag=-1
+        endif
     endif
+    if(gkmem%iter>=gkmem%max_iter)iflag=-1
+
+    call set_time_point(2,3)
+    call print_time_usage('g_fcn',3,io)
+    return
+
+end subroutine g_fcn
+
+
+subroutine g_fcn_rl(n,x,fvec)
+    use gprec
+    use gkernel
+    implicit none
+    integer,intent(in)::n
+    real(8),intent(in)::x(n)
+    real(8),intent(out)::fvec(n)
+
+    ! x to {r_coef, la1_coef}
+    wh%r_coef=transfer(x(1:gkmem%nx1),wh%r_coef)
+    wh%la1_coef=x(1+gkmem%nx1:)
+    call g_rl_onecycle()
+    fvec(1:gkmem%nx1)=transfer(wh%r_coef,fvec(1:gkmem%nx1))-x(1:gkmem%nx1)
+    fvec(1+gkmem%nx1:)=wh%nks_coef-wh%ncv_coef
     return
 
 end subroutine g_fcn_rl
@@ -413,20 +481,46 @@ subroutine g_rl_onecycle()
     call calc_ncvar_pp(io)
     call calc_ncphy_pp(io)
     call eval_sl_vec_all(2,io)
-
-    ! Check energy
-    call calc_et1_list()
-    call calc_ebnd()
-    call calc_edcla1()
-    call calc_edc_list()
-    etot=bnd%eband-wh%edcla1-sum(dc%e)+sum(wh%eu2)+sum(wh%et1)
-    if(io>0)then
-        write(io,'(" e_total_model = ",f0.7)')etot
-        if(gkmem%iter>1)then
-            write(io,'(" e_total_model diff = ",f0.7)')etot-gkmem%etot
-        endif
-    endif
-    gkmem%etot=etot
+    call calc_total_energy()
     return
 
 end subroutine g_rl_onecycle
+
+
+subroutine g_fcn_n(n,x,fvec)
+    use gprec
+    use gkernel
+    implicit none
+    integer,intent(in)::n
+    real(8),intent(in)::x(n)
+    real(8),intent(out)::fvec(n)
+
+    integer io
+
+    io=gp%io
+    wh%nks_coef=x
+    call hm_expand_all_herm(wh%nks,wh%nks_coef,wh%hm,-1,.false.)
+    call calc_nks_tot(io)
+    if(io>0)then
+        call output_matrices('nks-in',wh%nks,wh%na2112,wh%num_imp, &
+                &wh%na2_imp,io,0)
+    endif
+    call calc_la1_hf_list()
+    call add_vdc_to_la1_list()
+    call calc_la1_pp(io,'la1-inp')
+    call map_wh_bnd_matrix(wh%la1,bnd%la1,.false.)
+    call calc_band_all(io)
+    call gutz_fermi(io)
+    call calc_mup_dn(io)
+    call calc_nks()
+    call calc_nks_pp(io)
+    !! True for HF calculation.
+    wh%nc_phy=wh%nks
+    call eval_sl_vec_all(1,io)
+    call map_wh_bnd_matrix(wh%nks,bnd%nks,.false.)
+    fvec=wh%nks_coef-x
+    call calc_total_energy()
+    return
+
+end subroutine g_fcn_n
+

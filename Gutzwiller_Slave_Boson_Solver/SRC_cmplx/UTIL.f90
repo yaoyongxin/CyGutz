@@ -59,7 +59,7 @@ module gutil
     implicit none
     private
     public :: orbital_spin_trans, a_trans, get_ylm_cr, get_ylm_cr_all,  &
-            & out_time_use, inv_aplx, wrt_a, hermev, inv, chk_unitary, &
+            & inv_aplx, wrt_a, hermev, inv, chk_unitary, &
             & get_hm_expand, uhau, anmxbmm, annxb, trace_a, atofa, pfa_pa, &
             & h_regularize, calc_loewner, dsimix, dpsimix, &
             & file_name, int_to_str, fermi_fun, gauss_fun, set_range, &
@@ -476,25 +476,6 @@ module gutil
     end subroutine get_ylm_cr_all
       
       
-    subroutine out_time_use(task,cpu_time,wal_time,io)
-    character(*) task
-    real cpu_time,wal_time
-    integer nh,nm,io
-    real,parameter::minute=60._4,hour=minute*minute
-      
-    nh=int(cpu_time/hour  ); cpu_time=mod(cpu_time,hour  )
-    nm=int(cpu_time/minute); cpu_time=mod(cpu_time,minute)
-    write(io,'(a25," takes",i7," h ",i2," m and ",f7.2," s (cpu).")') &
-            &task,nh,nm,cpu_time
-    nh=int(wal_time/hour  ); wal_time=mod(wal_time,hour  )
-    nm=int(wal_time/minute); wal_time=mod(wal_time,minute)
-    write(io,'(25x," takes",i7," h ",i2," m and ",f7.2," s (wall).")') &
-            &nh,nm,wal_time
-    return
-      
-    end subroutine out_time_use
-     
-
     !< mode = 0: hermitian matrix; else: non-hermitian, use m*m^\dagger
     subroutine chk_eigens_dmatrix_list(str,am,n112,n2,dim_list,io,mode)
     integer,intent(in) :: n112,n2,io,dim_list(n2),mode

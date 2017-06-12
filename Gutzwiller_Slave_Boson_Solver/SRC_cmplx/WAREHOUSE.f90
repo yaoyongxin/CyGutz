@@ -148,6 +148,7 @@ module warehouse
         imap=wh%imap_imp(i)
         if(imap/=i)then
             wh%co(i)%v2e=>wh%co(imap)%v2e
+            wh%co(i)%v_j2e=>wh%co(imap)%v_j2e
         else
             na2=wh%na2_imp(i)
             allocate(wh%co(i)%v2e(na2,na2,na2,na2))
@@ -157,11 +158,24 @@ module warehouse
                 write(io,'(" imp = ",I2," v2e(1,1,1,1) = ",f0.2)')i,&
                     &real(wh%co(i)%v2e(1,1,1,1))
             endif
+            allocate(wh%co(i)%v_j2e(na2,na2,na2,na2))
+            call get_coul_exchange(na2,wh%co(i)%v2e,wh%co(i)%v_j2e)
         endif
     enddo
     return
 
     end subroutine set_v2e_list
+
+
+    subroutine calc_la1_hf_list()
+    integer i
+
+    do i=1,wh%num_imp
+        call calc_co_la1_hf(wh%co(i))
+    enddo
+    return
+
+    end subroutine calc_la1_hf_list
 
 
     subroutine link_co_warehouse()
@@ -467,7 +481,6 @@ module warehouse
     call gh5_create_impurity_groups(f_id)
     call gh5_wrt_wh_matrix_list('/R',wh%r)
     call gh5_wrt_wh_matrix_list('/LAMBDA',wh%la1)
-    call gh5_wrt_wh_matrix_list('/NKS',wh%nks)
     call gh5_close(f_id)
     return
       
@@ -828,6 +841,31 @@ module warehouse
 
     end subroutine calc_ncphy_pp
 
+
+    subroutine add_local_bz_splitting_to_h1e(bz_list,io,fact)
+    integer,intent(in)::io
+    real(q),intent(in)::bz_list(wh%num_imp)
+    real(q),intent(in)::fact
+
+    integer i,ia,ia2
+
+    do i=1,wh%num_imp
+        do ia=1,wh%na2_imp(i)/2
+            ia2=ia*2
+            ! spin-up component
+            wh%co(i)%h1e(ia2-1,ia2-1)=wh%co(i)%h1e(ia2-1,ia2-1)-bz_list(i)*fact
+            ! spin-dn component
+            wh%co(i)%h1e(ia2,ia2)=wh%co(i)%h1e(ia2,ia2)+bz_list(i)*fact
+        enddo
+    enddo
+    if(io>0)then
+        call output_matrices('h1e-with-bz',wh%h1e,wh%na2112,wh%num_imp, &
+                &wh%na2_imp,io,-1)
+    endif
+    return
+
+    end subroutine add_local_bz_splitting_to_h1e
+
     
     ! for wh%h1e, etc.
     subroutine calc_herm_matrices_pp(matrices,sname,mb,ltrans,io,mode)
@@ -1164,10 +1202,23 @@ module warehouse
     subroutine calc_et1_list()
     integer i
 
-    forall(i=1:wh%num_imp)wh%et1(i)=sum(wh%co(i)%h1e*wh%co(i)%nc_phy)
+    do i=1,wh%num_imp
+        wh%et1(i)=sum(wh%co(i)%h1e*wh%co(i)%nc_phy)
+    enddo
     return
 
     end subroutine calc_et1_list
+
+
+    subroutine calc_eu2_hf_list()
+    integer i
+
+    do i=1,wh%num_imp
+        call calc_co_eu2_hf(wh%co(i), wh%eu2(i))
+    enddo
+    return
+
+    end subroutine calc_eu2_hf_list
 
 
     subroutine output_energies_wh(io)

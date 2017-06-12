@@ -62,18 +62,16 @@ program cygutz
     use bandstru
     use warehouse
     use dcstd
+    use magnetism
     use gmpi
     use gkernel
     use psave
+    use gtime
     implicit none
     integer ierr
-    real ta1,ta2,tb1,tb2
-    integer tib1,tib2,tirate
-    external::g_fcn_rl
-      
-    call cpu_time(ta1)
-    call system_clock(tib1,tirate)
-    tb1=real(tib1,4)/real(tirate,4)
+    external::g_fcn
+    
+    call set_time_point(1,1)
 #ifdef mpi_mode
     call mpi_init(ierr)
 #endif
@@ -112,10 +110,34 @@ program cygutz
     ! double counting
     call init_dc_std(gp%io)
 
-    ! run the kernel
-    call init_gkernel(gp%io)
-    call g_newton_solver(gp%io,g_fcn_rl)
+    ! magnetic solution initialization
+    call init_magnetism(gp%io)
 
+    ! add spin-splitting to h1e to initialize lambda_1
+    if(associated(mag%bz_field))then
+        call add_local_bz_splitting_to_h1e(mag%bz_field,0,1.d0)
+    endif
+
+    !! Initialise the kernel
+    call init_gkernel(gp%io)
+
+    ! remove spin-splitting from h1e 
+    if(associated(mag%bz_field))then
+        call add_local_bz_splitting_to_h1e(mag%bz_field,0,-1.d0)
+    endif
+
+    ! check the quasi-particle part with initial guess of {R, lambda}
+    call map_wh_bnd_matrix(wh%la1,bnd%la1,.false.)
+    call calc_band_all(gp%io)
+    call gutz_fermi(gp%io)
+    call calc_nks()
+    call calc_nks_pp(gp%io)
+    call eval_sl_vec_all(1,gp%io)
+
+    !! Solve the set of Gutzwiller nonlinear equations.
+    call g_newton_solver(gp%io,g_fcn)
+
+    !! Save important data for analysis.
     call postsave()
 
     ! update electron density
@@ -132,11 +154,9 @@ program cygutz
         call update_nelf_list(gp%io)
     endif
 
-    call cpu_time(ta2)
-    call system_clock(tib2,tirate)
-    tb2=real(tib2,4)/real(tirate,4)
+    call set_time_point(2,1)
+    call print_time_usage('total',1,gp%io)
     if(gp%io>0)then
-        call out_time_use('total',ta2-ta1,tb2-tb1,gp%io)
         close(gp%io)
     endif
     call gh5_end()

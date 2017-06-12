@@ -10,10 +10,24 @@ import pyglib.model.special as special
 
 
 def gutz_model_setup(u=0.0, nmesh=5000, mu=0):
-    '''Set up calculations for 1-band model with semi-circular DOS.
+    '''Set up Gutzwiller calculations for 1-band model with semi-circular DOS.
+
+    Parameters:
+
+    * u: real number
+      Hubbard U.
+    * nmesh: interger number
+      number of energy mesh
+    * mu: real number
+      chemical potential
+
+    Result:
+
+    Create all the necessary input file of ``GPARAMBANDS.h5``, ``GPARAM.h5``,
+    and ``BAREHAM_0.h5``, for *CyGutz* calculation.
     '''
-    # get semi-circular class
-    sc = special.semicirular()
+    # get semi-circular class, predifined in pyglib.model.special
+    sc = special.semicircular()
 
     # get semi-circular energy mesh
     e_list = sc.get_e_list_of_uniform_wt(nmesh=nmesh)
@@ -27,7 +41,7 @@ def gutz_model_setup(u=0.0, nmesh=5000, mu=0):
     norb2 = norb*2
 
     # get a list of one-body Hamilonian for the enrgy mesh.
-    hk_list = [np.array([e+0.j]) for e in e_list]
+    hk_list = [np.array([[e+0.j]]) for e in e_list]
 
     # get the tight-binding model
     aTB = tb.TB(a, hk_list=hk_list)
@@ -53,9 +67,8 @@ def gutz_model_setup(u=0.0, nmesh=5000, mu=0):
     # generate GPARAMBANDS.h5
     # ensemble is set to 1 for grand canonical system.
     ginput.save_gparambands(kps_wt, num_e, norb, \
-            ensemble=1, h1e_list=h1e_list)
+            ensemble=1, h1e_list=h1e_list, delta=1.e-8)
 
-    # GPARAM.h5
     # set self-energy structure
     sigma = np.zeros((norb2,norb2), dtype=int)
     sigma[0::2, 0::2] = np.arange(1,norb**2+1).reshape( \
@@ -74,9 +87,9 @@ def gutz_model_setup(u=0.0, nmesh=5000, mu=0):
 
     # generate GPARAM.h5 file.
     ginput.save_gparam(na2_list=[norb2],
-            iembeddiag=-3, imix=0, sigma_list=[sigma],
+            iembeddiag=-1, imix=0, sigma_list=[sigma],
             v2e_list=[v2e], nval_top_list=[norb2],
-            vdc2_list=vdc2_list, max_iter=5000)
+            vdc2_list=vdc2_list, max_iter=100)
 
     # generate BAREHAM_0.h5 file.
     aTB.save_bareham(kps)

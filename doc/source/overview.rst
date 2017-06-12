@@ -17,29 +17,29 @@ The steps are:
 
 * init_lapw:
 
-  * NN: lists nearest neighbor distances and determine atomic sphere radii.
-  * SGROUP: determines the spacegroup of the structure deﬁned 
-    in your case.struct ﬁle.
-  * SYMMETRY: generates from a raw case.struct file 
-    the space group symmetry operations, 
-    determines the point group of the individual atomic sites, 
-    generates the LM expansion for the lattice harmonics 
-    and determines the local rotation matrices.
-  * LSTART: generates free atomic densities 
-    and determines how the different orbitals are treated 
-    in the band structure calculations.
-  * KGEN: generates a k-mesh in the irreducible part of the BZ.
-  * DSTART: generates a starting density for the scf cycle 
-    by a superposition of atomic densities generated in LSTART.
+    * NN: lists nearest neighbor distances and determine atomic sphere radii.
+    * SGROUP: determines the spacegroup of the structure deﬁned 
+      in your case.struct ﬁle.
+    * SYMMETRY: generates from a raw case.struct file 
+      the space group symmetry operations, 
+      determines the point group of the individual atomic sites, 
+      generates the LM expansion for the lattice harmonics 
+      and determines the local rotation matrices.
+    * LSTART: generates free atomic densities 
+      and determines how the different orbitals are treated 
+      in the band structure calculations.
+    * KGEN: generates a k-mesh in the irreducible part of the BZ.
+    * DSTART: generates a starting density for the scf cycle 
+      by a superposition of atomic densities generated in LSTART.
 
 * run_lapw:
   
-  * LAPW0: (POTENTIAL) generates potential from density.
-  * LAPW1: (BANDS) calculates valence bands (eigenvalues and eigenvectors).
-  * LAPWSO: adds spin-orbit coupling.
-  * LAPW2: (RHO) computes valence densities from eigenvectors.
-  * LCORE: computes core states and densities.
-  * MIXER: mixes input and output densities.
+    * LAPW0: (POTENTIAL) generates potential from density.
+    * LAPW1: (BANDS) calculates valence bands (eigenvalues and eigenvectors).
+    * LAPWSO: adds spin-orbit coupling.
+    * LAPW2: (RHO) computes valence densities from eigenvectors.
+    * LCORE: computes core states and densities.
+    * MIXER: mixes input and output densities.
 
 LDA + Gutzwiller-Slave-Boson
 ----------------------------

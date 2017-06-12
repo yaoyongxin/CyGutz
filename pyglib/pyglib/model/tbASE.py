@@ -353,7 +353,10 @@ class TB(object):
         """
 
         hk, _ = self.Hk(ikp, kpt)
-        ek, Uk = numpy.linalg.eigh(hk)
+        if hk.shape[0] == 1:
+            ek, Uk = [hk[0,0].real], numpy.array([[1.0+0.j]])
+        else:
+            ek, Uk = numpy.linalg.eigh(hk)
         return ek, Uk
 
     def get_bandstructure(self, kps, saveto=None, with_weights=False):
@@ -517,8 +520,9 @@ class TB(object):
                 for ik in range(ik_start, ik_end):
                     ek, Uk = self.eigens(ik, kpts[ik])
                     # Upper case: Fortran convention
-                    f['/IKP_'+str(ik+1)+'/ek0']=ek
-                    f['/IKP_'+str(ik+1)+'/ISYM_1/HK0']=self.hk.T
+                    f['/IKP_'+str(ik+1)+'/ek0'] = ek
+                    f['/IKP_'+str(ik+1)+'/ISYM_1/HK0'] = self.hk.T
+                    f['/IKP_'+str(ik+1)+'/T_PSIK0_TO_HK0_BASIS'] = Uk.T
 
 
 

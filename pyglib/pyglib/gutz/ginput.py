@@ -38,7 +38,7 @@ def save_gparam(iso=1, ispin=1, ityp_list=[0], imap_list=[0], na2_list=[2],
         if ldc > 1:
             f['/dc_nelf_list'] = nelf_list
         if vdc2_list is not None:
-            f['/vdc2_list'] = vdc2_list.T
+            f['/VDC2_LIST'] = np.asarray(vdc2_list).T
         if updn_list != []:
             f['/updn_list'] = updn_list
 
