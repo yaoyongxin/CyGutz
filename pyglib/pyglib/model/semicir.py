@@ -89,7 +89,7 @@ def gutz_model_setup(u=0.0, nmesh=5000, mu=0):
     ginput.save_gparam(na2_list=[norb2],
             iembeddiag=-1, imix=0, sigma_list=[sigma],
             v2e_list=[v2e], nval_top_list=[norb2],
-            vdc2_list=vdc2_list, max_iter=100)
+            vdc2_list=vdc2_list, max_iter=500)
 
     # generate BAREHAM_0.h5 file.
     aTB.save_bareham(kps)
