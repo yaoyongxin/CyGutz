@@ -380,6 +380,10 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         so = ''
         cmplx = ''
 
+    # In addition, check in1c file
+    if file_exists(w_case+'.in1c'):
+        cmplx = 'c'
+
     f_mpi = 'mpi_prefix.dat'
     if os.path.isfile(f_mpi):
         with open(f_mpi, 'r') as f:
