@@ -1,14 +1,8 @@
-# Author: Xiaoyu Deng, Yongxin Yao
+# Author: Yongxin Yao, Xiaoyu Deng
 
 '''
-A Tight-Binding model interface, using ASE Atoms as bases.
-Following the convention in Wannier90, H(R) is based on unit cell,
-not on orbitals. H(k)=sum_R H(R) exp(-ikR).
-
 A tight-binding model is defined by a set of hoppoing matrix H(R).
 H(R) is a matrix with dimension of orbitals in the unit cell.
-A usefull technique is to construct supercell,
-which needs to construct H(R) for the supercell.
 Dimension: all cells are three dimension in ASE,
 however one can mimick two dimensional model
 by setting hopping along the third axis zero.
@@ -34,13 +28,13 @@ class AtomsTB(Atoms):
         on each atom, for example, [["s"],["s","p"]]
       - spin: name of spins, by default, spin=["up"],
         only one spin component is considered.
-        Can be also ["up","down"].
+        Can be also ["up","dn"].
       - nspinorbitals: number of orbitals with possible
         spin degeneracy
     """
 
     def set_orbitals_spindeg(self, orbitals=None,
-                             spindeg=False, spinorbit=False):
+            spindeg=True, spinorbit=False):
         """
         Set the orbitals in a ASE Atoms object.
 
@@ -49,10 +43,10 @@ class AtomsTB(Atoms):
           orbitals: list
             orbitals names, list with each item
             is a list of orbital names on each atom,
-            for example, [("s"),("s","p")]
+            for example, [("s"),("s","px")]
           spindeg: bool
             spin degeneracy, if TRUE spin=["up"];
-            if False, spin=["up","down"]
+            if False, spin=["up","dn"]
           spinorbit: bool
             True, orbitals are in fact spin-orbitals,
             if this is true, spin is set to ["so"],
@@ -63,45 +57,29 @@ class AtomsTB(Atoms):
         >>> # set a atom with two bands, "s" and "p",
         >>> # and spin degenaracy
         >>> a=AtomsTB("N",[(0,0,0)],cell=(1,1,1))
-        >>> a.set_orbitals_spindeg(orbitals=[("s","p")],
+        >>> a.set_orbitals_spindeg(orbitals=[("s","px")],
         >>>         spindeg=True)
         """
 
         if orbitals is None:
             # one s orbital per atoms by default.
-            self.orbitals = [("s",) for i in
-                             range(len(self.positions))]
+            self.orbitals = [("s",) for pos in self.positions]
         else:
             self.orbitals = orbitals[:]
 
         self.spindeg = spindeg
         self.spinorbit = spinorbit
         if spindeg:
-            self.spin = ["up", "down"]
+            self.spin = ["up"]
         elif spinorbit:
             self.spin = ["so"]
         else:
-            self.spin = ["up"]
+            self.spin = ["up", "dn"]
 
         self.nspinorbitals = 0
         for i in self.orbitals:
             self.nspinorbitals += len(i)
         self.nspinorbitals *= len(self.spin)
-
-        # build a index
-        idx_spinorbital_sao = {}
-        idx_sao_spinorbital = {}
-        idx = 0
-        for ispin in self.spin:
-            for iatom in range(len(self.positions)):
-                for iorb in range(len(self.orbitals[iatom])):
-                    idx_spinorbital_sao[idx] = \
-                        (ispin, iatom, iorb)
-                    idx_sao_spinorbital[(ispin, iatom, iorb)] = \
-                        idx
-                    idx += 1
-        self.idx_spinorbital_sao = idx_spinorbital_sao
-        self.idx_sao_spinorbital = idx_sao_spinorbital
 
 
 class TB(object):
@@ -195,106 +173,13 @@ class TB(object):
                 R, iorb, jorb, t_hop = ihop
                 if R not in self.Hr:  # the matrix for R is not set yet
                     self.Hr[R] = numpy.zeros((
-                        self.Atoms.nspinorbitals,
-                        self.Atoms.nspinorbitals), dtype=numpy.complex)
+                            self.Atoms.nspinorbitals,
+                            self.Atoms.nspinorbitals), dtype=numpy.complex)
                 self.Hr[R][iorb, jorb] = t_hop
             else:
                 R, hr = ihop
                 self.Hr[R] = hr
 
-    def supercell(self, extent=None):
-        """
-        Generate a supercell with respect to original unit cell.
-        The main problem is to generate hopping matrix between super cells.
-        Following ASE atoms, the supercell can only be constructed
-        by repeating the unit cell in three directions.
-
-        Parameters
-        ----------
-        extent: tuple
-          a tuple(m,n,l) specifying the multiplicity of the unit cell
-          in each direction along it lattice vectors,
-          which consistute a supercell.
-          If it is a number then extent=(m,m,m), thus, same multiplicity
-          along each direction.
-
-        Returns
-        -------
-        sTB: a TB object of the supercell.
-        """
-
-        atoms = self.Atoms * extent
-        if type(extent) is int:
-            m = (extent, extent, extent)
-        else:
-            m = extent
-
-        # way to contruct supercell from primitive unit cell.
-        trans = [numpy.array(i) for i in numpy.ndindex(m)]
-        # num of duplicate of unit cell
-        dup = len(trans)
-        atoms.set_orbitals_spindeg(self.Atoms.orbitals * dup,
-                                   self.Atoms.spindeg, self.Atoms.spinorbit)
-        ex = numpy.diag(m)
-
-        def reduceVector(R, trans):
-            # for vector R, rewrite in the unit cell of supercell
-            # relative position respect to supercell
-            tpos = numpy.dot(numpy.array(R), numpy.linalg.inv(ex))
-            # set tops to nearest int if it is really close to the integer
-            tpostoint = numpy.rint(tpos)
-            select = numpy.where(abs(tpos - tpostoint) < 1e-6)
-            tpos[select] = tpostoint[select]
-            # vector shift will shit tpos in the unit cell of supercell
-            shift = numpy.floor(tpos).astype(int)
-            # tau is the relative position in the unit cell of supercell
-            tau = numpy.rint((numpy.dot(tpos - shift, ex))).astype(int)
-            td = -1
-            # print tpos, shift, tau,
-            for i in xrange(len(trans)):
-                if numpy.linalg.norm(trans[i] - tau) < 1e-6:
-                    td = i
-            # print shift,tau,td
-            assert td != -1, "shift vector is not in the unit cell"
-            return tuple(shift), tau, td
-
-        # define hopping matrix. This is done by iterating all possible hopping
-        # matrix from cells inside the supercell.
-        Norb = self.Atoms.nspinorbitals
-        Hr = {}
-        R = list(self.Hr)
-        for i in xrange(dup):
-            icord = trans[i]
-            for iR in R:
-                shiftR = numpy.array(iR) + icord
-                shift, tau, td = reduceVector(shiftR, trans)
-                if shift not in Hr:
-                    Hr[shift] = numpy.zeros((Norb * dup, Norb * dup),
-                                            dtype=type(self.Hr[R[0]][0, 0]))
-                if not self.Atoms.spindeg:
-                    Hr[shift][i * Norb:(i + 1) * Norb, \
-                            td * Norb:(td + 1) * Norb] = \
-                            self.Hr[iR]
-                else:  # make sure the spin index is the slowest one.
-                    Hr[shift][i * Norb / 2:(i + 1) * Norb / 2, \
-                            td * Norb / 2:(td + 1) * Norb / 2] =\
-                            self.Hr[iR][:Norb / 2, :Norb / 2]
-                    Hr[shift][i * Norb / 2 + dup * Norb / 2: \
-                            (i + 1) * Norb / 2 + dup * Norb / 2,\
-                            td * Norb / 2:(td + 1) * Norb / 2] = \
-                            self.Hr[iR][Norb / 2:, :Norb / 2]
-                    Hr[shift][i * Norb / 2:(i + 1) * Norb / 2, \
-                            td * Norb / 2 + dup * Norb / 2: \
-                            (td + 1) * Norb / 2 + dup * Norb / 2] = \
-                            self.Hr[iR][:Norb / 2, Norb / 2:]
-                    Hr[shift][i * Norb / 2 + dup * Norb / 2: \
-                            (i + 1) * Norb / 2 + dup * Norb / 2, \
-                            td * Norb / 2 + dup * Norb / 2: \
-                            (td + 1) * Norb / 2 + dup * Norb / 2] = \
-                            self.Hr[iR][Norb / 2:, Norb / 2:]
-
-        sTB = TB(AtomsTB=atoms, Hr=Hr)
-        return sTB
 
     def Hk(self, ikp=0, kpt=numpy.zeros((3))):
         """
@@ -474,40 +359,6 @@ class TB(object):
                 Hr[iR][norb / 2:, norb / 2:] = self.Hr[iR][:, :]
         else:
             Hr = None
-        return TB(atoms, Hr)
-
-    def trans_Nambubasis(self):
-        """
-        Transform the TB to nambu basis. Only hopping is changed.
-        This transpose is correct only if the one-site hopping is set to zero.
-
-        Returns
-        -------
-        TB: AtomsTB
-          A new AtomsTB object with modified Hr.
-        """
-
-        atoms = self.Atoms.copy()
-        assert self.Atoms.spindeg, \
-                " Error: orbital has no spin degeneracy!"
-        assert not self.Atoms.spinorbit, \
-                " Error: Cann't transform to Nambubasis with spin-orbit!"
-        atoms.set_orbitals_spindeg(
-                orbitals=self.Atoms.orbitals, spindeg=self.Atoms.spindeg)
-        norb = atoms.nspinorbitals
-        Hr = {}
-        for iR in self.Hr:
-            Hr[iR] = numpy.zeros((norb, norb), dtype=type(self.Hr[iR][0, 0]))
-            Hr[iR][0:norb / 2, 0:norb / 2] = \
-                    self.Hr[iR][0:norb / 2, 0:norb / 2]
-            # for down spin, Hr[R]=-(Hr[-R]).transpose
-            minusR = tuple([-i for i in iR])
-            # create Hr matrix
-            assert minusR in self.Hr, \
-                    " Error: inverse R is not in the hopping matrix!"
-            Hr[iR][norb / 2:, norb / 2:] = \
-                    -self.Hr[minusR].transpose()[norb / 2:, norb / 2:]
-
         return TB(atoms, Hr)
 
 

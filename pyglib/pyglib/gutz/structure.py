@@ -58,7 +58,7 @@ def check_material(material, f):
     print(" Scaled_positions: \n", material.get_scaled_positions(), file=f)
     print(" Mapping-table equivalent atoms: ",
             material.idx_equivalent_atoms, file=f)
-    print(" Labels correlated atoms: ", material.corr_list, file=f)
+    print(" Labels of correlated atoms: ", material.corr_list, file=f)
     print(" Orbital angular momentums of correlated electrons: ",
             material.df_list, file=f)
     print(" Take into accout SOC or not: ",

@@ -103,13 +103,13 @@ def h5save_usr_qa_setup(material, log):
     else:
         print("\n Please select method for U-interaction double counting.\n" +
                 " LDC = 12: Recommended for LDA+G-RISB calculations.\n" +
-                "           Standard double counting. \n" +
+                "           Fully-localized-limit (FLL) double counting. \n" +
                 "           (updating Vdc at each charge iteration, \n" +
                 "           initial n0 to be provided.) \n" +
                 "        2: Fix double counting potential \n" +
                 "           (keep same Vdc/n0 at each charge iteration,\n" +
                 "           n0 to be provided.) \n" +
-                "        1: Standard double counting potential \n" +
+                "        1: FLL double counting potential \n" +
                 "           (n0 self-consistently determined.) \n" +
                 "        0:  No double counting (useful for models). ")
         ldc = get_usr_input(" Please select LDC: ", ['12', '0', '1', '2'])
@@ -251,9 +251,7 @@ def h5save_usr_qa_setup(material, log):
         print("\n Please select the method to solve G-RISB equations.\n" +
                 " LNEWTON = 0: Recommended.\n" +
                 "              Modified Powell hybrid method (HYDRD1).\n" +
-                "          -1: Broyden method. Faster for solutions with Z\n" +
-                "              much larger than 0,\n" +
-                "              e.g., magnetic calculations.")
+                "          -1: Broyden method.")
         lnewton = get_usr_input(" Please select LNEWTON: ", ['-1', '0'])
         usr_input.write(lnewton + '\n')
     lnewton = int(lnewton)

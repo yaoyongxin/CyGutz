@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import sys
 
+
 def initialize():
     '''
     Initialization for the Gutzwiller-Slave-Boson solver.
