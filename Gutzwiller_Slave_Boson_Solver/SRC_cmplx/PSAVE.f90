@@ -64,6 +64,23 @@ module psave
     contains
 
 
+    subroutine postcheck(io)
+    integer,intent(in)::io
+
+
+    if(io<0)return
+    write(io,'(" maximal local symmetrization error = ", f10.5)')wh%symerr
+    if(wh%symerr>0.01_q)then
+        write(io,'(&
+                &" WARNING: LARGE LOCAL SYMM ERROR!",/, &
+                &"   IF YOU DO NOT UNDERSTAND WHAT YOU ARE DOING,",/, &
+                &"   REPORT TO YONGXIN YAO AT CYGUTZ@GMAIL.COM!")')
+    endif
+    return
+
+    end subroutine postcheck
+
+
     subroutine postsave()
 
     call postsave_glog()

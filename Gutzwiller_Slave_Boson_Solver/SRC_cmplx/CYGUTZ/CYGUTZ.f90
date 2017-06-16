@@ -152,6 +152,7 @@ program cygutz
         call output_energies(gp%io)
         call gh5_wrt_wh_rl('WH_RL_OUT.h5')
         call update_nelf_list(gp%io)
+        call postcheck(gp%io)
     endif
 
     call set_time_point(2,1)

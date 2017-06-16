@@ -88,7 +88,7 @@ module warehouse
         type(corr_orb),allocatable::co(:)
         type(frozen),pointer::fz(:)
 
-        real(q) :: ef,edcla1
+        real(q) :: ef,edcla1,symerr=0._q
         integer :: r_factor=2
         complex(q),pointer :: r(:),r0(:),d(:),d0(:),la1(:),la2(:),z(:), &
                 &copy(:),nks(:),nc_var(:),nc_phy(:),h1e(:),isimix(:), &
@@ -700,6 +700,8 @@ module warehouse
     subroutine calc_nks_pp(io)
     integer,intent(in)::io
 
+    real(q) maxerr
+
     if(io>0)then
         call output_matrices('nks-unsym',wh%nks,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,1)
@@ -710,11 +712,12 @@ module warehouse
     call hm_expand_all_herm(wh%nks,wh%nks_coef,wh%hm_l,1,.true.)
     ! Symmetrization (note non-zero diagonals)
     call hm_expand_all_sym(wh%nks,wh%hm,.true.,.true.)
+    maxerr=maxval(abs(wh%nks-wh%copy))
+    wh%symerr=max(wh%symerr,maxerr)
     if(io>0)then
         call output_matrices('nks-sym',wh%nks,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,1)
-        write(io,'(" max error due to symmetrization = ",f12.6)') &
-                &maxval(abs(wh%nks-wh%copy))
+        write(io,'(" max error due to symmetrization = ",f12.6)') maxerr
     endif
     call chk_eigens_matrix_list('nks',wh%nks,wh%na2112,wh%num_imp, &
             &wh%na2_imp,io,0)
@@ -776,6 +779,8 @@ module warehouse
     subroutine calc_ncvar_pp(io)
     integer,intent(in)::io
 
+    real(q) maxerr
+
     if(io>0)then
         call output_matrices('ncv-unsym',wh%nc_var,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,1)
@@ -785,11 +790,12 @@ module warehouse
     call hm_expand_all_herm(wh%nc_var,wh%ncv_coef,wh%hm_l,1,.true.)
     ! Symmetrization (note non-zero diagonals)
     call hm_expand_all_sym(wh%nc_var,wh%hm,.true.,.true.)
+    maxerr=maxval(abs(wh%nc_var-wh%copy))
+    wh%symerr=max(wh%symerr,maxerr)
     if(io>0)then
         call output_matrices('ncv-sym',wh%nc_var,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,1)
-        write(io,'(" max error due to symmetrization = ",f12.6)') &
-                &maxval(abs(wh%nc_var-wh%copy))
+        write(io,'(" max error due to symmetrization = ",f12.6)')maxerr
     endif
     return
 
@@ -819,6 +825,7 @@ module warehouse
     integer,intent(in)::io
 
     integer i
+    real(q) maxerr
 
     if(io>0)then
         call output_matrices('ncp-unsym',wh%nc_phy,wh%na2112,wh%num_imp, &
@@ -826,11 +833,12 @@ module warehouse
     endif
     wh%copy=wh%nc_phy
     call hm_expand_all_sym(wh%nc_phy,wh%hm,.true.,.true.)
+    maxerr=maxval(abs(wh%nc_phy-wh%copy))
+    wh%symerr=max(wh%symerr,maxerr)
     if(io>0)then
         call output_matrices('ncp-sym',wh%nc_phy,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,1)
-        write(io,'(" max error due to symmetrization = ",f12.6)') &
-                &maxval(abs(wh%nc_phy-wh%copy))
+        write(io,'(" max error due to symmetrization = ",f12.6)')maxerr
     endif
     call renorm_ncphy(io)
     if(io>0)then
@@ -875,6 +883,8 @@ module warehouse
     logical,intent(in)::ltrans
     integer,intent(in)::io,mode
 
+    real(q) maxerr
+
     if(io>0)then
         call output_matrices(sname//'-unsym',matrices,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,mode)
@@ -882,11 +892,12 @@ module warehouse
     wh%copy=matrices
     call symm_dm_across_atoms(matrices)
     call hm_expand_all_sym(matrices,mb,ltrans,.true.)
+    maxerr=maxval(abs(matrices-wh%copy))
+    wh%symerr=max(wh%symerr,maxerr)
     if(io>0)then
         call output_matrices(sname//'-sym',matrices,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,mode)
-        write(io,'(" max error due to symmetrization = ",f12.6)') &
-                &maxval(abs(matrices-wh%copy))
+        write(io,'(" max error due to symmetrization = ",f12.6)')maxerr
     endif
     return
 
@@ -932,6 +943,7 @@ module warehouse
     character,intent(in)::sname*5
 
     integer i
+    real(q) maxerr
 
     if(io>0)then
         call output_matrices(sname,wh%r,wh%na2112,wh%num_imp, &
@@ -939,11 +951,12 @@ module warehouse
     endif
     wh%copy=wh%r
     call hm_expand_all_general(wh%r,wh%r_coef,wh%hm_r,0,.false.)
+    maxerr=maxval(abs(wh%r-wh%copy))
+    wh%symerr=max(wh%symerr,maxerr)
     if(io>0)then
         call output_matrices(sname//'-sym',wh%r,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,0)
-        write(io,'(" max error due to symmetrization = ",f12.6)') &
-                &maxval(abs(wh%r-wh%copy))
+        write(io,'(" max error due to symmetrization = ",f12.6)')maxerr
     endif
     return
 
@@ -955,6 +968,7 @@ module warehouse
     character,intent(in)::sname*7
 
     integer i
+    real(q) maxerr
 
     if(io>0)then
         call output_matrices(sname,wh%la1,wh%na2112,wh%num_imp, &
@@ -962,11 +976,12 @@ module warehouse
     endif
     wh%copy=wh%la1
     call hm_expand_all_herm(wh%la1,wh%la1_coef,wh%hm_l,0,.false.)
+    maxerr=maxval(abs(wh%la1-wh%copy))
+    wh%symerr=max(wh%symerr,maxerr) 
     if(io>0)then
         call output_matrices(sname//'-sym',wh%la1,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,0)
-        write(io,'(" max error due to symmetrization = ",f12.6)') &
-                &maxval(abs(wh%la1-wh%copy))
+        write(io,'(" max error due to symmetrization = ",f12.6)')maxerr
     endif
     return
 
@@ -996,6 +1011,7 @@ module warehouse
     integer,intent(in)::io
 
     integer i
+    real(q) maxerr
 
     if(io>0)then
         call output_matrices('d0-unsym',wh%d0,wh%na2112,wh%num_imp, &
@@ -1004,11 +1020,12 @@ module warehouse
     wh%copy=wh%d0
     call symm_dm_across_atoms(wh%d0)
     call hm_expand_all_sym(wh%d0,wh%hm_r,.false.,.false.)
+    maxerr=maxval(abs(wh%d0-wh%copy))
+    wh%symerr=max(wh%symerr,maxerr)
     if(io>0)then
         call output_matrices('d0-sym',wh%d0,wh%na2112,wh%num_imp, &
                 &wh%na2_imp,io,0)
-        write(io,'(" max error due to symmetrization = ",f12.6)') &
-                &maxval(abs(wh%d0-wh%copy))
+        write(io,'(" max error due to symmetrization = ",f12.6)')maxerr
     endif
     return
 

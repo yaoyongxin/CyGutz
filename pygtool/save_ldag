@@ -62,7 +62,7 @@ set listfiles = ($file.struct $file.dayfile $file.clmsum $file.clmup \
         $file.kgen $file.klist $file.scf $file.scf2 $file.scfm \
         $file.scf2up $file.scf2dn $file.in* $file.nmat_only \
         $file.vsp $file.vspup $file.vspdn  $file.r2v $file.r2vdn \
-        ginit.h5 *_INP.h5 GMOTT.h5 GPARAM.h5)
+        ginit.h5 *_INP.h5 GMOTT.h5 GPARAM.h5 GLOG.h5 GUTZ.LOG)
 
 foreach i ( ${listfiles} )
     if ($savefile == "") then

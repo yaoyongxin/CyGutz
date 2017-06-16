@@ -352,7 +352,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         _para = '_x'
 
     toclean = glob.glob('*.scf') + glob.glob('*.error*') + \
-            glob.glob('*.outputdmf?.*')
+            glob.glob('*.outputdmf?.*') + glob.glob('EMBED_HAMIL_RES*')
     for f in toclean:
         os.remove(f)
 

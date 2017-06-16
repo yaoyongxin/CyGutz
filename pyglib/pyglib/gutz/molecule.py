@@ -24,7 +24,7 @@ class gmolecule(Molecule):
 
 
 def xtal_get_local_rot(symbols, scaled_positions, cell, iat, dist_cut_,
-        equivalent_indices=[], Nmax=4, tol=1.e-5, log=sys.stdout):
+        equivalent_indices=[], Nmax=4, tol=1.e-7, log=sys.stdout):
     '''
     Get rotation operations of center atom iat in crystal.
     '''
@@ -97,7 +97,7 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
 
 
 
-def xyz_get_rot_list(symbols, positions, tol=1.e-5, log=sys.stdout):
+def xyz_get_rot_list(symbols, positions, tol=1.e-7, log=sys.stdout):
     '''
     Get the rotation element list of a molecule,
     given symboal and position list.
@@ -106,7 +106,7 @@ def xyz_get_rot_list(symbols, positions, tol=1.e-5, log=sys.stdout):
     return mol_get_rot_list(mol, tol=tol, log=log)
 
 
-def mol_get_rot_list0(mol, tol=1.e-5, log=sys.stdout):
+def mol_get_rot_list0(mol, tol=1.e-7, log=sys.stdout):
     from pymatgen.symmetry.analyzer import PointGroupAnalyzer,\
             generate_full_symmops
     from scipy.linalg import det
@@ -122,7 +122,7 @@ def mol_get_rot_list0(mol, tol=1.e-5, log=sys.stdout):
     return rot_list
 
 
-def chk_rot_keep(mol, rot, tol=1.e-5):
+def chk_rot_keep(mol, rot, tol=1.e-7):
     coords = mol.cart_coords
     for i, coord in enumerate(coords):
         coordp = np.dot(rot, coord)
@@ -149,7 +149,7 @@ def mol_get_rot_list_screening(mol, rot_list):
     return rot_list
 
 
-def mol_get_rot_list(mol, tol=1.e-5, log=sys.stdout):
+def mol_get_rot_list(mol, tol=1.e-7, log=sys.stdout):
     rot_list = mol_get_rot_list0(mol, tol=tol, log=log)
     if len(mol.equivalent_indices) > 0:
         rot_list = mol_get_rot_list_screening(mol, rot_list)
