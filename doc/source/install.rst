@@ -32,6 +32,7 @@ are installed in your system.
   --enable-fortran2003. 
   Check for details at https://www.hdfgroup.org/HDF5/release/obtain5.html)
 * python = 2.7
+* future >= 0.16.0
 * numpy >= 1.5.0
 * scipy >= 0.9.0
 * h5py  >= 2.5.0

@@ -104,6 +104,7 @@ def get_self_energy_cf_nosoc(l_list, ispin, rotations):
     '''
     from pyglib.symm.angular_momentum_1p import get_J_vector
     Jorig = get_J_vector(l_list, 'CH')
+
     import pyglib.symm.atom_symm as atsym
     Jhalf, Uhalf, self_energy_half = atsym.get_atom_Jnew(rotations, Jorig)
 

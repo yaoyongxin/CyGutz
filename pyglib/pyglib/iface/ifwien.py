@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 import h5py
 from pyglib.io.fio import file_exists
 
@@ -24,7 +25,7 @@ def trafoso(L):
                .
               L+1/2
     '''
-    cf = np.zeros((2 * (2 * L + 1), 2 * (2 * L + 1)))
+    cf = np.zeros((2*(2*L + 1), 2*(2*L + 1)))
     if L == 0:
         cf[0, 1] = 1.0
         cf[1, 0] = 1.0
@@ -35,25 +36,25 @@ def trafoso(L):
             for ml in range(-L, L + 1):
                 k1 = k1 + 1
                 k2 = -1
-                for mj in range(-2 * L + 1, 2 * L, 2):  # L-1/2 states
+                for mj in range(-2*L + 1, 2*L, 2):  # L-1/2 states
                     amj = mj / 2.
                     k2 = k2 + 1
                     d = amj - ml - ams
                     if abs(d) < 0.0001:
                         if ms == 1:
                             cf[k2, k1] = - \
-                                np.sqrt((L + 0.5 + amj) / (2 * L + 1))
+                                np.sqrt((L + 0.5 + amj) / (2*L + 1))
                         else:
-                            cf[k2, k1] = np.sqrt((L + 0.5 - amj) / (2 * L + 1))
-                for mj in range(-2 * L - 1, 2 * L + 2, 2):  # L+1/2 states
-                    amj = mj / 2.
+                            cf[k2, k1] = np.sqrt((L + 0.5 - amj) / (2*L + 1))
+                for mj in range(-2*L - 1, 2*L + 2, 2):  # L+1/2 states
+                    amj = mj/2.
                     k2 = k2 + 1
                     d = amj - ml - ams
                     if abs(d) < 0.0001:
                         if ms == 1:
-                            cf[k2, k1] = np.sqrt((L + 0.5 - amj) / (2 * L + 1))
+                            cf[k2, k1] = np.sqrt((L + 0.5 - amj) / (2*L + 1))
                         else:
-                            cf[k2, k1] = np.sqrt((L + 0.5 + amj) / (2 * L + 1))
+                            cf[k2, k1] = np.sqrt((L + 0.5 + amj) / (2*L + 1))
     return cf
 
 
@@ -62,10 +63,19 @@ def get_orbital_transformation(l, qsplit):
     be 3 for identity, and 4 for complex spherical Harmonics to relativisitc
     Harmonics.
     '''
-    if qsplit == 3:
-        u_trans = np.identity((2*l+1), dtype=complex)
-    elif qsplit == 4:
-        u_trans = trafoso(l)
+
+    # qsplit == 3:
+    u_trans = np.identity((2*l+1), dtype=complex)
+
+    # puzzel: I have to add -1 phase to the negative odd m
+    # to be compatible with the local symmetry idetified
+    # with the symmtry analysis.
+    for m in range(l-1,-1,-2):
+        u_trans[m, m] *= -1.
+
+    if qsplit == 4:
+        u_trans = scipy.linalg.block_diag(u_trans, u_trans)
+        u_trans = trafoso(l).dot(u_trans)
     return u_trans
 
 

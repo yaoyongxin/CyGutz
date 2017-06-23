@@ -35,7 +35,7 @@ module gparam
     if(idx>0)then
         read(cmd(idx+2:),*)g_maxiter
         if(io>0)then
-            write(io,'(" command argument g_maxiter = ",i2)')g_maxiter
+            write(io,'(" command argument g_maxiter = ",i0)')g_maxiter
         endif
     endif
 

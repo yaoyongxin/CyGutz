@@ -12,4 +12,4 @@ from pyglib import model
 from pyglib import dft
 from pyglib import iface
 from pyglib import run
-from pyglib import comptible
+from pyglib import compatible

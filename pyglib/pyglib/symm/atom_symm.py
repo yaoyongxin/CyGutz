@@ -50,10 +50,12 @@ def get_Lie_parameter_3D(g, plus2pi=False):
     '''
     J = get_3D_rotation_generator()
     list_theta = []
-    assert len(
-        g) == 3, ' Error: get_Lie_parameter_3D is exclusively for 3D rotations!'
+    assert len(g) == 3, \
+            ' Error: get_Lie_parameter_3D is exclusively for 3D rotations!'
+
     # all rotation matrices are diagonalizable over the complex field
     vals, vecs = np.linalg.eig(g)
+
     # pick the label of the eigenvalue 1 (rotation axis)
     rotation_axes_label = np.abs(
         vals - 1.0).tolist().index(min(np.abs(vals - 1.0)))
@@ -67,6 +69,7 @@ def get_Lie_parameter_3D(g, plus2pi=False):
         fix = 1.0
     alpha = np.arccos(fix)
     theta = alpha * axis
+
     # get the additional sign
     gp = get_rotation(J, theta, method="eigh")
     err = np.max(np.abs(gp - g))
