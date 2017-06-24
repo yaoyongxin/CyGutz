@@ -129,7 +129,8 @@ def chk_rot_keep(mol, rot, tol=1.e-7):
         diff = coords - coordp
         ind = np.where(np.all(np.abs(diff) < tol, axis=1))[0]
         if len(ind) != 1:
-            raise ValueError('rotation list error!')
+            print(' WARNING: identified rotation ids: {}'.format(ind))
+            return False
         if mol.equivalent_indices[i] != mol.equivalent_indices[ind[0]]:
             return False
     return True

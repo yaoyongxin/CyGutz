@@ -64,18 +64,10 @@ def get_orbital_transformation(l, qsplit):
     Harmonics.
     '''
 
-    # qsplit == 3:
-    u_trans = np.identity((2*l+1), dtype=complex)
-
-    # puzzel: I have to add -1 phase to the negative odd m
-    # to be compatible with the local symmetry idetified
-    # with the symmtry analysis.
-    for m in range(l-1,-1,-2):
-        u_trans[m, m] *= -1.
-
-    if qsplit == 4:
-        u_trans = scipy.linalg.block_diag(u_trans, u_trans)
-        u_trans = trafoso(l).dot(u_trans)
+    if qsplit == 3:
+        u_trans = np.identity((2*l+1), dtype=complex)
+    elif qsplit == 4:
+        u_trans = trafoso(l)
     return u_trans
 
 

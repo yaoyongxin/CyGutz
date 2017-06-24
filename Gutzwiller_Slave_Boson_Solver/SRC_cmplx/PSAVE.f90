@@ -70,7 +70,7 @@ module psave
 
     if(io<0)return
     write(io,'(" maximal local symmetrization error = ", f10.5)')wh%symerr
-    if(wh%symerr>0.01_q)then
+    if(wh%symerr>0.05_q)then
         write(io,'(&
                 &" WARNING: LARGE LOCAL SYMM ERROR!",/, &
                 &"   IF YOU DO NOT UNDERSTAND WHAT YOU ARE DOING,",/, &

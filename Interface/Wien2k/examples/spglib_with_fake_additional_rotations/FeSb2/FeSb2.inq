@@ -1,0 +1,6 @@
+-9.0   3.0           Emin  Emax
+   2                 number of atoms
+   1  -2  0  0       iatom,qsplit,symmetrize,locrot
+3   0  1  2          nL, l-values
+   2  -2  0  0       iatom,qsplit,symmetrize,locrot
+3   0  1  2          nL, l-values
