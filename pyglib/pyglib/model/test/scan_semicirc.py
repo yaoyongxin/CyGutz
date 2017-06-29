@@ -5,7 +5,7 @@ import subprocess
 from builtins import zip
 
 import matplotlib
-matplotlib.rcParams['backend'] = "Qt4Agg"
+matplotlib.rcParams['backend'] = "Qt5Agg"
 import matplotlib.pyplot as plt
 
 

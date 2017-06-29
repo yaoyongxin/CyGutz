@@ -8,30 +8,13 @@ from pyglib.math.matrix_util import sym_array
 # d complex spherical Harmonics
 L = get_L_vector_CH(2)
 
-# test convention
-# utrans = numpy.diag([1, 1, 1, -1, 1.])
-# L = [utrans.conj().T.dot(L1).dot(utrans) for L1 in L]
-
-print('Lx_r\n',L[0].real)
-print('Lx_i\n',L[0].imag)
-
-print('Ly_r\n',L[1].real)
-print('Ly_i\n',L[1].imag)
-
-print('Lz_r\n',L[2].real)
-print('Lz_i\n',L[2].imag)
-
-
-
 # get Lie parameters and one-particle dm to test
 with h5py.File('data_complex_spherical_harmonics.h5', 'r') as f:
     nks = f['/NKS'][()].T
     lie_params = f['/lie_even_params'][()]
 
-
-
 # take one-spin component
-nks = nks[::2, ::2]
+nks = nks[::2, ::2].T
 
 # rotations
 R_list = get_representation(L, lie_params)
@@ -40,13 +23,16 @@ R_list = get_representation(L, lie_params)
 ptable = get_product_table(R_list)
 print('ptable\n',ptable)
 
-print('nks\n',nks.real)
+for i,rot in enumerate(R_list):
+    err = nks.dot(rot) -  rot.dot(nks)
+    print('{} maxerr of commutation = {}'.format(i,
+            numpy.max(numpy.abs(err))))
 
 
-nks_sym = sym_array(nks, R_list)
-print('nks_sym\n',nks_sym.real)
+nks = numpy.loadtxt('dm_ldau.txt').T
 
-print(numpy.max(numpy.abs(nks.imag)), numpy.max(numpy.abs(nks_sym.imag)))
+for i,rot in enumerate(R_list):
+    err = nks.dot(rot) -  rot.dot(nks)
+    print('{} maxerr of commutation = {}'.format(i,
+            numpy.max(numpy.abs(err))))
 
-
-print('max symm error = {}'.format(numpy.max(numpy.abs(nks-nks_sym))))

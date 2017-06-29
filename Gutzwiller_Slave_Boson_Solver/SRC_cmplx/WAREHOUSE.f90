@@ -1183,7 +1183,11 @@ module warehouse
             write(io,'(7x       ," sum_phy-sum_ks =",f16.8, &
                     &" would be renormalized!")')sum_phy-sum_ks
         endif
-        wh%co(i)%nc_phy=wh%co(i)%nc_phy/sum_phy*sum_ks ! renormalized
+        if(sum_phy<1.e-16_q)then
+            wh%co(i)%nc_phy = 0._q
+        else
+            wh%co(i)%nc_phy=wh%co(i)%nc_phy/sum_phy*sum_ks ! renormalized
+        endif
     enddo
     return
 

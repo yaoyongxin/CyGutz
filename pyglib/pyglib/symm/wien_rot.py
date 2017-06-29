@@ -6,6 +6,9 @@ from scipy.linalg import det
 
 
 def get_rotations(case_fname):
+    '''
+    Get the rotation list in struct file.
+    '''
     with open(str(case_fname), 'r') as f:
         lines = f.readlines()
         for i, line in enumerate(lines):

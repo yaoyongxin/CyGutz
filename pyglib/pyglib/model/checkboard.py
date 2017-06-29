@@ -1,9 +1,10 @@
 import numpy as np
+import pickle
 from ase.dft import kpoints
 import pyglib.gutz.ginput as ginput
 import pyglib.model.tbASE as tb
 
-def gutz_model_setup(u=0.0, spindeg=True, num_e=2.):
+def gutz_model_setup(u=0.0, spindeg=True, num_e=2., iembeddiag=-1):
     '''Set up Gutzwiller calculations for 2d body-centered square lattice.
 
     Parameters:
@@ -14,6 +15,12 @@ def gutz_model_setup(u=0.0, spindeg=True, num_e=2.):
       whether to keep spin degeneracy or not.
     * num_e: real number
       number of electron per unit cell
+    * iembeddiag: integer
+      flag for method to solve the embedding Hamiltonian.
+
+      * -3: valence truncation ED with S=0 (spin-singlet) constraint;
+      * -1: valence truncation ED;
+      * 10: Hartree-Fock.
 
     Result:
 
@@ -73,11 +80,31 @@ def gutz_model_setup(u=0.0, spindeg=True, num_e=2.):
     # for initializing CyGutz calculation
     from pyglib.gutz.batch_init import batch_initialize
 
+    if spindeg:
+        spin_polarization = 'n'
+    else:
+        spin_polarization = 'y'
+
     # the default settings are good for this model.
     batch_initialize(cell=cell, scaled_positions=scaled_positions,
-            symbols=symbols)
+            symbols=symbols,idx_equivalent_atoms=[0,1],
+            unique_u_list_ev=[u], iembeddiag=iembeddiag,
+            spin_polarization=spin_polarization,
+            updn_full_list=[1,-1])
 
-    # Check band structure
+    # save the aTB
+    with open('aTB.pckl', 'wb') as f:
+        pickle.dump([a, aTB], f)
+
+
+def get_bard_bands():
+    '''get bare band structure.
+    '''
+    # load aTB
+    with open('aTB.pckl', 'rb') as f:
+        a, aTB = pickle.load(f)
+
+    # k-point path
     kG = [0.0, 0.0, 0]
     kX = [0.5, 0.0, 0]
     kM = [0.5, 0.5, 0]
@@ -91,3 +118,4 @@ def gutz_model_setup(u=0.0, spindeg=True, num_e=2.):
 
 if __name__=='__main__':
     gutz_model_setup()
+    get_bard_bands()

@@ -208,7 +208,8 @@ For the main datasets:
     * ``/giembeddiag`` -- flag for method to solve the embedding Hamiltonian.
 
         * -3: valence truncation ED with S=0 (spin-singlet) constraint;
-        * -1: valence truncation ED.
+        * -1: valence truncation ED;
+        * 10: Hartree-Fock.
 
     * ``/gimix`` -- flag for the method to solve the Gutzwiller nonlinear eqns.
 

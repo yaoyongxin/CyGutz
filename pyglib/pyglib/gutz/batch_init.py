@@ -10,6 +10,7 @@ def batch_initialize(cell, scaled_positions, symbols, case=None,
         spin_orbit_coup='n', spin_polarization='n', u_matrix_type=1,
         unique_corr_symbol_list=None, unique_df_list=None,
         unique_j_list_ev=None, unique_nf_list=None,
+        updn_full_list=None,
         unique_u_list_ev=None, unit='eV'):
     '''initialize *CyGutz* calculation by directly providing values
     of the list of arguments.
@@ -40,6 +41,7 @@ def batch_initialize(cell, scaled_positions, symbols, case=None,
 
         * -3: Valence truncation ED for S=0 (spin-singlet)
         * -1: Valence truncation ED
+        * 10: Hartree-Fock (LDA+U)
 
     * ldc: integer
         flag for Coulomb interaction double counting.
@@ -109,6 +111,10 @@ def batch_initialize(cell, scaled_positions, symbols, case=None,
         f['/usrqa/lnewton'] = lnewton
         f['/usrqa/spin_orbit_coup'] = spin_orbit_coup
         f['/usrqa/spin_polarization'] = spin_polarization
+        if 'y' in spin_polarization:
+            if updn_full_list is None:
+                updn_full_list = [1 for s in symbols]
+            f['/usrqa/updn_full_list'] = updn_full_list
         f['/usrqa/u_matrix_type'] = u_matrix_type
         if unique_corr_symbol_list is None:
             unique_corr_symbol_list = list(set(symbols))

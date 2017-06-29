@@ -7,7 +7,7 @@ It corresponds to Bethe lattice with infinite coordination number.
 You will learn:
 
 * How to set up a simple model calculation
-* How the correlation strength induce metal-insulator transition 
+* How the correlation strength induces metal-insulator transition 
   in the Gutzwiller-slave-boson theory
 * How to determine the energy gap for the Mott-insulating phase
 
@@ -38,11 +38,11 @@ to run *CyGutz* for a list of Hubbard U or chemical potential :math:`\mu`,
 Let us first look at the case of :math:`\mu` =0, 
 i.e., in the particle-hole symmetric case. 
 Let us perform a series of *CyGutz* calculations with increasing U, 
-and check the behaviour of the total energy, the double occupancy, 
+and check the behavior of the total energy, the double occupancy, 
 and the quasi-particle weight (Z).
 Recall that in Gutzwiller-slave boson theory,
 Z=0 implies the system is in the Mott insulating phase,
-where all the spectral weight becomes noncoherent. 
+where all the spectral weight becomes non-coherent. 
 
 A script for a job of scanning U is defined as
 
@@ -51,7 +51,7 @@ A script for a job of scanning U is defined as
 For a hands-on practice, change to a testing directory, 
 copy the source file or download :download:`scan_semicirc.py 
 <../../pyglib/pyglib/model/test/scan_semicirc.py>`.
-Type the following cammand::
+Type the following command::
 
     $ python ./scan_semicirc.py
 
@@ -72,7 +72,7 @@ A script for a job of scanning :math:`\mu` at U=5 is defined as
 
 .. autofunction:: scan_semicirc.scan_mu
 
-Type the following cammand::
+Type the following command::
 
     $ python ./scan_semicirc.py -mu
 
@@ -83,5 +83,9 @@ It will automatically generate the following results:
     :scale: 100 %
     :align: center
 
-One can see that the gap size ~ 1.4*2 = 2.8, 
-considering the particle-hole symmetry.
+One can see that the physical quantities of interest stay constant
+in the gap region. 
+When :math:`\mu` increases over ~ 1.4, 
+the orbital occupation :math:`n` starts to decrease,
+indicating the gap size ~ 1.4*2 = 2.8. 
+The factor of 2 comes from  particle-hole symmetry.

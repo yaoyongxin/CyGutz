@@ -1,0 +1,4 @@
+the operation of the rotation matrix from wien2k has a transposition 
+when compared to normal matrix product. 
+This is the reason some elements got swicthed compared to hwat we get
+from the pyglib script.

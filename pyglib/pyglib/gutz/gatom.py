@@ -67,7 +67,7 @@ class gAtoms(Atoms):
             if self.iso != self.ispin == 2:
                 self.updn_full_list = h5auto_read(f, '/usrqa/updn_full_list')
                 self.b_field = h5auto_read(f,
-                        '/usrqa/bfield_ev_per_bohr_magneton', 0.1)
+                        '/usrqa/bfield_ev_per_bohr_magneton', 0.5)
                 if 'ryd' in self.unit:
                     self.b_field /= Ryd_eV
                 self.updn_full_list = self.updn_full_list*self.b_field
@@ -193,7 +193,17 @@ class gAtoms(Atoms):
         symbols = self.symbols
         cell = self.cell
         scaled_positions = self.scaled_positions
-        equivalent_indices = self.idx_equivalent_atoms
+
+        # Here we take fewer possible local rotations.
+        # to be fixed.
+        # but in principles the final results should not
+        # depend crucially on how many symmtry operations
+        # to be considered explicitly.
+        # the final result should reflect the symmetry of the system
+        # given no spontaneous symmetry breaking.
+        # (if consistent: equivalent_indices = self.idx_equivalent_atoms)
+
+        equivalent_indices = np.arange(len(scaled_positions)) + 1
         from pyglib.gutz.molecule import xtal_get_local_rot
         return xtal_get_local_rot(symbols, scaled_positions, cell, iat,
                 self.sym_dist_cut, equivalent_indices=equivalent_indices,

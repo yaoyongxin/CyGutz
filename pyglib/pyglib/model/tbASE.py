@@ -69,17 +69,15 @@ class AtomsTB(Atoms):
 
         self.spindeg = spindeg
         self.spinorbit = spinorbit
-        if spindeg:
-            self.spin = ["up"]
-        elif spinorbit:
-            self.spin = ["so"]
+        if spinorbit:
+            self.nso = 2
         else:
-            self.spin = ["up", "dn"]
+            self.nso = 1
 
         self.nspinorbitals = 0
         for i in self.orbitals:
             self.nspinorbitals += len(i)
-        self.nspinorbitals *= len(self.spin)
+        self.nspinorbitals *= self.nso
 
 
 class TB(object):

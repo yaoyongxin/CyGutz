@@ -116,9 +116,9 @@ def sym_array(X, R_list):
     Ham = np.zeros_like(X)
     for i, R in enumerate(R_list):
         if isinstance(R, np.ndarray):
-            Ham += np.dot(np.dot(R, X), np.conj(R).T)
+            Ham += R.dot(X).dot(R.conj().T)
         elif isinstance(R, csr_matrix):
-            Ham += np.dot(R.dot(X), np.conj(R.todense()).T)
+            Ham += R.dot(X).dot(R.todense().conj().T)
         else:
             raise AssertionError("Unsupported data type of {}!".\
                     format(R.__class__))
