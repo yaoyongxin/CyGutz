@@ -40,10 +40,10 @@
         enddo
         enddo
 
-!     do Jatom=1,NAT
-!       write(76,*)rotloc(1:3,1:3,jatom)
-!       write(75,*)rold  (1:3,1:3,jatom)
-!     enddo
-!
+     do Jatom=1,NAT
+       write(76,*)rotloc(1:3,1:3,jatom)
+       write(75,*)rold  (1:3,1:3,jatom)
+     enddo
+
       return
       end

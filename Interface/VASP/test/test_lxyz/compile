@@ -1,0 +1,1 @@
+ifort -FR  main.f90  get_lxyz.f90

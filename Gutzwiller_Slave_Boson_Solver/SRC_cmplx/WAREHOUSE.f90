@@ -356,7 +356,7 @@ module warehouse
         wh%la1=wh%h1e
         call set_diagonal_r(r_default)
     endif
-    call modify_r_la1_frozen()
+    call modify_r_la1_frozen(0)
     call calc_r_pp(io,'r-inp')
     call calc_la1_pp(io,'la1-inp')
     return
@@ -678,7 +678,8 @@ module warehouse
     
 
     !*************************************************************************
-    subroutine modify_r_la1_frozen()
+    subroutine modify_r_la1_frozen(mode)
+    integer,intent(in)::mode
     integer i,j,j_
       
     do i=1,wh%num_imp
@@ -686,7 +687,9 @@ module warehouse
             j_=wh%fz(i)%idx_orb(j)
             wh%co(i)%r(j_,:)=0
             wh%co(i)%la1(j_,:)=0; wh%co(i)%la1(:,j_)=0
-            wh%co(i)%la1(j_,j_)=30._q
+            if(mode>0)then
+                wh%co(i)%la1(j_,j_)=30._q
+            endif
         enddo
     enddo
     return

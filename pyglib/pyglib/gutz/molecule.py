@@ -24,18 +24,19 @@ class gmolecule(Molecule):
 
 
 def xtal_get_local_rot(symbols, scaled_positions, cell, iat, dist_cut_,
-        equivalent_indices=[], Nmax=4, tol=1.e-7, log=sys.stdout):
+        equivalent_indices=[], locrot=None, Nmax=4, tol=1.e-5,
+        log=sys.stdout):
     '''
     Get rotation operations of center atom iat in crystal.
     '''
     mol = xtal_extract_mol(symbols, scaled_positions, cell, iat,
             dist_cut_, equivalent_indices=equivalent_indices,
-            Nmax=Nmax)
+            locrot=locrot, Nmax=Nmax)
     return mol_get_rot_list(mol, tol=tol, log=log)
 
 
 def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
-        Nmax=10, equivalent_indices=[]):
+        locrot=None, Nmax=10, equivalent_indices=[]):
     '''
     Extracting molecule of center atom iat from crystal.
     atom iat is the molecule center
@@ -63,7 +64,7 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
                     molecule_symbols.append(symbols[jat])
                     if len(equivalent_indices) > 0:
                         eq_indices.append(equivalent_indices[jat])
-    # Get reasnoable dist_cut
+    # Get reasonable dist_cut
     dist = pair_dist[:]
     dist.sort()
     if dist_cut_ > dist[1]:
@@ -85,6 +86,11 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
     for key, group in groupby(mol_symbols):
         mol_name += key + '_' + str(len(list(group))) + ' '
 
+    # local rotation if required.
+    if locrot is not None:
+        for i, pos in enumerate(molecule_positions):
+            molecule_positions[i] = locrot.dot(pos)
+
     print(' molecule extracted {}:'.format(mol_name))
     print(" atom   x      y       z    distance")
     for symbo, position in zip(molecule_symbols, molecule_positions):
@@ -96,8 +102,7 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
             equivalent_indices=eq_indices)
 
 
-
-def xyz_get_rot_list(symbols, positions, tol=1.e-7, log=sys.stdout):
+def xyz_get_rot_list(symbols, positions, tol=1.e-5, log=sys.stdout):
     '''
     Get the rotation element list of a molecule,
     given symboal and position list.
@@ -106,7 +111,7 @@ def xyz_get_rot_list(symbols, positions, tol=1.e-7, log=sys.stdout):
     return mol_get_rot_list(mol, tol=tol, log=log)
 
 
-def mol_get_rot_list0(mol, tol=1.e-7, log=sys.stdout):
+def mol_get_rot_list0(mol, tol=1.e-5, log=sys.stdout):
     from pymatgen.symmetry.analyzer import PointGroupAnalyzer,\
             generate_full_symmops
     from scipy.linalg import det
@@ -116,13 +121,13 @@ def mol_get_rot_list0(mol, tol=1.e-7, log=sys.stdout):
 
     # Pick rotations only.
     symmops = [o for o in analyzer.symmops
-            if abs(det(o.rotation_matrix)-1)<1.e-6]
+            if abs(det(o.rotation_matrix)-1)<1.e-5]
     symmops = generate_full_symmops(symmops, tol, max_recursion_depth=50)
     rot_list=[o.rotation_matrix for o in symmops]
     return rot_list
 
 
-def chk_rot_keep(mol, rot, tol=1.e-7):
+def chk_rot_keep(mol, rot, tol=1.e-5):
     coords = mol.cart_coords
     for i, coord in enumerate(coords):
         coordp = np.dot(rot, coord)
@@ -146,11 +151,13 @@ def mol_get_rot_list_screening(mol, rot_list):
     for rot in rot_list_tmp:
         if chk_rot_keep(mol, rot):
             rot_list.append(rot)
+        else:
+            print(' rot \n{}\n removed!'.format(rot))
     print(' number of rotations after screening: {}'.format(len(rot_list)))
     return rot_list
 
 
-def mol_get_rot_list(mol, tol=1.e-7, log=sys.stdout):
+def mol_get_rot_list(mol, tol=1.e-5, log=sys.stdout):
     rot_list = mol_get_rot_list0(mol, tol=tol, log=log)
     if len(mol.equivalent_indices) > 0:
         rot_list = mol_get_rot_list_screening(mol, rot_list)

@@ -1,0 +1,18 @@
+Calculating FeSi in /home/ykent/GitHub/CyGutz/Interface/Wien2k/examples/orbital_convention/d_orbitals/FeSi/FeSi 
+on hal2011.cmpgroup.ameslab.gov with PID 14753
+   start at Sat Jul  1 23:16:54 2017 with lapw0 
+    1/100 to go.
+>lapw0      (23:16:54) 2.843u 0.027s 0:02.98 95.9%	0+0k 0+1328io 0pf+0w
+>lapw1      (23:16:57) 66.632u 0.885s 1:07.59 99.8%	0+0k 0+127608io 0pf+0w
+>dmft1      (23:18:05) 4.39user 0.07system 0:05.30elapsed 84%CPU (0avgtext+0avgdata 27880maxresident)k>CyGutz     (23:18:10) 27.80user 7.03system 0:37.56elapsed 92%CPU (0avgtext+0avgdata 145652maxresident)k>dmft2      (23:18:48) 27.64user 0.40system 0:28.12elapsed 99%CPU (0avgtext+0avgdata 27140maxresident)k>lcore      (23:19:16) 0.014u 0.003s 0:00.01 100.0%	0+0k 0+248io 0pf+0w
+>mixer      (23:19:16) 0.050u 0.005s 0:00.07 71.4%	0+0k 0+2168io 0pf+0w
+:ENERGY convergence: 1.0
+:CHARGE convergence: 0.0001215
+:VDC convergence: 0.0
+>lapw0      (23:19:16) 2.759u 0.022s 0:02.80 98.9%	0+0k 0+1328io 0pf+0w
+>lapw1      (23:19:19) 66.710u 0.901s 1:07.69 99.8%	0+0k 0+127648io 0pf+0w
+>dmft1      (23:20:27) 4.37user 0.09system 0:04.48elapsed 99%CPU (0avgtext+0avgdata 27876maxresident)k>CyGutz     (23:20:31) 27.59user 4.18system 0:33.30elapsed 95%CPU (0avgtext+0avgdata 145656maxresident)k>dmft2      (23:21:05) 27.91user 0.39system 0:28.34elapsed 99%CPU (0avgtext+0avgdata 27160maxresident)k>lcore      (23:21:33) 0.013u 0.003s 0:00.01 100.0%	0+0k 0+248io 0pf+0w
+>mixer      (23:21:33) 0.050u 0.009s 0:00.07 71.4%	0+0k 0+2168io 0pf+0w
+:ENERGY convergence: -2.00016074814e-08
+:CHARGE convergence: 8.03e-05
+:VDC convergence: 0.0

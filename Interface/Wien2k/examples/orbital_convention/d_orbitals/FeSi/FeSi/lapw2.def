@@ -1,0 +1,27 @@
+ 2,'FeSi.nsh',    'unknown','formatted',0
+ 3,'FeSi.in1c',   'unknown','formatted',0
+ 4,'FeSi.inso',           'unknown','formatted',0
+ 5,'FeSi.in2c',   'old',    'formatted',0
+ 6,'FeSi.output2','unknown','formatted',0
+ 7,'FeSi.vorb','unknown','formatted',0
+ 8,'FeSi.clmval','unknown','formatted',0
+10,'./FeSi.vector', 'unknown','unformatted',9000
+11,'FeSi.weight',    'unknown','formatted',0
+13,'FeSi.recprlist',      'unknown','unformatted',9000
+14,'FeSi.kgen',        'unknown','formatted',0
+15,'FeSi.tmp',       'unknown','unformatted',0
+16,'FeSi.qtl',       'unknown','formatted',0
+17,'FeSi.weightaver','unknown','formatted',0
+18,'FeSi.vsp',       'old',    'formatted',0
+19,'FeSi.vns',       'unknown','formatted',0
+20,'FeSi.struct',         'old',    'formatted',0
+21,'FeSi.scf2','unknown','formatted',0
+922,'FeSi.rotlm',   'unknown',    'formatted',0
+23,'FeSi.radwf',   'unknown',    'formatted',0
+26,'FeSi.weigh',   'unknown','unformatted',0
+27,'FeSi.weighdn',   'unknown','unformatted',0
+29,'FeSi.energydn','unknown','formatted',0
+30,'FeSi.energy', 'unknown','formatted',0
+32,'FeSi.qdmft',   'unknown',    'formatted',0
+34,'FeSi.oubwin',   'unknown',    'formatted',0
+231,'FeSi.dmftsym',   'unknown',    'formatted',0

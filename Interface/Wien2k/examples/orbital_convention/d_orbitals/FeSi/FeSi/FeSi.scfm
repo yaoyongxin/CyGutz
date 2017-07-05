@@ -1,0 +1,91 @@
+:CINT001 Core Integral Atom   1   11.998247
+:CINT002 Core Integral Atom   2    9.996123
+
+       DENSITY AT NUCLEUS
+        JATOM        VALENCE       SEMI-CORE          CORE           TOTAL
+:RTO001:   1        5.874147        0.000000    14882.981470    14888.855617
+:RTO002:   2        7.183312        0.000000     1886.341685     1893.524997
+     
+       CHARGES OF NEW CHARGE DENSITY
+:NTO   : INTERSTITIAL CHARGE =    12.534896
+:NTO001: CHARGE SPHERE  1    =    25.057536
+:NTO002: CHARGE SPHERE  2    =    11.803246
+
+:NEC01: NUCLEAR AND ELECTRONIC CHARGE    160.00000   159.97802
+     
+       CHARGES OF OLD CHARGE DENSITY
+:OTO   : INTERSTITIAL CHARGE =    12.557229
+:OTO001: CHARGE SPHERE  1    =    25.057484
+:OTO002: CHARGE SPHERE  2    =    11.803208
+
+:NEC02: NUCLEAR AND ELECTRONIC CHARGE    160.00000   160.00000
+     
+       CONVERGENCE TEST
+:DTO001: DIFFERENCE IN SPHERE  1 =  0.0001005
+:DTO002: DIFFERENCE IN SPHERE  2 =  0.0000602
+
+:DIS  :  CHARGE DISTANCE       ( 0.0001005 for atom    1 spin 1)      0.0000803
+:BIG check (qbig,qrms,qtot)    0.335D-04   0.586D-04   0.803D-04
+ 
+******************************************************
+* MULTISECANT MIXING VER6 RELEASE 6.0 OPTIONS        *
+* Standard Mode with controls                        *
+* Regularization       1.000E-06                     *
+* Trust Region Control Active                        *
+* Automatic Drift Correction for Forces              *
+* Max Number of Memory Steps    8                    *
+******************************************************
+ 
+:PLANE:  INTERSTITIAL TOTAL      1.33479 DISTAN  8.343E-03 % 
+:CHARG:  CLM CHARGE   /ATOM     71.94958 DISTAN  1.636E-04 % 
+ 
+ Step History DMIX, Red, Pred, Trust, FRMS, FABS
+  2  2.5000E-02  1.0000E+00  1.0000E+00  1.0000E+00
+  
+:NORMS:  Nuclear, Spectral, Froebius, Shanno-Pua   0.2829E+02  0.2829E+02  0.2829E+02  0.1790E-01
+:INFO :  Number of Memory Steps    1 Skipping    0
+
+Eigenvalues, unscaled except for SY+YY
+   #     SY Real        SY Imag          SS             YY         SY+YY Real      SY+YY Imag
+   1   1.789840E-02   0.000000E+00   1.249525E-03   1.000000E+00   1.017898E+00   0.000000E+00
+ 
+:INFO :  Decreased using Multisecant Shanno-Phua
+:DIRM :  MEMORY 1/8 RESCALE   2.95 RED 0.885 PRED 1.000 NEXT 0.974
+:INFO :  Blimit    8.333E-01  5.000E-01  1.733E-01  5.000E-01
+:DIRP :  |MSR1|= 6.179E-06 |PRATT|= 3.284E-04 ANGLE=   0.3 DEGREES
+:DIRQ :  |MSR1|= 4.447E-06 |PRATT|= 2.354E-04 ANGLE=   1.1 DEGREES
+:DIR  :  |MSR1|= 7.613E-06 |PRATT|= 4.040E-04 ANGLE=   0.7 DEGREES
+:MIX  :   MSR1   REGULARIZATION: 1.00E-06  GREED: 0.026  Newton 1.00  0.02                
+     
+       CHARGES OF MIXED CHARGE DENSITY
+:CTO   : INTERSTITIAL CHARGE =    12.557223
+:CTO001: CHARGE SPHERE  1    =    25.057485
+:CTO002: CHARGE SPHERE  2    =    11.803209
+
+:NEC03: NUCLEAR AND ELECTRONIC CHARGE    160.00000   160.00000
+
+PW CHANGE     H    K    L             Current                    Change               Residue
+:PTO001:      0    0    0  5.25729872E-02 0.00000000E+00 -5.181E-08  0.000E+00 -2.771E-06  0.000E+00
+:PTO003:     -1   -1    0  3.60673921E-19 5.89025213E-03 -6.449E-24 -1.053E-07 -3.413E-22 -5.574E-06
+:PTO004:     -1   -1   -1  9.84134864E-03 3.35235269E-03 -6.146E-09  1.809E-08 -3.304E-07  9.546E-07
+:PTO005:     -1   -1    1  9.84134864E-03-3.35235269E-03 -6.146E-09 -1.809E-08 -3.304E-07 -9.546E-07
+:PTO006:     -2    0    0 -7.40167123E-03 0.00000000E+00  3.257E-08  0.000E+00  1.728E-06  0.000E+00
+:PTO007:     -2   -1    0 -1.74087903E-02 0.00000000E+00  1.094E-07  0.000E+00  5.797E-06  0.000E+00
+:PTO008:     -2    0   -1  4.09282850E-20 6.68409619E-04 -3.808E-24 -6.218E-08 -2.014E-22 -3.290E-06
+:PTO009:     -2   -1   -1  2.62160204E-03 8.08800516E-04  3.857E-08  9.917E-09  2.039E-06  5.243E-07
+:PTO010:     -2   -1    1 -2.62160204E-03 8.08800516E-04 -3.857E-08  9.917E-09 -2.039E-06  5.243E-07
+:PTO011:     -2   -2    0  1.52828875E-03 0.00000000E+00  6.108E-09  0.000E+00  3.223E-07  0.000E+00
+:PTO013:     -2   -2   -1 -5.19177709E-03-2.43496195E-03 -1.901E-08  2.074E-08 -1.003E-06  1.099E-06
+:PTO014:     -2   -2    1  5.19177709E-03-2.43496195E-03  1.901E-08  2.074E-08  1.003E-06  1.099E-06
+
+:ENE  : ********** TOTAL ENERGY IN Ry =       -12503.02295401
+
+       TOTAL FORCE IN mRy/a.u. = |F|     Fx             Fy             Fz     with/without FOR in case.in2
+:FOR001:   1.ATOM          6.930          0.000          0.000          6.930 partial forces
+:FOR002:   2.ATOM         18.351          0.000          0.000        -18.351 partial forces
+       TOTAL FORCE WITH RESPECT TO GLOBAL CARTESIAN COORDINATES:
+:FCA001:   1.ATOM                         4.001          4.001          4.001 partial forces
+:FCA002:   2.ATOM                       -10.595        -10.595        -10.595 partial forces
+       TOTAL FORCE WITH RESPECT TO THE GLOBAL COORDINATE SYSTEM:
+:FGL001:   1.ATOM                 4.000912828     4.000912828     4.000912828 partial forces
+:FGL002:   2.ATOM               -10.595209660   -10.595209660   -10.595209660 partial forces

@@ -1,0 +1,25 @@
+ 3,'FeSi.rhopw',   'unknown','formatted',0
+ 4,'FeSi.inm',     'unknown','formatted',0
+ 5,'FeSi.in0',     'old',    'formatted',0
+ 6,'FeSi.output0', 'unknown','formatted',0
+ 7,'FeSi.vorbup',  'unknown','formatted',0
+ 8,'FeSi.clmsum',  'old',    'formatted',0
+ 9,'FeSi.vtotal',  'unknown','formatted',0
+10,'FeSi.vcoul',   'unknown','formatted',0
+11,'FeSi.r2v',     'unknown','formatted',0
+12,'FeSi.clmup',   'unknown','formatted',0
+13,'FeSi.clmdn',   'unknown','formatted',0
+14,'FeSi.mbjmix',     'unknown','formatted',0
+16,'FeSi.vsp','unknown','formatted',0
+17,'FeSi.vspdn',   'unknown','formatted',0
+18,'FeSi.vns','unknown','formatted',0
+19,'FeSi.vnsdn',   'unknown','formatted',0
+20,'FeSi.struct',  'old',    'formatted',0         
+21,'FeSi.scf0',    'unknown','formatted',0
+28,'FeSi.vrespsum','unknown','formatted',0
+29,'FeSi.vrespup', 'unknown','formatted',0
+30,'FeSi.vrespdn', 'unknown','formatted',0
+50,'FeSi.eeceup', 'unknown','formatted',0
+51,'FeSi.eecedn', 'unknown','formatted',0
+62,'FeSi.grr',    'unknown','formatted',0
+61,'FeSi.in0abp',     'unknown','formatted',0

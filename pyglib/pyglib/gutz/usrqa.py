@@ -125,8 +125,7 @@ def h5save_usr_qa_setup(material, log):
         if 'y' == spin_polarization != spin_orbit_coup:
             string_updn_list = sys.argv[sys.argv.index('-eqidx') + 2]
     else:
-        idx_equivalent_atoms = material.get_EquivalentAtoms() \
-                ['equivalent_atoms'].tolist()
+        idx_equivalent_atoms = material.get_EquivalentAtoms()
         yn = get_usr_input("\n Symmetrically-equivalent atom indices: " \
                 + ''.join("%2d " % (i) for i in idx_equivalent_atoms) +
                 "\n (note: '0 0 0 1 1' means 1-3 and 4-5 are two" +

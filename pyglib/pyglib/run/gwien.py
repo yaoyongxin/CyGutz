@@ -285,7 +285,7 @@ def create_gomp_file():
 
 def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         startp='lapw0', endp='', band='', openmp=False, cygutz='CyGutz',
-        pa_list=[], recycle_rl=False):
+        pa_list=[], recycle_rl=True):
     '''Driver for Wien2k + Gutzwiller-Slave-boson job.
     '''
     if '-s' in sys.argv:
@@ -307,8 +307,8 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         mix_dc = float(sys.argv[sys.argv.index('-amix') + 1])
     if '-band' in sys.argv:
         band='-band'
-    if '-rl' in sys.argv:
-        recycle_rl = True
+    if '-nrl' in sys.argv:
+        recycle_rl = False
     if band == '-band':
         _band = '_band'
         nmaxiter = 1
@@ -340,7 +340,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         startp   'lapw0'  -s lapw0         start program
         endp     ''       -e ''            end program
         openmp   False    -omp             use openMP instead of openMPI
-        rl       False    -rl              start from previous GA solutions
+        rl       True     -nrl             start from previous GA solutions
         '''
         print(help)
         sys.exit(0)

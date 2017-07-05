@@ -66,6 +66,12 @@ def get_orbital_transformation(l, qsplit):
 
     if qsplit == 3:
         u_trans = np.identity((2*l+1), dtype=complex)
+
+        # Test for the weird phase
+        if l == 2:
+            u_trans[1,1] = -1.j
+            u_trans[3,3] =  1.j
+
     elif qsplit == 4:
         u_trans = trafoso(l)
     return u_trans

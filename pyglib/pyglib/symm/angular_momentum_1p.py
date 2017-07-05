@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 '''
 Get the matrix representation of angular momentum operator
 in one-particle basis.
@@ -260,6 +262,27 @@ def get_L_vector(l_list, iso):
         return get_L_vector_JJ(l_list)
     else:
         return get_L_vector_CH_orbital_fast(l_list)
+
+
+def get_complex_to_real_sph_harm(l):
+    '''get the unitary transformation from compex spherical harmonics
+    (Condon–Shortley phase convention) to real harmonics
+    (https://en.wikipedia.org/wiki/Spherical_harmonics,
+    consistent with VASP).
+    '''
+    mdim = 2*l + 1
+    c2r = np.zeros((mdim, mdim), dtype=np.complex)
+    for m in range(mdim):
+        m_ = m - l
+        if m_ > 0:
+            c2r[ m_+l, m] = (-1)**m_/np.sqrt(2.)
+            c2r[-m_+l, m] = 1./np.sqrt(2.)
+        elif m_ == 0:
+            c2r[l, l] = 1.
+        else:
+            c2r[ m_+l, m] = 1.j/np.sqrt(2.)
+            c2r[-m_+l, m] = -1.j*(-1)**m_/np.sqrt(2.)
+    return c2r
 
 
 if __name__ == "__main__":

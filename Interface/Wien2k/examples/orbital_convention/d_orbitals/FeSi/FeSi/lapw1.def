@@ -1,0 +1,12 @@
+ 4,'FeSi.klist',          'unknown','formatted',0
+ 5,'FeSi.in1c',   'old',    'formatted',0
+ 6,'FeSi.output1','unknown','formatted',0
+10,'./FeSi.vector', 'unknown','unformatted',9000
+11,'FeSi.energy', 'unknown','formatted',0
+18,'FeSi.vsp',       'old',    'formatted',0
+19,'FeSi.vns',       'unknown','formatted',0
+20,'FeSi.struct',         'old',    'formatted',0
+21,'FeSi.scf1',   'unknown','formatted',0
+55,'FeSi.vec',            'unknown','formatted',0
+71,'FeSi.nsh',    'unknown','formatted',0
+200,'./FeSi.storeHinv', 'replace','unformatted',9000

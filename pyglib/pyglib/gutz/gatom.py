@@ -18,12 +18,13 @@ class gAtoms(Atoms):
     '''
     def __init__(self, symbols=None, positions=None, numbers=None,
                  masses=None, magmoms=None, scaled_positions=None,
-                 cell=None, pbc=None, wiencase=None):
+                 cell=None, pbc=None, wiencase=None, locrot_list=None):
         Atoms.__init__(self, symbols=symbols, positions=positions,
                 numbers=numbers, masses=masses, magmoms=magmoms,
                 scaled_positions=scaled_positions,
                 cell=cell, pbc=pbc)
         self.wiencase = wiencase
+        self.locrot_list = locrot_list
 
     def h5set(self):
         from pyglib.io.h5io import h5auto_read
@@ -193,27 +194,28 @@ class gAtoms(Atoms):
         symbols = self.symbols
         cell = self.cell
         scaled_positions = self.scaled_positions
+        if self.locrot_list is not None:
+            locrot = self.locrot_list[iat]
+        else:
+            locrot = None
 
-        # Here we take fewer possible local rotations.
-        # to be fixed.
-        # but in principles the final results should not
-        # depend crucially on how many symmtry operations
-        # to be considered explicitly.
-        # the final result should reflect the symmetry of the system
-        # given no spontaneous symmetry breaking.
-        # (if consistent: equivalent_indices = self.idx_equivalent_atoms)
-
-        equivalent_indices = np.arange(len(scaled_positions)) + 1
+        equivalent_indices = self.idx_equivalent_atoms
         from pyglib.gutz.molecule import xtal_get_local_rot
         return xtal_get_local_rot(symbols, scaled_positions, cell, iat,
                 self.sym_dist_cut, equivalent_indices=equivalent_indices,
-                Nmax=Nmax)
+                locrot=locrot, Nmax=Nmax)
 
 
     def get_EquivalentAtoms(self):
         # Getting general information about symmetry of the lattice
-        dataset = spglib.get_symmetry_dataset(self, symprec=1e-5)
-        return dataset
+        if self.wiencase is not None:
+            from pyglib.dft.wien import get_equivalent_atom_indices
+            idx_equivalent_atoms = get_equivalent_atom_indices(
+                    self.wiencase)
+        else:
+            dataset = spglib.get_symmetry_dataset(self, symprec=1e-5)
+            idx_equivalent_atoms = dataset['equivalent_atoms'].tolist()
+        return idx_equivalent_atoms
 
 
     def set_idx_equivalent_atoms(self, idx_equivalent_atoms):

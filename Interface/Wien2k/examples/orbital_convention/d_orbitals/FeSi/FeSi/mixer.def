@@ -1,0 +1,13 @@
+ 5,'FeSi.inm',       'old',    'formatted',0
+ 6,'FeSi.outputm',   'unknown','formatted',0
+ 7,'FeSi.inc',       'old',    'formatted',0
+10,'FeSi.clmsum_old','unknown','formatted',0
+17,'FeSi.clmval',    'unknown','formatted',0
+18,'FeSi.clmsc',     'unknown','formatted',0
+19,'FeSi.clmcor',    'unknown','formatted',0
+20,'FeSi.struct',    'old',    'formatted',0
+21,'FeSi.scfm',      'unknown','formatted',0
+22,'FeSi.scf',       'unknown','formatted',0
+31,'FeSi.broyd1',    'unknown','unformatted',164896
+32,'FeSi.broyd2',    'unknown','unformatted',164896
+51,'FeSi.clmsum',    'unknown','formatted',0

@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os
 import h5py
+from pyglib.gutz.gatom import gAtoms
 
 
 def read_wien_structure():
@@ -8,7 +9,9 @@ def read_wien_structure():
     structure_file = get_wiencase() + '.struct'
     from ase.io.wien2k import read_struct
     material = read_struct(structure_file)
-    return material,structure_file
+    from pyglib.dft.wien import get_local_rotations
+    locrot_list = get_local_rotations(structure_file)
+    return material, structure_file, locrot_list
 
 
 def read_vasp_contcar():
@@ -23,31 +26,34 @@ def h5save_structure_params():
         material = read_vasp_contcar()
         case=None
     else:
-        material,case = read_wien_structure()
-    from pyglib.gutz.gatom import gAtoms
+        material, case, locrot_list = read_wien_structure()
     with h5py.File('ginit.h5', 'a') as f:
         f['/struct/symbols'] = material.get_chemical_symbols()
         f['/struct/cell'] = material.get_cell()
         f['/struct/scaled_positions'] = material.get_scaled_positions()
         if case is not None:
             f['/struct/case'] = case
+            f['/struct/locrot_list'] = locrot_list
 
 def get_gatoms():
-    from pyglib.gutz.gatom import gAtoms
     if not os.path.isfile('ginit.h5'):
         h5save_structure_params()
 
     with h5py.File('ginit.h5', 'r') as f:
-        symbols = f['/struct/symbols'][...]
-        cell = f['/struct/cell'][...]
-        scaled_positions = f['/struct/scaled_positions'][...]
+        symbols = f['/struct/symbols'][()]
+        cell = f['/struct/cell'][()]
+        scaled_positions = f['/struct/scaled_positions'][()]
         if '/struct/case' in f:
-            case = f['/struct/case'][...]
+            case = f['/struct/case'][()]
         else:
             case = None
+        if '/struct/locrot_list' in f:
+            locrot_list = f['/struct/locrot_list'][()]
+        else:
+            locrot_list = None
     return gAtoms(symbols=symbols, cell=cell,
             scaled_positions=scaled_positions, pbc=True,
-            wiencase=case)
+            wiencase=case, locrot_list=locrot_list)
 
 
 def check_material(material, f):

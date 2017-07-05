@@ -10,6 +10,72 @@ has a subfolder template with reference case.struct and possibly case.inso.
 '''
 
 
+def get_rotations(case_fname):
+    '''get the rotation list in struct file.
+    '''
+    with open(str(case_fname), 'r') as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            if 'SYMMETRY OPERATIONS' in line:
+                break
+        nops = int(lines[i].split()[0])
+        lines = lines[i+1:]
+        rot_list = []
+        for i in range(0,nops*4,4):
+            rot = []
+            lok = True
+            for j in range(3):
+                line = lines[i+j]
+                rot.append([int(line[:2]), int(line[2:4]), int(line[4:6])])
+                if abs(float(line[6:17])) > 1.e-6:
+                    lok = False
+                    break
+            if lok:
+                if abs(np.linalg.det(rot)-1)<1.e-6:
+                    rot_list.append(rot)
+    return rot_list
+
+
+def get_equivalent_atom_indices(case_fname):
+    '''get equivalent atomic indices according to the atom labels in
+    case.struct file.
+    '''
+    with open(str(case_fname), 'r') as f:
+        idx_equivalent_atoms = []
+        ibase = 0
+        for line in f:
+            if 'MULT=' in line:
+                mult = int(line.split()[1])
+                for i in range(mult):
+                    idx_equivalent_atoms.append(ibase)
+                ibase += mult
+    return idx_equivalent_atoms
+
+
+def get_local_rotations(case_fname):
+    '''get list of locrot in struct file.
+    '''
+    with open(str(case_fname), 'r') as f:
+        locrot_list = []
+        readline = 100
+        for line in f:
+            if 'MULT=' in line:
+                mult = int(line.split()[1])
+            elif 'LOCAL ROT MATRIX' in line:
+                readline = 0
+                locrot = []
+            if readline < 3:
+                locrot.append(map(float, [line[20:30], line[30:40], \
+                        line[40:50]]))
+                readline += 1
+                if readline == 3:
+                    # wien2k convention
+                    locrot = np.asarray(locrot).T
+                    for i in range(mult):
+                        locrot_list.append(locrot)
+    return locrot_list
+
+
 def get_volume(file_scf='./case.scf'):
     '''Get primitive unit volume from scf file f_scf.
     '''

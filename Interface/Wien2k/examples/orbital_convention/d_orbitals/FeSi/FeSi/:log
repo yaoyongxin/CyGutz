@@ -1,0 +1,23 @@
+>   (run_lapw) options: 
+Sat Jul  1 23:13:07 CDT 2017> (x) lapw0
+Sat Jul  1 23:13:10 CDT 2017> (x) lapw1 -c
+Sat Jul  1 23:14:17 CDT 2017> (x) lapw2 -c
+Sat Jul  1 23:14:28 CDT 2017> (x) lcore
+Sat Jul  1 23:14:29 CDT 2017> (x) mixer
+Sat Jul  1 23:14:29 CDT 2017> (x) mixer
+Sat Jul  1 23:16:54 CDT 2017> (x) -f FeSi lapw0
+Sat Jul  1 23:16:57 CDT 2017> (x) -f FeSi lapw1
+Sat Jul 01 23:18:05 CDT 2017>   dmft1
+Sat Jul 01 23:18:10 CDT 2017>   CyGutz
+Sat Jul 01 23:18:48 CDT 2017>   dmft2
+Sat Jul  1 23:19:16 CDT 2017> (x) -f FeSi lcore
+Sat Jul  1 23:19:16 CDT 2017> (x) -f FeSi mixer
+Sat Jul  1 23:19:16 CDT 2017> (x) -f FeSi lapw0
+Sat Jul  1 23:19:19 CDT 2017> (x) -f FeSi lapw1
+Sat Jul 01 23:20:27 CDT 2017>   dmft1
+Sat Jul 01 23:20:31 CDT 2017>   CyGutz
+Sat Jul 01 23:21:05 CDT 2017>   dmft2
+Sat Jul  1 23:21:33 CDT 2017> (x) -f FeSi lcore
+Sat Jul  1 23:21:33 CDT 2017> (x) -f FeSi mixer
+Sat Jul  1 23:26:15 CDT 2017> (x) lapwdm
+Sat Jul  1 23:26:48 CDT 2017> (x) lapwdm

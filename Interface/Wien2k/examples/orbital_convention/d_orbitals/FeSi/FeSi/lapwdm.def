@@ -1,0 +1,16 @@
+ 4,'FeSi.inso',   'unknown',    'formatted',0
+ 5,'FeSi.indmc',   'old',    'formatted',0
+ 6,'FeSi.outputdm','unknown','formatted',0
+ 7,'FeSi.dmat','unknown','formatted',0
+ 8,'FeSi.dmatdn','unknown','formatted',0
+ 9,'./FeSi.vector', 'unknown','unformatted',9000
+10,'./FeSi.vectordn', 'unknown','unformatted',9000
+18,'FeSi.vsp',       'old',    'formatted',0
+19,'FeSi.vspdn',       'unknown','formatted',0
+20,'FeSi.struct',         'old',    'formatted',0
+21,'FeSi.scfdm',   'unknown','formatted',0
+26,'FeSi.weigh',   'unknown','unformatted',0
+50,'FeSi.energy', 'unknown','formatted',9000
+51,'FeSi.energydn', 'unknown','formatted',9000
+12,'FeSi.vorb',     'unknown','formatted',0
+11,'FeSi.dmatud'     ,'unknown','formatted',0
