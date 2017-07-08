@@ -179,7 +179,7 @@ def scfm(case):
         f.write(data)
 
 
-def diff(fday, case, mix_dc):
+def diff(fday, case, mix_dc, avg_dc):
     e_que = deque([], 2)
     with open('{}.scf'.format(case), 'r')  as f:
         for line in f:
@@ -201,6 +201,10 @@ def diff(fday, case, mix_dc):
             nelf_diff_list = nelf_list_out - nelf_list_in
             dcv_err = np.max(np.abs(nelf_diff_list))
             nelf_list_mix = nelf_list_in + mix_dc*nelf_diff_list
+            if avg_dc:
+                val = np.sum(nelf_list_mix)/len(nelf_list_mix)
+                nelf_list_mix = [val for x in nelf_list_in]
+                dcv_err = np.sum(nelf_diff_list)/len(nelf_list_mix)
             f["/dc_nelf_list"][()] = nelf_list_mix
         else:
             dcv_err = 0.
@@ -285,7 +289,7 @@ def create_gomp_file():
 
 def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         startp='lapw0', endp='', band='', openmp=False, cygutz='CyGutz',
-        pa_list=[], recycle_rl=True):
+        pa_list=[], recycle_rl=True, avg_dc=True):
     '''Driver for Wien2k + Gutzwiller-Slave-boson job.
     '''
     if '-s' in sys.argv:
@@ -309,6 +313,8 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         band='-band'
     if '-nrl' in sys.argv:
         recycle_rl = False
+    if '-navg_dc' in sys.argv:
+        avg_dc = False
     if band == '-band':
         _band = '_band'
         nmaxiter = 1
@@ -341,6 +347,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         endp     ''       -e ''            end program
         openmp   False    -omp             use openMP instead of openMPI
         rl       True     -nrl             start from previous GA solutions
+        avg_dc   True     -navg_dc         average dc among atoms or not
         '''
         print(help)
         sys.exit(0)
@@ -468,7 +475,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         scf(w_case)
         onestep(fday, w_case, 'mixer', w_root, '')
         scfm(w_case)
-        drho, dene, dvdc = diff(fday, w_case, mix_dc)
+        drho, dene, dvdc = diff(fday, w_case, mix_dc, avg_dc)
 
         with h5py.File('GLOG.h5', 'r') as f:
             gerr = f['/rl_maxerr'][0]

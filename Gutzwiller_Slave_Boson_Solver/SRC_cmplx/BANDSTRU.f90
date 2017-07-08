@@ -1089,6 +1089,7 @@ module bandstru
                             &fixed band level = ",2f12.4)')bnd%ek(i,ik,isp)
                     stop
                 endif
+                bnd%ek(i,ik,isp)=bnd%ef
                 bnd%ferwe(i,ik,isp)=real(bnd%nelet_frozen,q)/bnd%n_frozen* &
                         &wh%rspo*kpt%wt(ik)
             enddo

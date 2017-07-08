@@ -452,7 +452,7 @@ subroutine g_rl_onecycle()
     io=gp%io
     call hm_expand_all_general(wh%r,wh%r_coef,wh%hm_r,-1,.false.)
     call hm_expand_all_herm(wh%la1,wh%la1_coef,wh%hm_l,-1,.false.)
-    call modify_r_la1_frozen(1)
+    call modify_r_la1_frozen(1,30._q)
 
     if(io>0)then
         call output_matrices('r-in',wh%r,wh%na2112,wh%num_imp, &
@@ -466,6 +466,7 @@ subroutine g_rl_onecycle()
     call calc_band_all(io)
     call gutz_fermi(io)
     call bnd_modify_frozen()
+    call modify_r_la1_frozen(1,bnd%ef)
     call calc_mup_dn(io)
     call calc_nks()
     call calc_nks_pp(io)

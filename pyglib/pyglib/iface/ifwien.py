@@ -1,5 +1,4 @@
 import numpy as np
-import scipy
 import h5py
 from pyglib.io.fio import file_exists
 
@@ -34,6 +33,7 @@ def trafoso(L):
         for ms in range(-1, 2, 2):
             ams = -ms / 2.
             for ml in range(-L, L + 1):
+                # k1 -- complex spherical harmornics index
                 k1 = k1 + 1
                 k2 = -1
                 for mj in range(-2*L + 1, 2*L, 2):  # L-1/2 states
@@ -74,6 +74,12 @@ def get_orbital_transformation(l, qsplit):
 
     elif qsplit == 4:
         u_trans = trafoso(l)
+
+        # Test for the weird phase
+        if l == 2:
+            u_ = np.diag([1.,-1.j, 1., 1.j, 1., 1., -1.j, 1., 1.j, 1.])
+            u_trans = u_trans.dot(u_)
+
     return u_trans
 
 
