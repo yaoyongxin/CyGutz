@@ -235,15 +235,16 @@ class gAtoms(Atoms):
 
     def set_SL_vector_list(self):
         '''
-        Set S(L)_vector_list in the working local basis.
+        Set S(L)_vector_list in the working symmetry-adapted basis.
         '''
         l_list = self.get_llist()
         sx_list = []; sy_list = []; sz_list = []
         lx_list = []; ly_list = []; lz_list = []
-        from pyglib.symm.angular_momentum_1p import get_S_vector,get_L_vector
+        from pyglib.symm.angular_momentum_1p import get_S_vector, \
+                get_L_vector
         for i, _ls in enumerate(l_list):
-            S_vector = get_S_vector(_ls, self.iso)
-            L_vector = get_L_vector(_ls, self.iso)
+            S_vector = get_S_vector(_ls)
+            L_vector = get_L_vector(_ls, iso=2)
             utrans = self.utrans_list[i]
             for j, _S, _L in it.izip(it.count(), S_vector, L_vector):
                 S_vector[j] = utrans.T.conj().dot(_S).dot(utrans)
@@ -260,20 +261,6 @@ class gAtoms(Atoms):
         self.lx_list = lx_list
         self.ly_list = ly_list
         self.lz_list = lz_list
-
-
-    def get_J(self, basis):
-        '''
-        Get J vector in basis of 'CH' (complex harmonics) if spin-orbit
-        interaction is neglected or 'JJ' (J^2-J_z basis) if spin-orbit
-        interaction is present.
-        '''
-        from pyglib.symm.angular_momentum_1p import get_J_vector
-        J_list = []
-        l_list = self.get_llist()
-        for i,l in enumerate(l_list):
-            J_list.append(get_J_vector(l, basis))
-        return J_list
 
 
     def set_SelfEnergy(self):
@@ -314,8 +301,8 @@ class gAtoms(Atoms):
                             rotations_list.append(rotations_list[imap])
                             jgenerator_list.append(jgenerator_list[imap])
                         continue
-                if 'y' in self.crystal_field and 'n' in \
-                        self.orbital_polarization:
+                if 'y' in self.crystal_field and \
+                        'n' in self.orbital_polarization:
                     rotations = self.get_Rotations(l)
                     rotations_list.append(rotations)
                 else:
@@ -388,7 +375,6 @@ class gAtoms(Atoms):
 
     def set_v2e_list(self):
         from pyglib.mbody.coulomb_matrix import U_matrix
-        from pyglib.math.matrix_util import trans_JJ_to_CH_sup_sdn
         mode_list = ['manual', 'slater-condon', 'kanamori']
         if self.lhub > 0:
             self.v2e_list = []
@@ -406,10 +392,6 @@ class gAtoms(Atoms):
                 l_imp = l_list[i][0]
                 utrans = self.utrans_list[i]
 
-                if self.iso == 2:
-                    u_cmplx_harm_to_rel_harm =  \
-                            trans_JJ_to_CH_sup_sdn(l_imp).T # convention
-                    utrans = u_cmplx_harm_to_rel_harm.dot(utrans)
                 v2e, u_avg, j_avg = U_matrix(mode_list[self.lhub], l_imp,
                         U_int=self.u_list[i],
                         J_hund=self.j_list[i], T=utrans)

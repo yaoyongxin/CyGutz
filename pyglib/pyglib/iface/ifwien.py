@@ -1,85 +1,23 @@
 import numpy as np
 import h5py
+from scipy.linalg import block_diag
 from pyglib.io.fio import file_exists
 
 
-def trafoso(L):
-    '''
-    trafoso provides transformation matrices from
-    |L,1/2,mL,mS> (L=0,1,2,3, mS=-1/2,1/2) basis to
-    basis |J,L,S,mJ>, J=L-1/2, L+1/2
-    H. Watanabe 'Operator Methods in Ligand Field Theory'
-    Prentice Hall, 1966, Table 1.8-1.
-    ordering because of the convention used in WIEN is:
-                       mS=1/2        mS=-1/2
-                     -L .......L  -L ...... L     (2*(2L+1) columns)
-            -(L-1/2)
-               .
-    J=L-1/2    .
-               .
-             (L-1/2)
-             -L-1/2
-               .
-    J=L+1/2    .
-               .
-              L+1/2
-    '''
-    cf = np.zeros((2*(2*L + 1), 2*(2*L + 1)))
-    if L == 0:
-        cf[0, 1] = 1.0
-        cf[1, 0] = 1.0
-    else:
-        k1 = -1
-        for ms in range(-1, 2, 2):
-            ams = -ms / 2.
-            for ml in range(-L, L + 1):
-                # k1 -- complex spherical harmornics index
-                k1 = k1 + 1
-                k2 = -1
-                for mj in range(-2*L + 1, 2*L, 2):  # L-1/2 states
-                    amj = mj / 2.
-                    k2 = k2 + 1
-                    d = amj - ml - ams
-                    if abs(d) < 0.0001:
-                        if ms == 1:
-                            cf[k2, k1] = - \
-                                np.sqrt((L + 0.5 + amj) / (2*L + 1))
-                        else:
-                            cf[k2, k1] = np.sqrt((L + 0.5 - amj) / (2*L + 1))
-                for mj in range(-2*L - 1, 2*L + 2, 2):  # L+1/2 states
-                    amj = mj/2.
-                    k2 = k2 + 1
-                    d = amj - ml - ams
-                    if abs(d) < 0.0001:
-                        if ms == 1:
-                            cf[k2, k1] = np.sqrt((L + 0.5 - amj) / (2*L + 1))
-                        else:
-                            cf[k2, k1] = np.sqrt((L + 0.5 + amj) / (2*L + 1))
-    return cf
-
-
-def get_orbital_transformation(l, qsplit):
-    '''get the unitary transformation according to qsplit, which can simply
-    be 3 for identity, and 4 for complex spherical Harmonics to relativisitc
-    Harmonics.
+def get_orbital_transformation(l, nspin):
+    '''give the unitary transformation from wien2k basis to the standard
+    complex spherical Harmonics with Condon-shortley phase.
     '''
 
-    if qsplit == 3:
-        u_trans = np.identity((2*l+1), dtype=complex)
+    u_trans = np.identity((2*l+1), dtype=complex)
 
-        # Test for the weird phase
-        if l == 2:
-            u_trans[1,1] = -1.j
-            u_trans[3,3] =  1.j
+    # Test for the weird phase
+    if l == 2:
+        u_trans[1,1] = -1.j
+        u_trans[3,3] =  1.j
 
-    elif qsplit == 4:
-        u_trans = trafoso(l)
-
-        # Test for the weird phase
-        if l == 2:
-            u_ = np.diag([1.,-1.j, 1., 1.j, 1., 1., -1.j, 1., 1.j, 1.])
-            u_trans = u_trans.dot(u_)
-
+    if nspin == 2:
+        u_trans = block_diag(u_trans, u_trans)
     return u_trans
 
 
@@ -112,9 +50,9 @@ def h4set_indmfl(emin=-10., emax=10., projtype=-2):
             format(n_corr_atoms))
 
     if 'y' in finit['/usrqa/spin_orbit_coup'][()]:
-        qsplit = 4; nspin = 2
+        nspin = 2
     else:
-        qsplit = 3; nspin = 1
+        nspin = 1
     unique_df_list = finit['/usrqa/unique_df_list'][()]
 
     from pyglib.symm.angular_momentum_1p import get_l_list_from_string
@@ -132,7 +70,7 @@ def h4set_indmfl(emin=-10., emax=10., projtype=-2):
         for l in l_list:
             cix += 1
             findm.write(' {:2d} {:2d} {:2d}          # L, qsplit, cix\n'.\
-                    format(l, qsplit, cix))
+                    format(l, 3, cix))
             norbsmax = max(norbsmax, (2*l+1)*nspin)
 
     findm.write('----- unitary transformation for correlated orbitals -----\n')
@@ -143,7 +81,7 @@ def h4set_indmfl(emin=-10., emax=10., projtype=-2):
         findm.write('{:2d} {:2d}              # cix, dimension\n'. \
                 format(i+1, norbs))
         findm.write('----- unitary transformation matrix -----\n')
-        u_trans = get_orbital_transformation(l, qsplit)
+        u_trans = get_orbital_transformation(l, nspin)
         for u1 in u_trans:
             for u12 in u1:
                 findm.write('{:20.16f}{:20.16f} '.format(u12.real, u12.imag))

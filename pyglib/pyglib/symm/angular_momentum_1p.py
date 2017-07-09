@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+
 
 '''
 Get the matrix representation of angular momentum operator
-in one-particle basis.
+in complex spherical harmonics (CSH) basis.
+The orbital index is faster and spin goes up first where applicable.
 '''
 
 import numpy as np
@@ -10,45 +13,112 @@ from scipy.linalg import block_diag
 from pyglib.math.matrix_util import trans_orbital_fast_to_spin_fast
 
 
-def get_J_vector(l_list, basis):
+def get_J_generator(l_list, iso):
     '''
-    Get L(J) vector from a l list with CH (JJ) basis.
+    Get rotation generator J vector from a l_list with CSH basis.
+    For iso=2, the fast index of the basis is orbital,
+    and the spin goes up first then down.
     '''
-    J = [np.empty([0, 0], dtype=complex), np.empty(
-        [0, 0], dtype=complex), np.empty([0, 0], dtype=complex)]
-    for l in l_list:
-        if basis == 'CH':
-            Jz = get_matrix_Lz_CH(l)
-            Jp = get_matrix_Lp_CH(l)
-            Jn, Jx, Jy = get_other_op(Jz, Jp)
+    if iso == 1:
+        # need L-vector for one spin-block only
+        # because of no spin-orbit interaction.
+        return get_L_vector(l_list)
+    else:
+        return get_J_vector(l_list)
+
+
+def get_J_vector(l_list):
+    '''get the total angular momentum vector in CSH basis,
+    with orbital index faster and spin running through [up, down].
+    '''
+    Lx, Ly, Lz = get_L_vector(l_list, iso=2)
+    Sx, Sy, Sz = get_S_vector(l_list)
+    return [Lx + Sx, Ly + Sy, Lz + Sz]
+
+
+def get_JU_relat_sph_harm_random_phase(l_list):
+    '''get J vector in relativisitic spherical harmonics (RSH) basis,
+    and the unitary transformation U from complex spherical harmonics (CSH)
+    to RSH. There is a random phase associated RSH due to diagonalization.
+    '''
+    for i, _l in enumerate(l_list):
+        _Jx, _Jy, _Jz =  get_J_vector(_l)
+        Jsq = _Jx.dot(_Jx) + _Jy.dot(_Jy) + _Jz.dot(_Jz)
+        w, v = np.linalg.eigh(Jsq)
+
+        # from j(j+1) to j
+        w = map(lambda x: np.sqrt(x+0.25)-0.5, w)
+
+        if _l > 0:
+            n1 = int(2*(_l - .5) + 1.1)
+            if np.max(np.abs(w[:n1] - w[0])) > 1.e-6 or \
+                    np.max(np.abs(w[n1:] - w[n1])) > 1.e-6 or \
+                    np.abs(w[n1] - w[0] - 1) > 1.e-6:
+                raise_j_list_error(w, 'j_list')
+
+            # l-1/2 block
+            Jz1 = v[:,:n1].T.conj().dot(Jz).dot(v[:,:n1])
+            w1, v1 = np.linalg.eigh(Jz1)
+            if np.max(np.abs(w1[1:] - w[:-1] - 1.)) > 1.e-6:
+                raise_j_list_error(w1, 'jz1_list')
+            v[:, :n1] = v[:, :n1].dot(v1)
         else:
-            Jz = get_matrix_Jz_JJ(l)
-            Jp = get_matrix_Jp_JJ(l)
-            Jn, Jx, Jy = get_other_op(Jz, Jp)
-        J[0] = block_diag(J[0], Jx)
-        J[1] = block_diag(J[1], Jy)
-        J[2] = block_diag(J[2], Jz)
-    return J
+            n1 = 0
+
+        # l+1/2 block
+        Jz1 = v[:,n1:].T.conj().dot(Jz).dot(v[:,n1:])
+        w1, v1 = np.linalg.eigh(Jz1)
+        if np.max(np.abs(w1[1:] - w[:-1] - 1.)) > 1.e-6:
+            raise_j_list_error(w1, 'jz2_list')
+        v[:, n1:] = v[:, n1:].dot(v1)
+        _Jx, _Jy, _Jz = v.T.conj().dot(_Jx).dot(v), \
+                v.T.conj().dot(_Jy).dot(v), v.T.conj().dot(_Jz).dot(v)
+        if i == 0:
+            Jx, Jy, Jz = _Jx, _Jy, _Jz
+            u_trans = v
+        else:
+            Jx, Jy, Jz, u_trans = block_diag(Jx, _Jx), block_diag(Jy, _Jy), \
+                    block_diag(Jz, _Jz), block_diag(u_trans, v)
+    return [Jx, Jy, Jz], u_trans
 
 
-def get_L_vector_CH(l):
-    '''
-    Get (L_x, L_y, L_z) with CH basis.
-    '''
-    Lz = get_matrix_Lz_CH(l)
-    Lp = get_matrix_Lp_CH(l)
-    Ln, Lx, Ly = get_other_op(Lz, Lp)
-    return Lx, Ly, Lz
+def raise_j_list_error(j_list, head):
+    msg = 'error in {}:\n'.format(head)
+    for k, j in enumerate(j_list):
+        msg += ' {:6.2f}'.format(j)
+        if k % 5 == 4:
+            msg += '/n'
+    raise ValueError(msg)
 
 
-def get_J_vector_JJ(l):
+def get_L_vector(l, iso=1):
     '''
-    Get (J_x, J_y, J_z) with JJ basis.
+    Get matrix representation of L-vector.
     '''
-    Jz = get_matrix_Jz_JJ(l)
-    Jp = get_matrix_Jp_JJ(l)
-    Jn, Jx, Jy = get_other_op(Jz, Jp)
-    return Jx, Jy, Jz
+    if iso == 1:
+        # for spin-up block
+        try:
+            for i, _l in enumerate(l):
+                _Lx, _Ly, _Lz = get_L_vector(_l)
+                if i == 0:
+                    Lx, Ly, Lz = _Lx.copy(), _Ly.copy(), _Lz.copy()
+                else:
+                    Lx, Ly, Lz = block_diag(Lx, _Lx), block_diag(Ly, _Ly), \
+                        block_diag(Lz, _Lz)
+            return [Lx, Ly, Lz]
+        # expect single l
+        except TypeError:
+            Lz = get_matrix_Lz_CSH(l)
+            Lp = get_matrix_Lp_CSH(l)
+            _, Lx, Ly = get_other_op(Lz, Lp)
+            return [Lx, Ly, Lz]
+    else:
+        # get spin-up block first
+        Lx, Ly, Lz = get_L_vector(l)
+        # add spin-down block
+        Lx, Ly, Lz = block_diag(Lx, Lx), block_diag(Ly, Ly), \
+                block_diag(Lz, Lz)
+        return [Lx, Ly, Lz]
 
 
 def get_Lp_coef(l, m):
@@ -58,7 +128,7 @@ def get_Lp_coef(l, m):
     return np.sqrt(l * (l + 1) - m * (m + 1))
 
 
-def get_diag_Lz_CH(l):
+def get_diag_Lz_CSH(l):
     '''
     Get diagonal elements of Lz for Complex spherical Harmomnics basis.
     '''
@@ -68,14 +138,14 @@ def get_diag_Lz_CH(l):
     return Lz
 
 
-def get_matrix_Lz_CH(l):
+def get_matrix_Lz_CSH(l):
     '''
     Get matrix_{z}.
     '''
-    return np.diag(get_diag_Lz_CH(l))
+    return np.diag(get_diag_Lz_CSH(l))
 
 
-def get_matrix_Lp_CH(l, m_rising=True):
+def get_matrix_Lp_CSH(l, m_rising=True):
     '''
     Get matrix L_{\dagger}.
     '''
@@ -90,132 +160,40 @@ def get_matrix_Lp_CH(l, m_rising=True):
     return Lp
 
 
-def get_matrix_Sz_CH_orbital_fast(l_list):
+def get_matrix_Sz_CSH_orbital_fast(l_list):
     '''
     Get matrix Sz for Complex spherical Harmomnics basis
-    with spin-down + up block.
+    with spin-up + spin-down block.
     '''
-    num_lm = np.sum(2 * np.array(l_list) + 1)
+    num_lm = np.sum(2*np.asarray(l_list) + 1)
+
     # spin-up + spin_dn. Wien2k convention.
-    Sz = np.diag([ 0.5 for i in range(num_lm)] + [-0.5 for i in range(num_lm)])
+    Sz = np.diag([ 0.5 for i in range(num_lm)] + \
+            [-0.5 for i in range(num_lm)])
     return Sz
 
 
-def get_matrix_Lzp_CH_orbital_fast(l_list):
+def get_matrix_Sp_CSH_spin_fast(l_list):
     '''
-    Get matrix Lz, Lp for Complex spherical Harmomnics basis
-    with spin-up + dn block.
+    Get matrix Sp for Complex spherical Harmomnics basis with spin-fast
+    (up, down) index.
     '''
-    for i, _l in enumerate(l_list):
-        _Jz = get_matrix_Lz_CH(_l)
-        _Jp = get_matrix_Lp_CH(_l)
-        if i == 0:
-            Jz = _Jz.copy()
-            Jp = _Jp.copy()
-        else:
-            Jz = block_diag(Jz, _Jz)
-            Jp = block_diag(Jp, _Jp)
-    # Adding the spin-dn block.
-    Jz = block_diag(Jz, Jz)
-    Jp = block_diag(Jp, Jp)
-    return Jz, Jp
-
-
-def get_matrix_Sp_CH_spin_fast(l_list):
-    '''
-    Get matrix Sp for Complex spherical Harmomnics basis with spin-fast-index.
-    '''
-    num_lm = np.sum(2 * np.array(l_list) + 1)
-    Sp_sub = get_matrix_Lp_CH(0.5, m_rising=False)
+    num_lm = np.sum(2 * np.asarray(l_list) + 1)
+    Sp_sub = get_matrix_Lp_CSH(0.5, m_rising=False)
     Sp_list = [Sp_sub for i in range(num_lm)]
     from scipy.linalg import block_diag
     return block_diag(*Sp_list)
 
 
-def get_S_vector_CH_orbital_fast(l_list):
+def get_S_vector(l_list):
     '''
-    Get S-vector in CH basis with fast orbital index.
+    Get S-vector in CSH basis with fast orbital index.
     '''
-    Sz = get_matrix_Sz_CH_orbital_fast(l_list)
-    Sp = get_matrix_Sp_CH_spin_fast(l_list)
+    Sz = get_matrix_Sz_CSH_orbital_fast(l_list)
+    Sp = get_matrix_Sp_CSH_spin_fast(l_list)
     Sp = trans_orbital_fast_to_spin_fast(Sp, lback=True)
     _, Sx, Sy = get_other_op(Sz, Sp)
     return [Sx, Sy, Sz]
-
-
-def get_L_vector_CH_orbital_fast(l_list):
-    '''
-    Get L-vector in CH basis with fast orbital index.
-    '''
-    Lz, Lp = get_matrix_Lzp_CH_orbital_fast(l_list)
-    _, Lx, Ly = get_other_op(Lz, Lp)
-    return [Lx, Ly, Lz]
-
-
-def get_trans_JJ_to_CH_orbital_fast(l_list):
-    '''
-    Get the unitary transformation from JJ to CH_orbital_fast basis.
-    '''
-    from pyglib.math.matrix_util import trans_JJ_to_CH_sup_sdn
-    U_list = []
-    for l in l_list:
-        # watch out the convention.
-        U = trans_JJ_to_CH_sup_sdn(l)
-        U_list.append(U)
-    return block_diag(*U_list)
-
-
-def get_S_vector_JJ(l_list):
-    '''
-    Get S-vector in JJ basis.
-    '''
-    S_vec = get_S_vector_CH_orbital_fast(l_list)
-    U = get_trans_JJ_to_CH_orbital_fast(l_list)
-    for i, _S in enumerate(S_vec):
-        S_vec[i] = U.dot(_S.dot(U.conj().T))
-    return S_vec
-
-
-def get_L_vector_JJ(l_list):
-    '''
-    Get L-vector in JJ basis.
-    '''
-    L_vec = get_L_vector_CH_orbital_fast(l_list)
-    U = get_trans_JJ_to_CH_orbital_fast(l_list)
-    for i, _L in enumerate(L_vec):
-        L_vec[i] = np.dot(U, np.dot(_L, np.conj(U.T)))
-    return L_vec
-
-
-def get_matrix_Jz_JJ(l):
-    '''
-    Get matrix J_z with relativisitc Harmonics basis
-    for l = 0, the basis is assumed to be (s_down and s_up)
-    '''
-    if l == 0:
-        return np.diag([-0.5, 0.5])
-    else:
-        j1 = l - 0.5
-        J1z = np.diag(get_diag_Lz_CH(j1))
-        j2 = l + 0.5
-        J2z = np.diag(get_diag_Lz_CH(j2))
-        return block_diag(J1z, J2z)
-
-
-def get_matrix_Jp_JJ(l):
-    '''
-    Get matrix J_p with relativisitc Harmonics basis
-    for l = 0, the basis is assumed to be (s_down and s_up)
-    '''
-    if l == 0:
-        alpha = get_Lp_coef(0.5, -0.5)
-        return(np.array([[0., 0.], [alpha, 0.]]))
-    else:
-        j1 = l - 0.5
-        J1p = get_matrix_Lp_CH(j1)
-        j2 = l + 0.5
-        J2p = get_matrix_Lp_CH(j2)
-        return block_diag(J1p, J2p)
 
 
 def get_other_op(Lz, Lp):
@@ -244,26 +222,6 @@ def get_l_from_char(c):
     return {'s': 0, 'p': 1, 'd': 2, 'f': 3}.get(c, -1)
 
 
-def get_S_vector(l_list, iso):
-    '''
-    Dispatcher.
-    '''
-    if iso > 1:
-        return get_S_vector_JJ(l_list)
-    else:
-        return get_S_vector_CH_orbital_fast(l_list)
-
-
-def get_L_vector(l_list, iso):
-    '''
-    Dispatcher.
-    '''
-    if iso > 1:
-        return get_L_vector_JJ(l_list)
-    else:
-        return get_L_vector_CH_orbital_fast(l_list)
-
-
 def get_complex_to_real_sph_harm(l):
     '''get the unitary transformation from compex spherical harmonics
     (Condon–Shortley phase convention) to real harmonics
@@ -286,5 +244,5 @@ def get_complex_to_real_sph_harm(l):
 
 
 if __name__ == "__main__":
-    Lx, Ly, Lz = get_L_vector_CH(0)
-    print Lx, Ly, Lz
+    Lx, Ly, Lz = get_L_vector(0)
+    print(Lx, Ly, Lz)

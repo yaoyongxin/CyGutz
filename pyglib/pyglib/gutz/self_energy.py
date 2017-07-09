@@ -2,22 +2,19 @@ import sys
 import numpy as np
 from scipy.linalg import block_diag
 from pyglib.math.matrix_util import trans_orbital_fast_to_spin_fast
+from pyglib.symm.angular_momentum_1p import get_J_generator, \
+        get_JU_relat_sph_harm_random_phase
+import pyglib.symm.atom_symm as atsym
 
 
 def get_self_energy(l_list, ispin, orbital_pol, cf, iso, rotations=None):
     '''
     Dispatcher.
     '''
-    perturbation = None
-    if '-p' in sys.argv:
-        perturbation = sys.argv[sys.argv.index('-p') + 1]
-
     if 'y' in orbital_pol and iso == 2:
         return get_self_energy_op_soc(l_list)
-    elif 'y' in cf and iso == 2 and perturbation is None:
+    elif 'y' in cf and iso == 2:
         return get_self_energy_cf_soc(l_list, rotations)
-    elif 'y' in cf and iso == 2 and perturbation == 'cf':
-        return get_self_energy_soc_perturb_cf(l_list, rotations)
     elif iso == 2:
         return get_self_energy_soc(l_list, ispin)
     elif 'y' in orbital_pol:
@@ -71,30 +68,9 @@ def get_self_energy_cf_soc(l_list, rotations):
     Get the self energy structure in the case of crystal field splitting
     and with spin-orbit interaction.
     '''
-    from pyglib.symm.angular_momentum_1p import get_J_vector
-    Jorig = get_J_vector(l_list, 'JJ')
-    import pyglib.symm.atom_symm as atsym
+    Jorig = get_J_generator(l_list, iso=2)
     J, U, self_energy = atsym.get_atom_Jnew(rotations, Jorig)
     return J, U, self_energy
-
-
-def get_self_energy_soc_perturb_cf(l_list, rotations):
-    '''
-    Get the self energy structure in the case of adding crystal field
-    perturbatively with spin-orbit interaction.
-    '''
-    from pyglib.symm.angular_momentum_1p import get_J_vector
-    assert len(l_list) == 1, " Not tested for multiple-l!"
-    Jorig = get_J_vector(l_list, 'JJ')
-    l = (len(Jorig[0]) - 2) / 4
-    import pyglib.symm.atom_symm as atsym
-    J1_orig = [Jc[:2 * l, :2 * l] for Jc in Jorig]
-    J1, U1, self_energy1 = atsym.get_atom_Jnew(rotations, J1_orig)
-    J2_orig = [Jc[2 * l:, 2 * l:] for Jc in Jorig]
-    J2, U2, self_energy2 = atsym.get_atom_Jnew(rotations, J2_orig)
-    self_energy2[np.where(self_energy2 > 0)] += np.max(self_energy1)
-    return  block_diag(J1, J2), block_diag(U1, U2),  \
-            block_diag(self_energy1, self_energy2)
 
 
 def get_self_energy_cf_nosoc(l_list, ispin, rotations):
@@ -102,10 +78,7 @@ def get_self_energy_cf_nosoc(l_list, ispin, rotations):
     Get the self energy structure in the case of crystal field splitting
     and without spin-orbit interaction.
     '''
-    from pyglib.symm.angular_momentum_1p import get_J_vector
-    Jorig = get_J_vector(l_list, 'CH')
-
-    import pyglib.symm.atom_symm as atsym
+    Jorig = get_J_generator(l_list, iso=1)
     Jhalf, Uhalf, self_energy_half = atsym.get_atom_Jnew(rotations, Jorig)
 
     if ispin == 2:
@@ -113,7 +86,6 @@ def get_self_energy_cf_nosoc(l_list, ispin, rotations):
     else:
         shift = 0
 
-    from scipy.linalg import block_diag
     self_energy = block_diag(
         self_energy_half, shift_self_energy(self_energy_half, shift))
 
@@ -154,8 +126,10 @@ def get_self_energy_average(l_list, ispin):
     U = np.identity(len(self_energy), dtype=complex)
     n_half = U.shape[0]/2
     utrans = np.zeros_like(U)
+
     # Similarly transform to spin-fast convention.
-    utrans[:,::2] = U[:,:n_half]; utrans[:,1::2] = utrans[:,::2]
+    utrans[:,::2] = U[:,:n_half]
+    utrans[:,1::2] = utrans[:,::2]
     return None, utrans, self_energy
 
 
@@ -175,18 +149,23 @@ def get_self_energy_soc(l_list, ispin):
         else:
             elem = []
             if ispin == 1:
-                elem += [elem_base for i in range(int(2 * (l - 0.49)) + 1)]
+                elem += [elem_base for i in \
+                        range(int(2 * (l - 0.49)) + 1)]
                 elem_base = max(elem) + 1
-                elem += [elem_base for i in range(int(2 * (l + 0.51)) + 1)]
+                elem += [elem_base for i in \
+                        range(int(2 * (l + 0.51)) + 1)]
             else:
-                elem += [elem_base + i for i in range(int(2 * (l - 0.49)) + 1)]
+                elem += [elem_base + i for i in \
+                        range(int(2 * (l - 0.49)) + 1)]
                 elem_base = max(elem) + 1
-                elem += [elem_base + i for i in range(int(2 * (l + 0.51)) + 1)]
+                elem += [elem_base + i for i in \
+                        range(int(2 * (l + 0.51)) + 1)]
         diag_elem += elem
         elem_base = max(elem) + 1
     self_energy = np.diag(diag_elem)
-    U = np.identity(len(self_energy), dtype=complex)
-    return None, U, self_energy
+
+    J, U = get_JU_relat_sph_harm_random_phase(l_list)
+    return J, U, self_energy
 
 
 def shift_self_energy(self_energy, shift):
