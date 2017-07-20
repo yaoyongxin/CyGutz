@@ -72,6 +72,7 @@ def get_local_rotations(case_fname):
                     # wien2k convention
                     locrot = np.asarray(locrot).T
                     for i in range(mult):
+                        # maybe there are problems here.
                         locrot_list.append(locrot)
     return locrot_list
 

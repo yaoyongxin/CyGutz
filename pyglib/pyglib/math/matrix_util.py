@@ -334,6 +334,11 @@ def get_matrix_trace(A):
     return tr
 
 
+def get_loewdin_orthnorm(a):
+    U, s, V = np.linalg.svd(a)
+    return U.dot(V)
+
+
 def unitary_transform_coulomb_matrix(a, u):
     a = np.asarray(a)
     m_range = range(a.shape[0])

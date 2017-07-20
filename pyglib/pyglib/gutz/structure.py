@@ -24,15 +24,23 @@ def h5save_structure_params():
     import sys
     if '-vasp' in sys.argv:
         material = read_vasp_contcar()
-        case=None
+        case = None
+        locrot_list = None
     else:
         material, case, locrot_list = read_wien_structure()
+
+    # check whether locrot_list is externally provided or not.
+    if os.path.isfile('locrot.h5'):
+        with h5py.File('locrot.h5', 'r') as f:
+            locrot_list = f['locrot_list'][()]
+
     with h5py.File('ginit.h5', 'a') as f:
         f['/struct/symbols'] = material.get_chemical_symbols()
         f['/struct/cell'] = material.get_cell()
         f['/struct/scaled_positions'] = material.get_scaled_positions()
         if case is not None:
             f['/struct/case'] = case
+        if locrot_list is not None:
             f['/struct/locrot_list'] = locrot_list
 
 def get_gatoms():

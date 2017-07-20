@@ -9,6 +9,8 @@ from pymatgen import Molecule
 Help funtions for extracting molecule from crystal and determine local rotational operations.
 '''
 
+# module global molecule index
+imol = 0
 
 class gmolecule(Molecule):
     '''adding equivalent indices to atoms.
@@ -84,12 +86,12 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
     mol_name = ''
     mol_symbols = sorted(molecule_symbols)
     for key, group in groupby(mol_symbols):
-        mol_name += key + '_' + str(len(list(group))) + ' '
+        mol_name += key + str(len(list(group)))
 
     # local rotation if required.
     if locrot is not None:
         for i, pos in enumerate(molecule_positions):
-            molecule_positions[i] = locrot.dot(pos)
+            molecule_positions[i] = locrot.T.dot(pos)
 
     print(' molecule extracted {}:'.format(mol_name))
     print(" atom   x      y       z    distance")
@@ -98,6 +100,13 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
                 *([symbo] + position.tolist() +
                 [np.sqrt(np.dot(position, position))])))
 
+    global imol
+    with open('{}_{}.xyz'.format(mol_name, imol), 'w') as f:
+        print(' {}\n'.format(len(molecule_symbols)), file=f)
+        for symbo, position in zip(molecule_symbols, molecule_positions):
+            print(" {:3s} {:6.2f} {:6.2f} {:6.2f}".format(
+                    *([symbo] + position.tolist())), file=f)
+    imol += 1
     return gmolecule(molecule_symbols, molecule_positions,
             equivalent_indices=eq_indices)
 

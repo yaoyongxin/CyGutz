@@ -309,7 +309,7 @@ class gAtoms(Atoms):
                     rotations = None
                 jgen, utrans, sigma = get_self_energy(l_list[i], self.ispin,
                         self.orbital_polarization,
-                        self.crystal_field,self.iso,
+                        self.crystal_field, self.iso,
                         rotations=rotations)
                 utrans_list.append(utrans)
                 sigma_list.append(sigma)

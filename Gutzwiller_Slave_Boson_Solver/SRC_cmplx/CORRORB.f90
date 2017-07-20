@@ -85,10 +85,11 @@ module corrorb
     complex(q) n_(co%dim2,co%dim2)
       
     if(mode==1)then
-        n_=transpose(co%nks)
+        n_=co%nks
     else
-        n_=transpose(co%nc_phy)
+        n_=co%nc_phy
     endif
+    ! Tr(\rho A) = \sum_{ij}{\rho_ij*A_ji} = \sum_{ij}{\rho^{t}_ji*A_ji}
     co%s_val(1,mode)=sum(co%sx*n_)
     co%s_val(2,mode)=sum(co%sy*n_)
     co%s_val(3,mode)=sum(co%sz*n_)

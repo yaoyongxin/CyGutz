@@ -106,7 +106,7 @@ def get_L_vector(l, iso=1):
                     Lx, Ly, Lz = block_diag(Lx, _Lx), block_diag(Ly, _Ly), \
                         block_diag(Lz, _Lz)
             return [Lx, Ly, Lz]
-        # expect single l
+        # excepct single l
         except TypeError:
             Lz = get_matrix_Lz_CSH(l)
             Lp = get_matrix_Lp_CSH(l)
