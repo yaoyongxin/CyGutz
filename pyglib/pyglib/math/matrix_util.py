@@ -335,11 +335,16 @@ def get_matrix_trace(A):
 
 
 def get_loewdin_orthnorm(a):
+    '''Get the Loewdin symmetry-adapted orthonormalization via
+    singular-value decomposition.
+    '''
     U, s, V = np.linalg.svd(a)
     return U.dot(V)
 
 
 def unitary_transform_coulomb_matrix(a, u):
+    '''Perform a unitary transformation (u) on the Coulomb matrix (a).
+    '''
     a = np.asarray(a)
     m_range = range(a.shape[0])
     for i,j in product(m_range, m_range):
@@ -348,3 +353,13 @@ def unitary_transform_coulomb_matrix(a, u):
     for i,j in product(m_range, m_range):
         a[i,j,:,:] = u.T.conj().dot(a[i,j,:,:].dot(u))
     return a
+
+
+def get_hamilt_matrix_from_ev(w, v):
+    '''given v_{alpha, n} and w_{n}, get back the Hamiltonian matrix.
+    Here alpha is the basis orbital index and n the band index.
+    '''
+    vh = v.T.conj()
+    for i in range(v.shape[0]):
+        v[i] *= w
+    return v.dot(vh)

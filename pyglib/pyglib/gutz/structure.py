@@ -14,16 +14,16 @@ def read_wien_structure():
     return material, structure_file, locrot_list
 
 
-def read_vasp_contcar():
+def read_vasp_poscar():
     from ase.io.vasp import read_vasp
-    material = read_vasp()
+    material = read_vasp(filename='POSCAR')
     return material
 
 
 def h5save_structure_params():
     import sys
     if '-vasp' in sys.argv:
-        material = read_vasp_contcar()
+        material = read_vasp_poscar()
         case = None
         locrot_list = None
     else:

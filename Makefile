@@ -1,5 +1,6 @@
 GUTZ_ROOT2 = ${HOME}/WIEN_GUTZ/bin2
 
+
 install:
 	#--------------------------------------------------------
 	# Build CyGutz and install to ~/WIEN_GUTZ/bin2
@@ -18,10 +19,11 @@ install:
 	pip install -e ./pyglib
 	# Installation finished gracefully! Enjoy!
 
+gtool:
+	cp -r pygtool/* ${GUTZ_ROOT2}
 
 clean:
 	cd Gutzwiller_Slave_Boson_Solver && make clean && cd ..
-
 
 clean_bin:
 	rm -rf ${GUTZ_ROOT2}/*
