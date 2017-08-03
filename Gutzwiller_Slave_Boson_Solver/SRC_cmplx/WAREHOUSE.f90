@@ -432,7 +432,7 @@ module warehouse
 
     if(.not.associated(wh%sx))return
     if(mode==1)then
-        name_='variational'
+        name_='var-hf-only'
     else
         name_='physical'
     endif
@@ -441,7 +441,7 @@ module warehouse
         if(io>0)then
             write(io,'(" imp =",i4," s_xyz(",a12,") =",3f12.5)')i,name_, &
                 &wh%co(i)%s_val(:,mode)
-            write(io,'("     ",4x," l_xyz(",a12,") =",3f12.5)')name_, &
+            write(io,'(10x," l_xyz(",a12,") =",3f12.5)')name_, &
                 &wh%co(i)%l_val(:,mode)
         endif
     enddo

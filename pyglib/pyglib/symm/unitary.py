@@ -2,7 +2,7 @@ import numpy as np
 
 
 def jj_to_cubic_relativistic_harmonics(orbital='f'):
-    if 'f' in orbital:
+    if 'f' == orbital:
         jj_to_cubic = np.zeros((14,14))
         jj_to_cubic[0,8] = -np.sqrt(1./6.) # |5/2, -5/2>
         jj_to_cubic[4,8] =  np.sqrt(5./6.) # |5/2, +3/2> G7, 5/2, +
@@ -37,7 +37,21 @@ def jj_to_cubic_relativistic_harmonics(orbital='f'):
         jj_to_cubic[ 7,1] =  np.sqrt(1./4.)  # |7/2, -5/2>
         jj_to_cubic[11,1] =  np.sqrt(3./4.)  # |7/2, +3/2> G82, 7/2, -
     else:
-        raise Exception('UndefinedFunction')
+        raise ValueError('UndefinedFunction')
     return jj_to_cubic
 
 
+def comp_sph_harm_to_real_harm(orbital='d'):
+    if 'd' == orbital:
+        # Unitary transformation from complex spherical harmonics to
+        # real harmonics {xy, yz, z2, zx, x2-y2}
+        # i.e., matrix < cmp_sph_harm | real_harm >
+        csh2rh = np.zeros((5, 5), dtype=complex)
+        csh2rh[0, 0] =  1.j/np.sqrt(2.); csh2rh[4, 0] = -1.j/np.sqrt(2.)
+        csh2rh[1, 1] =  1.j/np.sqrt(2.); csh2rh[3, 1] =  1.j/np.sqrt(2.)
+        csh2rh[2, 2] = 1.0
+        csh2rh[1, 3] = 1./np.sqrt(2); csh2rh[3, 3] = -1./np.sqrt(2.)
+        csh2rh[0, 4] = 1./np.sqrt(2.); csh2rh[4, 4] = 1./np.sqrt(2.)
+    else:
+        raise ValueError('UndefinedFunction')
+    return csh2rh
