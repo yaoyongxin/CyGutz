@@ -127,6 +127,9 @@ module psave
         call gh5_write(bnd%ef,'/e_fermi',f_id)
         call gh5_write(wh%nspin,'/nspin',f_id)
         call gh5_write(wh%nasotot,'/nasotot',f_id)
+        ! Other commonly used data for analysis 
+        call gh5_wrt_wh_matrix_list('/R',wh%r)
+        call gh5_wrt_wh_matrix_list('/NC_PHY',wh%nc_phy)
         call gh5_close(f_id)
     endif
     return

@@ -1,5 +1,4 @@
-import os, matplotlib
-matplotlib.use('Agg')
+import os
 
 from pyglib import basic
 from pyglib import estructure
