@@ -1,5 +1,3 @@
-import os
-
 from pyglib import basic
 from pyglib import estructure
 from pyglib import gutz

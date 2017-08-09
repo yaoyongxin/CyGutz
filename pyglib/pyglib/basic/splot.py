@@ -4,9 +4,9 @@ from future.builtins.iterators import zip
 '''Simple pdf plot for quick visual check.
 '''
 
-colors = ['black', 'red', 'green', 'blue', 'maroon', 'orange','violet',
+colors = ['black', 'red', 'green', 'blue', 'orange','violet',
         'darkred', 'darkgreen', 'navy', 'brown', 'chocolate', 'darkorange',
-        'gold', 'olive']
+        'gold', 'olive', 'maroon']
 
 def xy_plot(x_list, y_list, xlabel='x', ylabel='y', fsave='test.pdf'):
     plt.figure()

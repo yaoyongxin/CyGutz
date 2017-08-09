@@ -7,7 +7,7 @@ import h5py
 from pyglib.mbody.multiplets_analysis_lib import get_local_histogram
 
 
-def calc_save_atomic_states(imp=1, num_ev=100):
+def calc_save_atomic_states(imp=1, num_ev=100, fname='multiplets.h5'):
     '''
     Calculate and save the eigen-values of the local many-body density matrix
     and the labels.
@@ -19,7 +19,7 @@ def calc_save_atomic_states(imp=1, num_ev=100):
             = get_local_histogram(imp, num_ev=num_ev)
 
     # Store results to metadata.
-    with h5py.File("multiplets.h5".format(imp), 'a') as f:
+    with h5py.File(fname, 'a') as f:
         base = "/impurity_" + str(imp)
         if base in f:
             del f[base]
