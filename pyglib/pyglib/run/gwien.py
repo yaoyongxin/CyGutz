@@ -73,11 +73,11 @@ def get_file_info(fname, unit, idmf, case, scratch, so, para, cmplx, _band,
         raise ValueError('No matching file name {}!'.format(fname))
 
 
-def fcreate_def_dmft(case, scratch='.', so='', para='', idmf='1', cmplx='',
+def fcreate_def_gwien(case, scratch='.', so='', para='', idmf='1', cmplx='',
         _band='', updn='', dnup='dn'):
-    '''create dmft1/2.def file.
+    '''create gwien1/2.def file.
     '''
-    fdef = open('dmft{}.def'.format(idmf), 'w')
+    fdef = open('gwien{}.def'.format(idmf), 'w')
     if idmf == '1':
         fname_list = ['in2', 'inso', 'indmfl', 'outputdmf', \
                 'in1c', 'vectorupdn', 'vectordnup', 'klist', \
@@ -117,7 +117,7 @@ def onestep(fday, case, exec_name, w_root, para):
 
 
 def gonestep(fday, exec_name, mpi):
-    '''dmft1, CyGutz and dmft2 steps.
+    '''gwien1, CyGutz and gwien2 steps.
     '''
     time_start = time.strftime("%H:%M:%S")
     with open(':log', 'a') as f:
@@ -128,7 +128,7 @@ def gonestep(fday, exec_name, mpi):
     if mpi != '':
         cmd.extend(mpi)
     cmd.append('./{}'.format(exec_name))
-    if 'dmft' in exec_name:
+    if 'gwien' in exec_name:
         cmd.append('{}.def'.format(exec_name))
 
     print(' '.join(x for x in cmd))
@@ -329,9 +329,9 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         x lapw0   : computes LDA potential with current DFT+G-RISB charge
         x lapw1   : solves LDA eigenvalue equations
         [x lapwso]: second variational treatment of spin-orbit coupling
-        x dmft1   : compute the local projector in the basis of DFT bands
+        x gwien1  : compute the local projector in the basis of DFT bands
         x cygutz  : solve the generic KS-Hubbard model using G-RISB
-        x dmft2   : computes DFT+G-RISB valence charge
+        x gwien2  : computes DFT+G-RISB valence charge
         x lcore   : computes DFT core charge
         x mixer   : mixes new charge density with the previous result
 
@@ -408,17 +408,17 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     else:
         _mpi = mpi
 
-    p_list = ['dmft1', 'dmft2', 'CyGutz', 'exe_spci', 'exe_spci_s2_mott']
+    p_list = ['gwien1', 'gwien2', 'CyGutz', 'exe_spci', 'exe_spci_s2_mott']
     for pa in pa_list:
         if pa not in p_list:
             p_list.append(pa)
     for p in p_list:
         shutil.copy2(g_root+'/'+p, '.')
 
-    # create dmft1/2.def files
-    fcreate_def_dmft(w_case, scratch=w_scratch, so=so, para=_para,
+    # create gwien1/2.def files
+    fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
             idmf='1', cmplx=cmplx, _band=_band)
-    fcreate_def_dmft(w_case, scratch=w_scratch, so=so, para=_para,
+    fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
             idmf='2', cmplx=cmplx, _band=_band)
 
     if nmaxiter > 0:
@@ -449,17 +449,17 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     # Major charge density loop
     for icycle in range(nmaxiter):
         if icycle > 0 or (icycle == 0 and startp in \
-                'lapw0 lapw1 lapwso dmft1'):
-            gonestep(fday, 'dmft1', mpi)
+                'lapw0 lapw1 lapwso gwien1'):
+            gonestep(fday, 'gwien1', mpi)
             if openmp:
                 create_gomp_file()
             elif os.path.isfile("GOMP.h5"):
                 os.remove("GOMP.h5")
-        if endp == 'dmft1':
+        if endp == 'gwien1':
             sys.exit(0)
 
         if icycle > 0 or (icycle == 0 and startp in \
-                'lapw0 lapw1 lapwso dmft1 CyGutz'):
+                'lapw0 lapw1 lapwso gwien1 CyGutz'):
             gonestep(fday, 'CyGutz', _mpi)
         shutil.copy2('GUTZ.LOG', 'SAVE_GUTZ.LOG')
         if endp == 'CyGutz' or band == '-band':
@@ -467,8 +467,8 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         if recycle_rl:
             shutil.copy2('WH_RL_OUT.h5', 'WH_RL_INP.h5')
 
-        gonestep(fday, 'dmft2', mpi)
-        if endp == 'dmft2':
+        gonestep(fday, 'gwien2', mpi)
+        if endp == 'gwien2':
             sys.exit(0)
 
         onestep(fday, w_case, 'lcore', w_root, '')
@@ -494,5 +494,5 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
 
 
 if __name__=='__main__':
-    fcreate_def_dmft('FeSb2', scratch='.', so='', para='',
+    fcreate_def_gwien('FeSb2', scratch='.', so='', para='',
             idmf='1', cmplx='', _band='', updn='', dnup='dn')

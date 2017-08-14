@@ -53,9 +53,11 @@ def hist_ns(weights_list, n_labels_list, s_labels_list,
     g_weights_list = get_group_weights(weights_list, n_labels_list,
             s_labels_list)
     idx = -1
-    fig, ax = plt.subplots(figsize=(5,3))
+    fig, ax = plt.subplots(figsize=(6,3))
     g_weights_list = numpy.asarray(g_weights_list)
     rwidth = 1./(1+g_weights_list.shape[0])
+
+    cmap = plt.get_cmap('plasma')
 
     nalpha_start = -1
     for n in range(g_weights_list.shape[1]):
@@ -90,9 +92,10 @@ def hist_ns(weights_list, n_labels_list, s_labels_list,
                     label = None
 
         if idx > idx_start:
-            ax.axvspan(idx_start+0.5, idx+0.5, facecolor='g',
-                    alpha=(n-nalpha_start+1.)/(nalpha_end-nalpha_start+1)*0.8,
-                    zorder=-1)
+            ax.axvspan(idx_start+0.5, idx+0.5,
+                    facecolor=cmap(float(n-nalpha_start) \
+                    /(nalpha_end-nalpha_start)),
+                    zorder=-1, alpha=0.2, ls='--', ec='blue')
             x_ticks.append((idx_start+idx+1)/2.)
             label_ticks.append('N='+str(n+nmin))
     ax.set_xlim(-0.5, idx+0.5)
@@ -101,6 +104,7 @@ def hist_ns(weights_list, n_labels_list, s_labels_list,
     ax.legend()
     ax.set_ylabel('Probability')
     fig.tight_layout()
+    plt.show()
     fig.savefig('hist_s.pdf')
 
 

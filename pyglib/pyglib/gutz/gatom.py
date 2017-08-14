@@ -374,34 +374,12 @@ class gAtoms(Atoms):
 
 
     def set_v2e_list(self):
-        from pyglib.mbody.coulomb_matrix import U_matrix
-        mode_list = ['manual', 'slater-condon', 'kanamori']
-        if self.lhub > 0:
-            self.v2e_list = []
-            self.u_avg_list = []
-            self.j_avg_list = []
-            l_list = self.get_llist()
+        from pyglib.mbody.coulomb_matrix import set_v2e_list
+        l_list = self.get_llist()
+        self.v2e_list, self.u_avg_list, self.j_avg_list = \
+                get_v2e_list(self.lhub, l_list, self.u_list,
+                self.j_list, self.imap_list, self.utrans_list)
 
-            for i,imap in enumerate(self.imap_list):
-                if i > imap:
-                    self.v2e_list.append(self.v2e_list[imap])
-                    self.u_avg_list.append(self.u_avg_list[imap])
-                    self.j_avg_list.append(self.j_avg_list[imap])
-                    continue
-                assert len(l_list[i]) == 1, " more than one l with lhub>0!"
-                l_imp = l_list[i][0]
-                utrans = self.utrans_list[i]
-
-                v2e, u_avg, j_avg = U_matrix(mode_list[self.lhub], l_imp,
-                        U_int=self.u_list[i],
-                        J_hund=self.j_list[i], T=utrans)
-                self.v2e_list.append(v2e)
-                self.u_avg_list.append(u_avg)
-                self.j_avg_list.append(j_avg)
-        else:
-            self.v2e_list = None
-            self.u_avg_list = None
-            self.j_avg_list = None
 
 nval_range_list = {
     "H":[0,2],

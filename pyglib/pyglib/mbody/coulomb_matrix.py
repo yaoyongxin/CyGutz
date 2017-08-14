@@ -330,6 +330,36 @@ def get_average_uj(v2e):
     return u_avg, j_avg
 
 
+def get_v2e_list(lhub, l_list, u_list, j_list, imap_list, utrans_list):
+    mode_list = ['manual', 'slater-condon', 'kanamori']
+    if lhub > 0:
+        v2e_list = []
+        u_avg_list = []
+        j_avg_list = []
+
+        for i, imap in enumerate(imap_list):
+            if i > imap:
+                v2e_list.append(v2e_list[imap])
+                u_avg_list.append(u_avg_list[imap])
+                j_avg_list.append(j_avg_list[imap])
+                continue
+            assert len(l_list[i]) == 1, " more than one l with lhub>0!"
+            l_imp = l_list[i][0]
+            utrans = utrans_list[i]
+
+            v2e, u_avg, j_avg = U_matrix(mode_list[lhub], l_imp,
+                    U_int=u_list[i],
+                    J_hund=j_list[i], T=utrans)
+            v2e_list.append(v2e)
+            u_avg_list.append(u_avg)
+            j_avg_list.append(j_avg)
+    else:
+        v2e_list = None
+        u_avg_list = None
+        j_avg_list = None
+
+    return v2e_list, u_avg_list, j_avg_list
+
 
 if __name__ == '__main__':
     l = 2

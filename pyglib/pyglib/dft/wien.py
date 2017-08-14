@@ -126,7 +126,7 @@ def update_case_ref(vfrac_min):
     '''
     cwd = os.getcwd()+'/'
     os.chdir('./template')
-    create_struct('../Vmin/case', 1./vfrac_min, case='case')
+    create_struct('../Ref_Vmin/case', 1./vfrac_min, case='case')
     os.chdir(cwd)
 
 
@@ -320,8 +320,7 @@ def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
         sys.exit('Please choose proper inline argument!')
     if 'Vmin' in sys.argv[1]:
         create_dir1(vfrac_min, 'Ref_Vmin', dir_template=dir_template)
-        print('Done with step-0, goto Ref_Vmin/case and finish manual test \n'
-                + 'and update the case.struct in template with correct RMT!')
+        print('Please goto Ref_Vmin/case and finish manual test.')
     elif 'update_case_ref' == sys.argv[1]:
         update_case_ref(vfrac_min)
     elif 'Vlist' == sys.argv[1]:

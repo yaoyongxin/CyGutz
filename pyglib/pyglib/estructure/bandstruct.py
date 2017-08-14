@@ -14,4 +14,4 @@ def get_estimated_gap(nocc, fband='GBANDS_0.h5'):
             ek = f['/ISPIN_1/IKP_{}/ek'.format(ik)][()]
             evmax = max(ek[nocc-1], evmax)
             ecmin = min(ek[nocc], ecmin)
-    return ecmin - evmax
+    return max(ecmin - evmax, 0.)

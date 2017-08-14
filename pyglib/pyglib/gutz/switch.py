@@ -1,5 +1,5 @@
 from __future__ import print_function
-import h5py,sys
+import h5py, sys
 
 
 def modify_gparam():
@@ -25,3 +25,16 @@ def modify_gparam():
         if '-maxiter' in sys.argv:
             f['/gmaxiter'][()] = [int(sys.argv[sys.argv.index( \
                     '-maxiter') + 1])]
+
+    # change settings in 'ginit.h5' if available
+    if sys.path.isfile('ginit.h5'):
+        with h5py.File('ginit.h5', 'a') as f:
+            if '-imix' in sys.argv:
+                f['/usrqa/lnewton'][()] = int(sys.argv[sys.argv.index( \
+                        '-imix') + 1])
+            if '-iembeddiag' in sys.argv:
+                f['/usrqa/iembeddiag'][()] = int(sys.argv[sys.argv.index( \
+                        '-iembeddiag') + 1])
+            if '-dc_mode' in sys.argv:
+                f['/usrqa/ldc'][()] = int(sys.argv[sys.argv.index( \
+                        '-dc_mode') + 1])
