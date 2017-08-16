@@ -57,18 +57,18 @@ def get_JU_relat_sph_harm_random_phase(l_list):
                 raise_j_list_error(w, 'j_list')
 
             # l-1/2 block
-            Jz1 = v[:,:n1].T.conj().dot(Jz).dot(v[:,:n1])
+            Jz1 = v[:,:n1].T.conj().dot(_Jz).dot(v[:,:n1])
             w1, v1 = np.linalg.eigh(Jz1)
-            if np.max(np.abs(w1[1:] - w[:-1] - 1.)) > 1.e-6:
+            if np.max(np.abs(w1[1:] - w1[:-1] - 1.)) > 1.e-6:
                 raise_j_list_error(w1, 'jz1_list')
             v[:, :n1] = v[:, :n1].dot(v1)
         else:
             n1 = 0
 
         # l+1/2 block
-        Jz1 = v[:,n1:].T.conj().dot(Jz).dot(v[:,n1:])
+        Jz1 = v[:,n1:].T.conj().dot(_Jz).dot(v[:,n1:])
         w1, v1 = np.linalg.eigh(Jz1)
-        if np.max(np.abs(w1[1:] - w[:-1] - 1.)) > 1.e-6:
+        if np.max(np.abs(w1[1:] - w1[:-1] - 1.)) > 1.e-6:
             raise_j_list_error(w1, 'jz2_list')
         v[:, n1:] = v[:, n1:].dot(v1)
         _Jx, _Jy, _Jz = v.T.conj().dot(_Jx).dot(v), \

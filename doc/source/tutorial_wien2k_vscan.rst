@@ -1,5 +1,5 @@
-DFT energy-volume curve
------------------------
+DFT batch calculations
+----------------------
 
 Since DFT+Gutzwiller method is very efficient, 
 it is a routine to perform the calculations for a series of volume points.
@@ -133,7 +133,7 @@ in template directory, including muffin-tin radius and symmetry. Typing::
     $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py update_case_ref
 
 
-step 2: create a list of volume samples
+step 3: create a list of volume samples
 =======================================
 
 Type the following command to create a list of jobs 
@@ -145,7 +145,7 @@ By default, the volume fraction with respect to V0 goes from 0.7 to 1.3
 at step size of 0.05. 
 
 
-step 3: batch initialize the jobs
+step 4: batch initialize the jobs
 =================================
 
 Type the following command to automitically initialize 
@@ -158,7 +158,7 @@ Log file ''binit_lapw.log'' is created in the working directory,
 which records the main output, including possible errors or warnings.
 
 
-step 4: run a series of lapw calculations
+step 5: run a series of lapw calculations
 =========================================
 
 Use the following command to directory run the series DFT calculations, 
@@ -176,7 +176,7 @@ use the following command to save time::
 This can take up to a few hour.
 
 
-step 5: save the lapw calculations
+step 6: save the lapw calculations
 ==================================
 
 It is a good idea to save the main calculation results, 
@@ -185,10 +185,10 @@ Type::
 
     $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py batch_save_lapw
 
-It saves the main results to s subfolder named ''lapw''.
+It saves the main results to a subfolder named ''lapw''.
 
 
-step 6: energy-volume curve from lapw 
+step 7: energy-volume curve from lapw 
 =====================================
 
 We can easily check the energy vs volume curve by typing::
@@ -208,7 +208,7 @@ from fitting to the Murnaghan equation of state are saved as
 the numerical results are also stored in the metadata file ''results.h5''.
 
 
-step 7: adding spin-orbit interaction
+step 8: adding spin-orbit interaction
 =====================================
 
 Type the following command to automitically initialize

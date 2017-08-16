@@ -3,6 +3,7 @@ import numpy as np
 import sys, os, glob, subprocess, shutil, fileinput, h5py
 import pyglib.basic.splot as splot
 import pyglib.basic.units as units
+from pyglib.run import gwien
 
 
 '''help routines for processing wien2k data. Assume the current work directory
@@ -307,8 +308,10 @@ def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
                 '  Vlist -- generate directories for a range of volumes;\n' +
                 '  batch_init_lapw -- init_lapw all the directories;\n' +
                 '  batch_initso_lapw -- initso_lapw all the directories;\n' +
-                '  run_lapw -- run_lapw the directories 1 by 1;\n' +
-                '  run_lapwso -- run_lapw -so the directories;\n' +
+                '  batch_init_ga -- initso_lapw all the directories;\n' +
+                '  batch_run_lapw -- run_lapw all the directories 1 by 1;\n' +
+                '  batch_run_lapwso -- run_lapw -so all the directories;\n' +
+                '  batch_run_ga -- run_ga all the directories; \n'
                 '  batch_save_lapw -- save_lapw the directories; \n' +
                 '  batch_save_lapwso -- save_lapwso the directories; \n' +
                 '  ev_lapw -- save_energy volume data for lapw calc.; \n' +
@@ -328,9 +331,9 @@ def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
                 vfrac_step=vfrac_step, dir_template=dir_template)
     elif 'batch_init_lapw' == sys.argv[1]:
         batch_init_lapw()
-    elif 'run_lapw' == sys.argv[1]:
+    elif 'batch_run_lapw' == sys.argv[1]:
         run_lapw()
-    elif 'run_lapwso' == sys.argv[1]:
+    elif 'batch_run_lapwso' == sys.argv[1]:
         run_lapw(args=['-so', '-i', '70'])
     elif 'batch_save' in sys.argv[1]:
         batch_save_lapw(sdir=sys.argv[1].split('_')[2])
@@ -343,6 +346,10 @@ def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
         h5get_mfit_ev(path='/'+sys.argv[1].split('_')[2])
     elif 'compare_ev' == sys.argv[1]:
         compare_ev_plot()
+    elif 'batch_init_ga' == sys.argv[1]:
+        gwien.batch_init_ga()
+    elif 'batch_run_ga' == sys.argv[1]:
+        gwien.run_ga()
     else:
         raise ValueError('Inline option not defined!')
 

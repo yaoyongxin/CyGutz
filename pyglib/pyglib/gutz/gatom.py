@@ -374,7 +374,7 @@ class gAtoms(Atoms):
 
 
     def set_v2e_list(self):
-        from pyglib.mbody.coulomb_matrix import set_v2e_list
+        from pyglib.mbody.coulomb_matrix import get_v2e_list
         l_list = self.get_llist()
         self.v2e_list, self.u_avg_list, self.j_avg_list = \
                 get_v2e_list(self.lhub, l_list, self.u_list,

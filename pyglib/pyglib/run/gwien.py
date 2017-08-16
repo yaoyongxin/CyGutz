@@ -1,7 +1,7 @@
 from __future__ import print_function
 from builtins import range, zip
 
-import os, sys, glob, h5py, socket, shutil, time, re
+import os, sys, glob, h5py, socket, shutil, time, re, multiprocessing
 import numpy as np
 from collections import deque
 from subprocess import Popen, PIPE
@@ -490,6 +490,39 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         onestep(fday, w_case, 'lapw1', w_root, para)
         if p_so:
             onestep(fday, w_case, 'lapwso', w_root, para)
+
+
+def batch_init_ga(dir_template='./template'):
+    '''Loop over all the directories to initialize CyGutz calculations
+     -- actually, since the CyGutz input files remain the same for different
+    volumes, it simply copy the input files in template directory to
+    each folder.
+    '''
+    cwd = os.getcwd()+'/'
+    for dname in glob.glob('V*'):
+        os.chdir(dname+'/case')
+        shutil.copy(cwd+'/'+dir_template+'/ginit.h5', './')
+        shutil.copy(cwd+'/'+dir_template+'/GPARAM.h5', './')
+        shutil.copy(cwd+'/'+dir_template+'/case.indmfl', './')
+        os.chdir(cwd)
+
+
+def run_ga(nproc=1):
+    '''Loop over all the directories to run_ga using nproc processors.
+    '''
+    cwd = os.getcwd()+'/'
+    if '-p' in sys.argv:
+        nproc = int(sys.argv[sys.argv.index('-p')+1])
+    jobs = []
+    for i,dname in enumerate(glob.glob('V*')):
+        os.chdir(dname+'/case')
+        p = multiprocessing.Process(target=run_gwien, args=())
+        jobs.append(p)
+        p.start()
+        os.chdir(cwd)
+        if len(jobs) == nproc:
+            for job in jobs:
+                job.join()
 
 
 

@@ -119,7 +119,7 @@ module gkernel
     integer,intent(in)::io
     external::av
 
-    real(q),parameter :: rtol=1.e-10_q,epsfcn=1.e-10_q
+    real(q),parameter :: rtol=1.e-10_q,epsfcn=1.e-10_q,nitmin=1000
 
     !! If {n} as the variables like lda+u
     if(gkmem%iembeddiag==10)then
@@ -147,7 +147,7 @@ module gkernel
         do 
             call ghybrd( &
                     &av,gkmem%nx,gkmem%x,gkmem%fvec,rtol,epsfcn,io)
-            if(gkmem%iter>=gkmem%max_iter.or.gkmem%maxerr<gkmem%rtol)exit
+            if(gkmem%iter>=nitmin.or.gkmem%maxerr<gkmem%rtol)exit
         enddo
     case(-1,1)
         call broyden_mix( &
