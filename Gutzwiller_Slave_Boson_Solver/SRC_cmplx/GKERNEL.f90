@@ -119,6 +119,7 @@ module gkernel
     integer,intent(in)::io
     external::av
 
+    integer imore
     real(q),parameter :: rtol=1.e-10_q,epsfcn=1.e-10_q,nitmin=1000
 
     !! If {n} as the variables like lda+u
@@ -144,7 +145,7 @@ module gkernel
 
     select case(gkmem%imix)
     case(0)
-        do 
+        do imore=1,3
             call ghybrd( &
                     &av,gkmem%nx,gkmem%x,gkmem%fvec,rtol,epsfcn,io)
             if(gkmem%iter>=nitmin.or.gkmem%maxerr<gkmem%rtol)exit

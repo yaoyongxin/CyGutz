@@ -161,7 +161,7 @@ which records the main output, including possible errors or warnings.
 step 5: run a series of lapw calculations
 =========================================
 
-Use the following command to directory run the series DFT calculations, 
+Use the following command to directly run the series DFT calculations, 
 since they are usually cheap. 
 Otherwise, one should use job script file to submit these jobs 
 to the clusters. Type::
@@ -206,6 +206,21 @@ The energy-volume curve and pressure-volume curve
 from fitting to the Murnaghan equation of state are saved as 
 ''lapw_evfit.pdf'' and ''lapw_pvfit.pdf'', 
 the numerical results are also stored in the metadata file ''results.h5''.
+One can view the results by typing::
+
+    $ h5ls -r results.h5
+
+and get:: 
+
+    /lapw/eosfit             Group
+    /lapw/eosfit/b0          Dataset {SCALAR}
+    /lapw/eosfit/bp          Dataset {SCALAR}
+    /lapw/eosfit/e0          Dataset {SCALAR}
+    /lapw/eosfit/e_list      Dataset {129}
+    /lapw/eosfit/p_list      Dataset {129}
+    /lapw/eosfit/v0          Dataset {SCALAR}
+    /lapw/eosfit/v_list      Dataset {129}
+    /lapw/etot_list          Dataset {13}
 
 
 step 8: adding spin-orbit interaction

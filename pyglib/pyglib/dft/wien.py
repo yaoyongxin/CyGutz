@@ -311,13 +311,16 @@ def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
                 '  batch_init_ga -- initso_lapw all the directories;\n' +
                 '  batch_run_lapw -- run_lapw all the directories 1 by 1;\n' +
                 '  batch_run_lapwso -- run_lapw -so all the directories;\n' +
-                '  batch_run_ga -- run_ga all the directories; \n'
-                '  batch_save_lapw -- save_lapw the directories; \n' +
-                '  batch_save_lapwso -- save_lapwso the directories; \n' +
+                '  batch_run_ga -- run_ga all the directories; \n' +
+                '  batch_save_lapw -- save_lapw all the directories; \n' +
+                '  batch_save_lapwso -- save_lapwso all the directories; \n' +
+                '  batch_gsave_uxjx -- save DFT+G results to uxjx dirs; \n' +
                 '  ev_lapw -- save_energy volume data for lapw calc.; \n' +
                 '  ev_lapwso -- save_energy volume data for lapwso calc.\n' +
+                '  ev_uxjy -- save_energy volume data for DFT+G calc.\n' +
                 '  eos_fit_lapw -- Murnaghan EOS fir for lapw results;\n' +
                 '  eos_fit_lapwso -- Murnaghan EOS fir for lapwso results.\n' +
+                '  eos_fit_uxjx -- Murnaghan EOS fir for DFT+G results.\n' +
                 '  compare_ev -- Compare the EOS for lapw/lapwso/lapwsog.\n' +
                 '  You may append "-p nproc" to specify # of procs in use.')
         sys.exit('Please choose proper inline argument!')
@@ -337,6 +340,8 @@ def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
         run_lapw(args=['-so', '-i', '70'])
     elif 'batch_save' in sys.argv[1]:
         batch_save_lapw(sdir=sys.argv[1].split('_')[2])
+    elif 'batch_gsave' in sys.argv[1]:
+        gwien.batch_gsave(sdir=sys.argv[1].split('_')[2])
     elif 'ev_' in sys.argv[1]:
         h2get_energy_volume_list(path=sys.argv[1].split('_')[1])
     elif 'batch_initso_lapw' == sys.argv[1]:

@@ -7,3 +7,4 @@ Tutorials
   tutorial_bethe_latt
   tutorial_checkboard
   tutorial_wien2k_vscan
+  tutorial_gwien_vscan

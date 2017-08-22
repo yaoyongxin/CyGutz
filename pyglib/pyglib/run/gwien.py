@@ -1,7 +1,8 @@
 from __future__ import print_function
 from builtins import range, zip
 
-import os, sys, glob, h5py, socket, shutil, time, re, multiprocessing
+import os, sys, glob, h5py, socket, shutil, time, re, multiprocessing, \
+        subprocess
 import numpy as np
 from collections import deque
 from subprocess import Popen, PIPE
@@ -107,7 +108,7 @@ def onestep(fday, case, exec_name, w_root, para):
     print(' '.join(x for x in cmd))
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
-    fday.write('>{:<10s} ({}) {}'.format(exec_name, time_start, out))
+    fday.write('>{:<10s} ({}) {}\n'.format(exec_name, time_start, out))
     fday.flush()
     for f in glob.glob('{}.error*'.format(exec_name)):
         if os.path.getsize(f) > 0:
@@ -136,7 +137,7 @@ def gonestep(fday, exec_name, mpi):
     out, err = process.communicate()
     with open('{}_info.out'.format(exec_name), 'w') as f:
         f.write(out)
-    fday.write('>{:<10s} ({}) {}'.format(exec_name, time_start, \
+    fday.write('>{:<10s} ({}) {}\n'.format(exec_name, time_start, \
             err.splitlines()[-2]))
     fday.flush()
     for f in glob.glob('{}.error*'.format(exec_name)):
@@ -523,6 +524,17 @@ def run_ga(nproc=1):
         if len(jobs) == nproc:
             for job in jobs:
                 job.join()
+
+
+def batch_gsave(sdir='ldag', args=['-f']):
+    '''Loop over all the directories to save_lapw.
+    '''
+    cmd = [os.environ['WIEN_GUTZ_ROOT2']+'/save_ldag', '-d'] + [sdir] + args
+    cwd = os.getcwd()+'/'
+    for dname in glob.glob('V*'):
+        os.chdir(dname+'/case')
+        subprocess.call(cmd)
+        os.chdir(cwd)
 
 
 
