@@ -44,6 +44,10 @@ Rename the cif file to be ''case.cif'' by typing::
 
     $ rename *cif case.cif
 
+Generate the preliminary struct file by typing::
+
+    $ ${WIENROOT}/cif2struct case.cif
+
 
 step 1: initialize and run the minimal volume point
 ===================================================
@@ -166,12 +170,12 @@ since they are usually cheap.
 Otherwise, one should use job script file to submit these jobs 
 to the clusters. Type::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py run_lapw
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py batch_run_lapw
 
 If there are several cores available, e.g., 4,
 use the following command to save time::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py run_lapw -p 4
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py batch_run_lapw -p 4
 
 This can take up to a few hour.
 
@@ -233,7 +237,7 @@ the series of jobs with SOI::
 
 Run the series of DFT+SOI calculations by typing::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py run_lapwso -p 4
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py batch_run_lapwso -p 4
 
 The whole job should be finished within one hour.
 Save the lapwso results by typing::

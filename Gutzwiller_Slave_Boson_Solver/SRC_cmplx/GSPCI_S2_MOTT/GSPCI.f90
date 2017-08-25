@@ -84,22 +84,41 @@ module gspci
 
 
     subroutine gspci_gh5exe()
-    integer::i,ierr,nv
+    integer::i,ierr,nv,idx,iembdv
     character*32 str
     real(q)::etot,de
     logical lexist
+    character(255) cmd
 
-    call get_command_argument(1, value=str, status=ierr)
-    if(ierr/=0)then
-        write(0,'(" Error in gspci_gh5start: missing inline argument!")')
-        stop 1 
+    call get_command(cmd)
+
+    idx=index(cmd,'-i ')
+    if(idx>0)then
+        read(cmd(idx+2:),*)i
+    else 
+        ! By default, work with the 1st impurity
+        i=1
     endif
-    read(str,*)i
-    call get_command_argument(2, value=str, status=ierr)
-    if(ierr==0)then
-        read(str,*)dmem%lambda_j2
-        write(0,'(" lambda_s2 = ", f0.4)')dmem%lambda_j2
+    write(0,'(" solving impurity ", i2)')i
+
+    idx=index(cmd,'-l ')
+    if(idx>0)then
+        read(cmd(idx+2:),*)dmem%lambda_j2
     endif
+    write(0,'(" lambda_s2 = ", f0.4)')dmem%lambda_j2
+
+    idx=index(cmd,'-e ')
+    if(idx>0)then
+        read(cmd(idx+2:),*)iembdv
+    else
+        iembdv=0
+    endif
+    if(iembdv>0)then
+        write(0,'(" existing eigen-vector serves as the starting point.")')
+    else
+        write(0,'(" random vector serves as the starting point.")')
+    endif
+
     call gh5_init()
     call gh5_open_r('EMBED_HAMIL_'//trim(int_to_str(i))//'.h5',f_id)
     call gh5_read(dmem%norb,'/na2',f_id)
@@ -129,6 +148,7 @@ module gspci
 
     ! Check previous solution vector
     inquire(file='EMBED_HAMIL_RES_'//trim(int_to_str(i))//'.h5',exist=lexist)
+    lexist=lexist.and.(iembdv>0)
     if(lexist)then
         call gh5_open_r('EMBED_HAMIL_RES_'//trim(int_to_str(i))//'.h5',f_id)
         call gh5_read(nv,'/dimv',f_id)

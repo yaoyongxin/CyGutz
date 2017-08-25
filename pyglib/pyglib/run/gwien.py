@@ -189,7 +189,7 @@ def diff(fday, case, mix_dc, avg_dc):
             if ':ENE' in line:
                 e_que.append(float(line.split()[-1]))
     if len(e_que) == 2:
-        d_etot = e_que[1] - e_que[0]
+        d_etot = np.abs(e_que[1] - e_que[0])
     else:
         d_etot = 1.0
 
@@ -486,6 +486,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
                 dvdc, drho, cc, dene, ec, gerr, icycle))
         if drho < cc and dene < ec and dvdc < vc:
             sys.exit(0)
+
 
         onestep(fday, w_case, 'lapw0', w_root, para)
         onestep(fday, w_case, 'lapw1', w_root, para)

@@ -1293,3 +1293,42 @@ subroutine calc_reduced_rho_nblk(rho,n,ival)
 
 
 end subroutine calc_reduced_rho_nblk
+
+
+subroutine calc_save_phi_matrix_blks(imp)
+    use gprec
+    use sparse
+    use gutil
+    use ghdf5_base
+    use ghdf5
+    use gspci
+    implicit none
+    integer,intent(in)::imp
+
+    integer ival,nfs,nfs_l,nbase
+    complex(q),allocatable::phi(:,:)
+
+    call gh5_open_w('EMBED_HAMIL_PHIMAT_'//trim(int_to_str(imp))//'.h5',f_id)
+    nbase=0
+    do ival=dmem%nval_bot,dmem%nval_top
+        nfs=dmem%idx(ival+1)-dmem%idx(ival)
+        nfs_l=dmem%idx_l(dmem%norb-ival+1)-dmem%idx_l(dmem%norb-ival)
+        allocate(phi(nfs,nfs))
+        call phi_vec_to_mat(dmem%v(nbase+1:nbase+nfs*nfs_l), &
+                &phi,nfs,dmem%bs_l(dmem%idx_l(dmem%norb-ival): &
+                &dmem%idx_l(dmem%norb-ival+1)-1), &
+                &nfs_l,dmem%norb,dmem%ibs,dmem%idx(ival))
+        if(maxval(abs(phi))>1.d-16)then
+            call gh5_create_group('/valence_block_'// &
+                    &trim(int_to_str(ival)),f_id)
+            call gh5_write(phi,nfs,nfs,'/valence_block_'// &
+                    &trim(int_to_str(ival))//'/PHI',f_id)
+        endif
+        deallocate(phi)
+        nbase=nbase+nfs*nfs_l
+    enddo
+    call gh5_close(f_id)
+
+
+end subroutine calc_save_phi_matrix_blks
+

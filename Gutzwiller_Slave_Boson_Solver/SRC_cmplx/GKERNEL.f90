@@ -285,7 +285,7 @@ module gkernel
             write(0,'(" Error in running exe_spci_mott!")')
         endif
     elseif(gkmem%iembeddiag==-3)then
-        call execute_command_line('exe_spci_s2_mott '//int_to_str(i),  &
+        call execute_command_line('exe_spci_s2_mott -i '//int_to_str(i),  &
                 &exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running exe_spci_s2_mott!")')

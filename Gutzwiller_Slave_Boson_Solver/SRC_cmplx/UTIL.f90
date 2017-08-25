@@ -69,7 +69,9 @@ module gutil
             & primme_diag, primme_diag_chk, get_coul_exchange, get_hf_pot, &
             & calc_state_sz, sum_empty_slots_fs,chk_sum_first_empty_slots_fs, &
             & chk_i_in_list, hermev_blk, get_determinant_a, &
-            & set_occupied_orbitals, set_skip_orbitals, calc_fock_state_coef
+            & set_occupied_orbitals, set_skip_orbitals, &
+            & calc_fock_state_coef, phi_mat_to_vec, &
+            & phi_vec_to_mat
       
     interface orbital_spin_trans
         module procedure dspin_blk1_trans, zspin_blk2u_trans, &
@@ -167,6 +169,14 @@ module gutil
     interface chk_eigens_matrix_list
         module procedure chk_eigens_dmatrix_list,chk_eigens_zmatrix_list
     end interface chk_eigens_matrix_list
+
+    interface phi_mat_to_vec
+        module procedure zphi_mat_to_vec
+    end interface phi_mat_to_vec
+
+    interface phi_vec_to_mat
+        module procedure zphi_vec_to_mat
+    end interface phi_vec_to_mat
 
     contains
       
@@ -2462,6 +2472,50 @@ module gutil
     return
 
     end function get_determinant_za
+
+
+    ! convert a valence block of phi-vector to phi-matrix.
+    subroutine zphi_vec_to_mat(v,a,n,bs_l,nl,norb,ibs,ibs_base)
+    integer,intent(in)::n,nl,norb,ibs_base ! nl<n for mott phase
+    complex(q),intent(in)::v(n*nl)
+    integer,intent(in)::bs_l(nl),ibs(0:ishft(1,norb)-1)
+    complex(q),intent(out)::a(n,n)
+    
+    integer j,bs,ib,nmax
+
+    a=0 ! \phi_{\Gamma, n}
+    nmax=ishft(1,norb)-1
+    do j=1,nl
+        bs=bs_l(j) 
+        bs=nmax-bs ! post particle-hole transformation
+        ib=ibs(bs)-ibs_base+1 ! get the correct index for phi-matrix
+        a(:,ib)=v(j::nl)
+    enddo
+    return
+
+    end subroutine zphi_vec_to_mat
+
+
+    ! convert a valence block of phi-vector to phi-matrix.
+    subroutine zphi_mat_to_vec(v,a,n,bs_l,nl,norb,ibs,ibs_base)
+    integer,intent(in)::n,nl,norb,ibs_base ! nl<n for mott phase
+    complex(q),intent(inout)::v(n*nl)
+    integer,intent(in)::bs_l(nl),ibs(0:ishft(1,norb)-1)
+    complex(q),intent(in)::a(n,n)
+    
+    integer j,bs,ib,nmax
+
+    nmax=ishft(1,norb)-1
+    do j=1,nl
+        bs=bs_l(j) 
+        bs=nmax-bs ! post particle-hole transformation
+        ib=ibs(bs)-ibs_base+1 ! get the correct index for phi-matrix
+        v(j::nl)=v(j::nl)+a(:,ib)
+    enddo
+    return
+
+    end subroutine zphi_mat_to_vec
+
 
 
 end module gutil
