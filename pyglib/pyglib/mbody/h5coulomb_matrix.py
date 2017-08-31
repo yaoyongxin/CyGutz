@@ -1,5 +1,5 @@
-'''Directly modify the Coulomb U-matrix of impurity assuming Slater-Condon type
-parametrization.
+'''Directly modify the Coulomb U-matrix of impurity
+assuming Slater-Condon type parametrization.
 
 Files needed:
     GPARAM.h5.

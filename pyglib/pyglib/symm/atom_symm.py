@@ -15,7 +15,7 @@ Output:
 """
 
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import isspmatrix
 import sys
 
 
@@ -30,7 +30,7 @@ def get_rotation(J, theta, method="eigh"):
     '''
     exponent = J[0] * theta[0] + J[1] * theta[1] + J[2] * theta[2]
     if method == "eigh":
-        if isinstance(exponent, csr_matrix):
+        if isspmatrix(exponent):
             exponent = exponent.todense()
         vals, vecs = np.linalg.eigh(exponent)
         rep = np.dot(
@@ -295,7 +295,7 @@ def check_commute_G(H, G):
     for i, g in enumerate(G):
         if isinstance(g, np.ndarray):
             C = np.dot(H, g) - np.dot(g, H)
-        elif isinstance(g, csr_matrix):
+        elif isspmatrix(g):
             C = np.dot(H, g.todense()) - g.dot(H)
         else:
             raise AssertionError("Unsupported datatype of g" + g.__class__)
@@ -311,13 +311,7 @@ def get_characters_espace(representation, V):
     chi = []
     repr = []
     for R in representation:
-        if isinstance(R, np.ndarray):
-            VHRV = np.dot(np.conj(V), np.dot(R, V.T))
-        elif isinstance(R, csr_matrix):
-            VHRV = np.dot(np.conj(V), R.dot(V.T))
-        else:
-            print(" Unsupported data type of V", V.__class__)
-            quit()
+        VHRV = V.conj().dot(R).dot(V.T)
         if VHRV.shape == (1,):
             tr = VHRV[0]
         else:

@@ -13,6 +13,7 @@ def initialize():
     print("    "+" ".join(sys.argv[:]), file=log_file)
 
     from pyglib.gutz.structure import get_gatoms, check_material
+    from pyglib.gutz.gatom import h5calc_save_lrot
     # get the material
     material = get_gatoms()
     material.set_modify_mode()
@@ -64,6 +65,10 @@ def initialize():
             nval_bot_list=material.nval_bot_list,
             nval_top_list=material.nval_top_list,
             updn_list=material.updn_list)
+
+    # local rotation matrix (l) in Hilbert space.
+    h5calc_save_lrot(material)
+
     log_file.close()
 
 

@@ -32,7 +32,7 @@ def get_csr_matrix(f, path):
 
 def get_coo_matrix(f, path):
     '''
-    Read the csr_matrix located at path in the hdf5 file f.
+    Read the coo_matrix located at path in the hdf5 file f.
     '''
     nrow = f[path + "/nrow"][0]
     ncol = f[path + "/ncol"][0]
@@ -56,6 +56,19 @@ def write_csr_matrix(f, path, a):
     f[path + "/base"] = [0]
     f[path + "/indices"] = a.indices
     f[path + "/indptr"] = a.indptr
+
+
+def write_coo_matrix(f, path, a):
+    '''
+    Write the coo_matrix located at path in the hdf5 file f.
+    '''
+    f[path + "/nrow"] = [a.shape[0]]
+    f[path + "/ncol"] = [a.shape[1]]
+    f[path + "/nnz"] = [a.nnz]
+    f[path + "/data"] = a.data
+    f[path + "/base"] = [0]
+    f[path + "/i"] = a.row
+    f[path + "/j"] = a.col
 
 
 def get_hs_rotations(f, imp, valences):

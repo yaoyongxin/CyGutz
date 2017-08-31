@@ -2,15 +2,19 @@
 Get lcoal operators given the {n_ij} operators.
 '''
 
-import h5py
+import h5py, pkg_resources
 import itertools as it
 import numpy as np
 from scipy.sparse import csc_matrix
+from pyglib.io.h5io import get_coo_matrix
+
 
 def get_linear_operators(nij, uij):
     '''
     Calculate \sum_{i,j} nij_{i,j}*uij(i,j).
     '''
+    if nij is None:
+        return None
     res = None
     for i, n1, u1 in it.izip(it.count(), nij, uij):
         for j, n12, u12 in it.izip(it.count(), n1, u1):
@@ -33,7 +37,7 @@ def get_linear_operators(nij, uij):
     return res
 
 
-def get_am_op_from_nij(svec, lvec, nij, op_list):
+def get_am_op_from_nij(svec=None, lvec=None, nij=None, op_list=None):
     '''
     Get angular momentum operators given the {n_ij} operators and
     coiefficient matrice of spin and orbital momentum operators.
@@ -41,11 +45,14 @@ def get_am_op_from_nij(svec, lvec, nij, op_list):
     if op_list is None:
         return None
 
-    s_z = get_linear_operators(nij, svec[2])
-    s_p = get_linear_operators(nij, svec[0]+1.j*svec[1])
-    l_z = get_linear_operators(nij, lvec[2])
-    l_p = get_linear_operators(nij, lvec[0]+1.j*lvec[1])
-    j_z, j_p = s_z + l_z, s_p + l_p
+    if svec is not None:
+        s_z = get_linear_operators(nij, svec[2])
+        s_p = get_linear_operators(nij, svec[0]+1.j*svec[1])
+    if lvec is not None:
+        l_z = get_linear_operators(nij, lvec[2])
+        l_p = get_linear_operators(nij, lvec[0]+1.j*lvec[1])
+    if svec is not None and lvec is not None:
+        j_z, j_p = s_z + l_z, s_p + l_p
     res = {}
 
     if "Sx" in op_list:
@@ -82,8 +89,6 @@ def get_local_operators(imp, ival, op_list):
     Get the local operators, like Sx, Sy, Sz, Lx, Ly, Lz, S^2, L^2
     and J^2 operators for impurity imp.
     '''
-    from pyglib.io.h5io import get_coo_matrix
-
     # Read in coefficient matrices for S and L.
     with h5py.File('GPARAM.h5', 'r') as f:
         svec = []
@@ -109,7 +114,7 @@ def get_local_operators(imp, ival, op_list):
                     n_i.append(None)
             nij.append(n_i)
 
-    return get_am_op_from_nij(svec, lvec, nij, op_list)
+    return get_am_op_from_nij(svec=svec, lvec=lvec, nij=nij, op_list=op_list)
 
 
 def get_label_list(J, vecs):
@@ -126,3 +131,50 @@ def get_label_list(J, vecs):
             label.append(res.real)
         label = np.array(label)
     return label
+
+
+def get_nij_op(l='d', ival='1'):
+    '''get the matrix representation of n_{i,j}=c_{i}^{\dagger} c_{j}
+    in the Hilbert space with valence of ival from preset file 'mbody.h5'.
+    '''
+    if l == 'd':
+        norb = 10
+    elif l == 'f':
+        norb = 14
+    else:
+        raise ValueError('unsupported orbital={}!'.format(l))
+    fname = pkg_resources.resource_filename('pyglib', './mbody/mbody.h5')
+    with h5py.File(fname, 'r') as f:
+        nij = []
+        for i in range(norb):
+            n_i = []
+            for j in range(i+1):
+                path = '/{}/valence_block_{}/n_{}_{}'.format(
+                        l,ival,i,j)
+                n_i.append(get_coo_matrix(f, path).tocsc())
+            nij.append(n_i)
+    return nij
+
+
+def get_lvec_op(lvec, l='d', ival='1'):
+    '''get the l angular momentum operators [lx, ly, lz]
+    in the Hilbert space with valence of ival,
+    given their representation in single particle space (lvec).
+    '''
+    nij = get_nij_op(l=l, ival=ival)
+    lops = get_am_op_from_nij(lvec=lvec, nij=nij,
+            op_list=['Lx', 'Ly', 'Lz'])
+    return [lops['Lx'], lops['Ly'], lops['Lz']]
+
+
+def get_lrot_op(lvec, lie_jeven_params, l='d', ival='1'):
+    '''get the 3d rotation matrix representations
+    in the Hilbert space with valence of ival,
+    given the single particle space representation of the l-angular momentum
+    operators and lie parameters.
+    '''
+    lops = get_lvec_op(lvec, l=l, ival=ival)
+    from pyglib.symm.atom_symm import get_representation
+    return get_representation(lops, lie_jeven_params)
+
+

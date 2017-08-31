@@ -381,6 +381,44 @@ class gAtoms(Atoms):
                 self.j_list, self.imap_list, self.utrans_list)
 
 
+def h5calc_save_lrot(gatm):
+    '''calcuate the 3d rotation matrix representations
+    in Hilbert space fro each impurity.
+    for equivalent impurity, a link is set up instead of
+    redundant calculations.
+    the results are save in 'GLROT.h5'.
+    '''
+    from pyglib.mbody.local_operator_factory import get_lrot_op
+    if os.path.isfile('GLROT.h5'):
+        return
+    with h5py.File('GLROT.h5', 'w') as f:
+        for i, imap in enumerate(gatm.imap_list):
+            prefix = '/IMPURITY_{}'.format(i+1)
+            if i > imap:
+                f[prefix] = h5py.SoftLink(
+                        '/IMPURITY_{}'.format(imap+1))
+                continue
+            elif i < imap:
+                raise ValueError('(i={}) > (imap={})'.format(i, imap))
+            else:
+                orb = gatm.df_list[i]
+                if orb == 'd':
+                    nmax = 10
+                elif orb == 'f':
+                    nmax = 14
+                else:
+                    raise ValueError('not supported df={}!'.format(orb))
+                # empty or full occupation excluded.
+                lvec = [gatm.lx_list[i], gatm.ly_list[i], gatm.lz_list[i]]
+                for ival in range(1, nmax):
+                    lrots = get_lrot_op(lvec, gatm.Lie_Jeven_list[i],
+                            l=orb, ival=ival)
+                    for ir, lrot in enumerate(lrots):
+                        f[prefix+'/valence_block_{}/ROT_{}'.format( \
+                                ival, ir+1)] = lrot.T
+
+
+
 nval_range_list = {
     "H":[0,2],
     "Li":[0,2],
