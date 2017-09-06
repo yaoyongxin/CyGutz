@@ -296,6 +296,12 @@ module gkernel
         if(ierr/=0)then
             write(0,'(" Error in running exe_spci_j2_mott!")')
         endif
+    elseif(gkmem%iembeddiag==-31)then
+        call execute_command_line('exe_spci_s2_dsym_mott -i '//int_to_str(i),  &
+                &exitstat=ierr)
+        if(ierr/=0)then
+            write(0,'(" Error in running exe_spci_s2_dsym_mott!")')
+        endif
     elseif(gkmem%iembeddiag==-10)then
         call execute_command_line('exe_spci_bathtrunc '//int_to_str(i),  &
                 &exitstat=ierr)

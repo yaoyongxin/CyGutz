@@ -242,34 +242,50 @@ def h2get_energy_volume_list(path='lapw'):
             ylabel='E (eV/primitive cell)', fsave='ev_{}.pdf'.format(path))
 
 
-def compare_ev_plot(fres='results.h5'):
-    '''Compare lapw/lapwso/lapwsog in a plot compare_ev.pdf.
+def compare_ev_plot(path_list, fres='results.h5'):
+    '''Compare lapw/lapwso/lapwsog in a plot.
     '''
     v_list = []
     e_list = []
     pattern_list = []
     label_list = []
     with h5py.File(fres, 'r') as f:
-        if '/lapw' in f:
-            label_list.append('lapw')
-            e_list.append(f['/lapw/etot_list'][...])
-            v_list.append(f['/vol_list'][...])
-            pattern_list.append('o')
-        if '/lapwso' in f:
-            label_list.append('lapwso')
-            e_list.append(f['/lapwso/etot_list'][...])
-            v_list.append(f['/vol_list'][...])
-            pattern_list.append('d')
-        if '/lapwsog' in f:
-            label_list.append('lapwsog')
-            e_list.append(f['/lapwsog/etot_list'][...])
-            v_list.append(f['/vol_list'][...])
-            pattern_list.append('h')
+        postfix=''
+        for path in path_list:
+            if path in f:
+                label_list.append(path)
+                e_list.append(f['/'+path+'/etot_list'][()])
+                v_list.append(f['/vol_list'][()])
+                pattern_list.append('o')
+                postfix += path.split('/')[0]
         if v_list != []:
             splot.xy2_plot(v_list, e_list, pattern_list, label_list,
                     xlabel='V ($\AA^{3}$/primitive cell)',
                     ylabel='E (eV/primitive cell)',
-                    fsave='ev_compare.pdf')
+                    fsave='ev_{}.pdf'.format(postfix))
+
+
+def compare_pv_plot(path_list, fres='results.h5'):
+    '''Compare lapw/lapwso/lapwsog in a plot.
+    '''
+    v_list = []
+    p_list = []
+    pattern_list = []
+    label_list = []
+    with h5py.File(fres, 'r') as f:
+        postfix=''
+        for path in path_list:
+            if path in f:
+                label_list.append(path)
+                p_list.append(f['/'+path+'/p_list'][()])
+                v_list.append(f['/'+path+'/v_list'][()])
+                pattern_list.append('o')
+                postfix += path.split('/')[0]
+        if v_list != []:
+            splot.xy2_plot(v_list, p_list, pattern_list, label_list,
+                    xlabel='V ($\AA^{3}$/primitive cell)',
+                    ylabel='P (GPa)',
+                    fsave='pv_{}.pdf'.format(postfix))
 
 
 def batch_save_lapw(sdir='lapw', args=['-f']):
@@ -299,6 +315,19 @@ def run_lapw(args=['-i', '70'], nproc=1):
             proc.communicate()
 
 
+def batch_copy_dir(src, dst):
+    '''Loop over all the directories and copy subfolder src to dst.
+    '''
+    cwd = os.getcwd()+'/'
+    for dname in glob.glob('V*'):
+        os.chdir(dname+'/case')
+        if not os.path.lexists(dst):
+            os.mkdir(dst)
+        for f in os.listdir(src):
+            shutil.copy(src+'/'+f, dst)
+        os.chdir(cwd)
+
+
 def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
         dir_template='./template'):
     if len(sys.argv) == 1 or '-h' in sys.argv[1]:
@@ -308,20 +337,28 @@ def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
                 '  Vlist -- generate directories for a range of volumes;\n' +
                 '  batch_init_lapw -- init_lapw all the directories;\n' +
                 '  batch_initso_lapw -- initso_lapw all the directories;\n' +
-                '  batch_init_ga -- initso_lapw all the directories;\n' +
+                '  batch_init_ga -- init ga for all the directories;\n' +
+                '  batch_init_mott -- init ga-mott for all directories;\n' +
+                '  batch_setu_x_j_x -- set u/j for all directories;\n' +
+                '  batch_modify_ga ... -- modify ga for all directories;\n' +
                 '  batch_run_lapw -- run_lapw all the directories 1 by 1;\n' +
                 '  batch_run_lapwso -- run_lapw -so all the directories;\n' +
                 '  batch_run_ga -- run_ga all the directories; \n' +
                 '  batch_save_lapw -- save_lapw all the directories; \n' +
                 '  batch_save_lapwso -- save_lapwso all the directories; \n' +
                 '  batch_gsave_uxjx -- save DFT+G results to uxjx dirs; \n' +
-                '  ev_lapw -- save_energy volume data for lapw calc.; \n' +
-                '  ev_lapwso -- save_energy volume data for lapwso calc.\n' +
-                '  ev_uxjy -- save_energy volume data for DFT+G calc.\n' +
-                '  eos_fit_lapw -- Murnaghan EOS fir for lapw results;\n' +
-                '  eos_fit_lapwso -- Murnaghan EOS fir for lapwso results.\n' +
-                '  eos_fit_uxjx -- Murnaghan EOS fir for DFT+G results.\n' +
-                '  compare_ev -- Compare the EOS for lapw/lapwso/lapwsog.\n' +
+                '  batch_gsave_uxjx -- save DFT+G results to uxjx dirs; \n' +
+                '  -cp-dir src dst -- copy subfilder src to dst; \n' +
+                '  -jobq u j -w dir -- batch submit jobs; \n' +
+                '  -ev lapw -- save_energy volume data for lapw calc.; \n' +
+                '  -ev lapwso -- save e-v data for lapwso calc.\n' +
+                '  -ev dirname -- save e-v data for dirname calc.\n' +
+                '  -pv lapw -- Murnaghan EOS fir for lapw results;\n' +
+                '  -pv lapwso -- Murnaghan EOS fir for lapwso results.\n' +
+                '  -pv uxjx -- Murnaghan EOS fir for DFT+G results.\n' +
+                '  -pv dirname -- Murnaghan EOS fir for dirname results.\n' +
+                '  -ev-cmp path1 path2 ... -- Compare e-v data.\n' +
+                '  -pv-cmp path1 path2 ... -- Compare p-v data.\n' +
                 '  You may append "-p nproc" to specify # of procs in use.')
         sys.exit('Please choose proper inline argument!')
     if 'Vmin' in sys.argv[1]:
@@ -342,17 +379,32 @@ def steps(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
         batch_save_lapw(sdir=sys.argv[1].split('_')[2])
     elif 'batch_gsave' in sys.argv[1]:
         gwien.batch_gsave(sdir=sys.argv[1].split('_')[2])
-    elif 'ev_' in sys.argv[1]:
-        h2get_energy_volume_list(path=sys.argv[1].split('_')[1])
+    elif '-cp-dir' == sys.argv[1]:
+        batch_copy_dir(sys.argv[2], sys.argv[3])
+    elif '-ev' == sys.argv[1]:
+        h2get_energy_volume_list(path=sys.argv[2])
     elif 'batch_initso_lapw' == sys.argv[1]:
         batch_initso_lapw()
-    elif 'eos_fit' in sys.argv[1]:
+    elif '-pv' == sys.argv[1]:
         from pyglib.dft.eos import h5get_mfit_ev
-        h5get_mfit_ev(path='/'+sys.argv[1].split('_')[2])
-    elif 'compare_ev' == sys.argv[1]:
-        compare_ev_plot()
+        h5get_mfit_ev(path=sys.argv[2])
+    elif '-ev-cmp' == sys.argv[1]:
+        compare_ev_plot(sys.argv[2:])
+    elif '-pv-cmp' == sys.argv[1]:
+        compare_pv_plot(sys.argv[2:])
     elif 'batch_init_ga' == sys.argv[1]:
         gwien.batch_init_ga()
+    elif 'batch_init_mott' == sys.argv[1]:
+        gwien.batch_init_mott()
+    elif 'batch_setu' in sys.argv[1]:
+        _args = sys.argv[1].split('_')
+        args = ['-unique_u_ev', _args[2], '-unique_j_ev', _args[4]]
+        gwien.batch_modify_ga_setup(args)
+    elif 'batch_modify_ga' == sys.argv[1]:
+        args = sys.argv[2:]
+        gwien.batch_modify_ga_setup(args)
+    elif '-jobq' == sys.argv[1]:
+        gwien.batch_job_slurm(sys.argv[2], sys.argv[3])
     elif 'batch_run_ga' == sys.argv[1]:
         gwien.run_ga()
     else:

@@ -175,6 +175,5 @@ def get_lrot_op(lvec, lie_jeven_params, l='d', ival='1'):
     '''
     lops = get_lvec_op(lvec, l=l, ival=ival)
     from pyglib.symm.atom_symm import get_representation
-    return get_representation(lops, lie_jeven_params)
-
-
+    reps = get_representation(lops, lie_jeven_params)
+    return reps

@@ -1415,7 +1415,7 @@ module gutil
     integer,intent(in)::n,m
     complex(q),intent(in)::u(n,m)
     complex(q),intent(inout)::a(n,n)
-    complex(q),intent(out),optional::uhau(m,m)
+    complex(q),intent(inout),optional::uhau(m,m)
     character*1,intent(in),optional::trul,trur
       
     character*1 tul,tur
@@ -1428,7 +1428,7 @@ module gutil
     allocate(b_(m,m)); b_=0
     call zgemm(tul,'n',m,m,n,z1,u,n,a_,n,z0,b_,m)
     if(present(uhau))then
-        uhau=b_
+        uhau=uhau+b_
     else
         if(n/=m)stop ' error in zuhau: n/=m while not preset uhau!'
         a=b_
@@ -1443,7 +1443,7 @@ module gutil
     integer,intent(in)::n,m
     real(q),intent(in)::u(n,m)
     real(q),intent(inout)::a(n,n)
-    real(q),intent(out),optional::uhau(m,m)
+    real(q),intent(inout),optional::uhau(m,m)
     character*1,intent(in),optional::trul,trur
       
     character*1 tul,tur
@@ -1456,7 +1456,7 @@ module gutil
     allocate(b_(m,m)); b_=0
     call dgemm(tul,'n',m,m,n,d1,u,n,a_,n,d0,b_,m)
     if(present(uhau))then
-        uhau=b_
+        uhau=uhau+b_
     else
         if(n/=m)stop ' error in duhau: n/=m while not preset uhau!'
         a=b_

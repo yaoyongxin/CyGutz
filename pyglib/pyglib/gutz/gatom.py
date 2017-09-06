@@ -416,6 +416,7 @@ def h5calc_save_lrot(gatm):
                     for ir, lrot in enumerate(lrots):
                         f[prefix+'/valence_block_{}/ROT_{}'.format( \
                                 ival, ir+1)] = lrot.T
+                f[prefix+'/dim_rot'] = [len(gatm.Lie_Jeven_list[i])]
 
 
 

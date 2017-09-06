@@ -1282,6 +1282,7 @@ subroutine calc_save_phi_matrix_blks(imp)
         nbase=nbase+nfs*nfs_l
     enddo
     call gh5_close(f_id)
+    return
 
 
 end subroutine calc_save_phi_matrix_blks

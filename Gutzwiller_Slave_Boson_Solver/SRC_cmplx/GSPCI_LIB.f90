@@ -319,6 +319,128 @@ end subroutine add_hdns_spci_s2
 #endif constraint_s2
 
 
+#ifdef constraint_dsym
+subroutine chk_eval_dsym(lstop)
+    use gprec
+    use gutil
+    use gspci
+    use ghdf5_base
+    use ghdf5
+    implicit none
+    logical lstop
+
+    logical lexist
+    integer ival,nfs,nfs_l,nbase,dimu,j
+    complex(q) zes
+    complex(q),allocatable::phi(:,:),phj(:,:),u(:,:)
+    complex(q),external::zdotc
+
+    ! dsym projector
+    inquire(file='GLROT.h5', exist=lexist)
+    if(.not.lexist)return
+    call gh5_open_r('GLROT.h5',f_id)
+    call gh5_read(dimu,'/IMPURITY_'//trim(int_to_str(dmem%imp))// &
+            &'/dim_rot',f_id)
+    if(dimu>0)then
+        nbase=0
+        zes=0
+        do ival=dmem%nval_bot,dmem%nval_top
+            nfs=dmem%idx(ival+1)-dmem%idx(ival)
+            nfs_l=dmem%idx_l(dmem%norb-ival+1)-dmem%idx_l(dmem%norb-ival)
+            if(nfs>1)then ! skip trivial case
+                allocate(phi(nfs,nfs),phj(nfs,nfs),u(nfs,nfs))
+                phj=0
+                call phi_vec_to_mat(dmem%v(nbase+1:nbase+nfs*nfs_l), &
+                        &phi,nfs,dmem%bs_l(dmem%idx_l(dmem%norb-ival): &
+                        &dmem%idx_l(dmem%norb-ival+1)-1), &
+                        &nfs_l,dmem%norb,dmem%ibs,dmem%idx(ival))
+                do j=1,dimu
+                    ! read jth rotation matrix
+                    call gh5_read(u,nfs,nfs,'/IMPURITY_'// &
+                            &trim(int_to_str(dmem%imp))//&
+                            &'/valence_block_'//trim(int_to_str(ival))// &
+                            &'/ROT_'//trim(int_to_str(j)), f_id)
+                    call uhau(phi,u,nfs,nfs,uhau=phj)
+                enddo
+                zes=zes-zdotc(nfs*nfs,phj,1,phi,1)
+                deallocate(phi,phj,u)
+            elseif(nfs*nfs_l==1)then
+                zes=zes-dmem%v(nbase+1)*conjg(dmem%v(nbase+1))*dimu
+            endif
+            nbase=nbase+nfs*nfs_l
+        enddo
+        zes=zes/dimu+1
+        write(0,*) "<1-P_dsym> = ", zes
+        if(lstop)then
+            if(abs(zes)>1.d-8)then
+                write(0,'(" Warning: <1-P_dsym> is not zero!")')
+            endif
+        endif
+    endif
+    call gh5_close(f_id)
+    return
+
+
+end subroutine chk_eval_dsym
+
+
+! v2 = v2 + lambda_dsym/dim_{Pr}*\sum_{Pr}{(1-Pr)*v1}
+subroutine av1_gspci_dsym(v1,v2)
+    use gprec
+    use gutil
+    use gspci
+    use ghdf5_base
+    use ghdf5
+    implicit none
+    complex(q),intent(in)::v1(*)
+    complex(q),intent(inout)::v2(*)
+
+    integer ival,nfs,nfs_l,nbase,dimu,j
+    complex(q),allocatable::phi(:,:),phj(:,:),u(:,:)
+
+    ! dsym projector
+    if(abs(dmem%lambda_dsym)<1.d-12)return
+    call gh5_open_r('GLROT.h5',f_id)
+    call gh5_read(dimu,'/IMPURITY_'//trim(int_to_str(dmem%imp))// &
+            &'/dim_rot',f_id)
+    if(dimu>0)then
+        nbase=0
+        do ival=dmem%nval_bot,dmem%nval_top
+            nfs=dmem%idx(ival+1)-dmem%idx(ival)
+            nfs_l=dmem%idx_l(dmem%norb-ival+1)-dmem%idx_l(dmem%norb-ival)
+            if(nfs>1)then ! skip trivial case
+                allocate(phi(nfs,nfs),phj(nfs,nfs),u(nfs,nfs))
+                phj=0
+                call phi_vec_to_mat(v1(nbase+1:nbase+nfs*nfs_l), &
+                        &phi,nfs,dmem%bs_l(dmem%idx_l(dmem%norb-ival): &
+                        &dmem%idx_l(dmem%norb-ival+1)-1), &
+                        &nfs_l,dmem%norb,dmem%ibs,dmem%idx(ival))
+                do j=1,dimu
+                    ! read jth rotation matrix
+                    call gh5_read(u,nfs,nfs,'/IMPURITY_'// &
+                            &trim(int_to_str(dmem%imp))//&
+                            &'/valence_block_'//trim(int_to_str(ival))// &
+                            &'/ROT_'//trim(int_to_str(j)), f_id)
+                    call uhau(phi,u,nfs,nfs,uhau=phj)
+                enddo
+                phj=-dmem%lambda_dsym/dimu*phj+dmem%lambda_dsym*phi
+                call phi_mat_to_vec(v2(nbase+1:nbase+nfs*nfs_l), & 
+                        &phj,nfs,dmem%bs_l(dmem%idx_l(dmem%norb-ival): &
+                        &dmem%idx_l(dmem%norb-ival+1)-1), &
+                        &nfs_l,dmem%norb,dmem%ibs,dmem%idx(ival))
+                deallocate(phi,phj,u)
+            endif
+            nbase=nbase+nfs*nfs_l
+        enddo
+    endif
+    call gh5_close(f_id)
+    return
+
+
+end subroutine av1_gspci_dsym
+#endif constraint_dsym
+
+
 #ifdef nc_csr
 ! In physical subspace.
 subroutine setup_npcoo_op1()

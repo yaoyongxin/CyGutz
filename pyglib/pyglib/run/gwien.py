@@ -1,7 +1,7 @@
 from __future__ import print_function
 from builtins import range, zip
 
-import os, sys, glob, h5py, socket, shutil, time, re, multiprocessing, \
+import os, sys, glob, h5py, socket, shutil, time, re, \
         subprocess
 import numpy as np
 from collections import deque
@@ -509,22 +509,81 @@ def batch_init_ga(dir_template='./template'):
         os.chdir(cwd)
 
 
+def batch_init_mott(dir_template='./template'):
+    '''Loop over all the directories to initialize CyGutz-Mott calculations
+     -- actually, since the CyGutz input files remain the same for different
+    volumes, it simply copy the input files in template directory to
+    each folder.
+    '''
+    cwd = os.getcwd()+'/'
+    for dname in glob.glob('V*'):
+        os.chdir(dname+'/case')
+        shutil.copy(cwd+'/'+dir_template+'/GMOTT.h5', './')
+        os.chdir(cwd)
+
+
+def batch_modify_ga_setup(args, nproc=1):
+    '''Loop over all the directories to modify CyGutz set up file.
+    '''
+    cwd = os.getcwd()+'/'
+    cmd = [os.environ['WIEN_GUTZ_ROOT2']+'/switch_gparam.py'] + args
+    if '-p' in sys.argv:
+        nproc = int(sys.argv[sys.argv.index('-p')+1])
+    for i,dname in enumerate(glob.glob('V*')):
+        os.chdir(dname+'/case')
+        proc = subprocess.Popen(cmd)
+        os.chdir(cwd)
+        if (i+1) % nproc == 0:
+            proc.communicate()
+
+
+def batch_job_slurm(u, j, dir_template='./template', dir_work='./'):
+    '''copy template/job.slurm file to each working directory and submit jobs.
+    '''
+    cwd = os.getcwd()+'/'
+    jname = 'u{}j{}'.format(u, j)
+
+    # command to modify u,j
+    args = ['-unique_u_ev', u, '-unique_j_ev', j]
+    cmd = [os.environ['WIEN_GUTZ_ROOT2']+'/switch_gparam.py'] + args
+
+    if '-w' in sys.argv:
+        dir_work = sys.argv[sys.argv.index('-w')+1]
+
+    # command to submit job.
+    cmd_s = ['qsub', './job.slurm']
+
+    for dname in glob.glob('V*'):
+        os.chdir(dname+'/case/'+dir_work)
+
+        # get job.slurm file
+        with open(cwd+'/'+dir_template+'/job.slurm', 'r') as fin:
+            with open('./job.slurm', 'w') as fout:
+                for line in fin:
+                    fout.write(line.replace('VV', dname). \
+                            replace('UJ', jname))
+        # modify u,j
+        proc = subprocess.Popen(cmd)
+        proc.communicate()
+
+        # submit
+        proc = subprocess.Popen(cmd_s)
+        os.chdir(cwd)
+
+
 def run_ga(nproc=1):
     '''Loop over all the directories to run_ga using nproc processors.
     '''
+    cmd = [os.environ['WIEN_GUTZ_ROOT2']+'/run_ga.py']
     cwd = os.getcwd()+'/'
     if '-p' in sys.argv:
         nproc = int(sys.argv[sys.argv.index('-p')+1])
-    jobs = []
     for i,dname in enumerate(glob.glob('V*')):
         os.chdir(dname+'/case')
-        p = multiprocessing.Process(target=run_gwien, args=())
-        jobs.append(p)
-        p.start()
+        proc = subprocess.Popen(cmd)
         os.chdir(cwd)
-        if len(jobs) == nproc:
-            for job in jobs:
-                job.join()
+        if (i+1) % nproc == 0:
+            proc.communicate()
 
 
 def batch_gsave(sdir='ldag', args=['-f']):

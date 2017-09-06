@@ -61,7 +61,7 @@ step b: batch initialize DFT+G jobs
 Type the following command to automitically initialize 
 the series of DFT+G jobs::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py batch_run_ga
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py batch_init_ga
 
 The script simply copies the previously generated DFT+G initialization files
 (ginit.h5, GPARAM.h5 and case.indmfl) to each job directory.
@@ -99,13 +99,13 @@ step d: energy-volume curve from DFT+G
 
 We can easily check the energy vs volume curve by typing::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py ev_u6.0j0.7
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py -ev u6.0j0.7
 
 The figure is plotted in a pdf file ''ev_u6.0j0.7.pdf''. 
 The numerical data are also stored in metadata file ''results.h5''.
 Get the pressure-volume curve by typing::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py eos_fit_u6.0j0.7
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py -pv u6.0j0.7
 
 The energy-volume curve and pressure-volume curve from fitting 
 to the Murnaghan equation of state are saved as ''u6.0j0.7_evfit.pdf'' 
