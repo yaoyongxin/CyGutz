@@ -19,10 +19,69 @@ and *dmft2*.
 in directory ``ksum`` of the Wien2K interface. 
 It is modified version the Kristjan Haule's DMFT-Wien2K interface 
 by Yongxin Yao.
-It generates the generic Kohn-Sham-Hubbard (KSH) Hamiltonian 
-based on the KS band energies and wave functions (WF), 
-as well as local projectors, which are expressed in term of 
-the KS WFs.
+
+In general, the interface generates a generic Kohn-Sham-Hubbard 
+(KSH) Hamiltonian based on the KS band energies {} and wave functions (WFs), 
+as well as local projectors, 
+which are expressed in term of the KS WFs.
+
+Mathematically, let us define the Kohn-Sham band wave functions {:math:`\psi_{nk}`} 
+and the band energies {:math:`E_{nk}`},
+where :math:`n` is the band index and :math:`k` is the crystal momentum index. 
+The Kohn-Sham Hamiltonian is then given by
+
+.. math:: 
+    H_{k} = \sum_{n}{E_{nk}\vert\psi_{nk}\rangle\langle\psi_{nk}\vert}
+
+Let's define an array NE(dim_kpts, 3), 
+with NE[k, 1] specifying the total number of bands at the :math:`k^th` k-point,
+and NE[k, 2/3] for the starting and ending band wave function index, 
+the wave functions between which are used for the Wannier function construction.
+And we call this set of bands to be active bands.
+The bands {:math:`\psi_{nk}`} with index smaller 
+than NE(k, 2) will remain untouched 
+by the additional onsite electron interactions between the correlated orbitals.
+Generally, by a unitary transformation, the active bands {:math:`\psi_{nk}`} 
+can be mapped to {:math:`\phi_{\alpha k}`}, 
+including a set of correlated orbitals 
+and the complementary set (presumably itinerant part).
+Now we can rewrite the Kohn-Sham Hamiltonian as
+
+.. math::
+    H_{k} &= \sum_{\alpha, \beta}\sum_{n}{E_{nk}
+             \vert\phi_{\alpha k}\rangle
+             \langle\phi_{\alpha k}\vert\psi_{nk}\rangle
+             \langle\psi_{nk}|\phi_{\beta k}\rangle}\langle
+             \phi_{\beta k}\vert  \\
+          &= \sum_{\alpha, \beta}H_{\alpha \beta}^{k}
+
+Here we have define
+
+.. math::
+    H_{\alpha \beta}^{k} = \sum_{n}{E_{nk}\langle\phi_{\alpha k}
+    \vert\psi_{nk}\rangle\langle\psi_{nk}\vert\phi_{\beta k}\rangle}
+
+The one-body part of the local onsite Hamiltonian is simply given by 
+
+.. math::
+    H_{\alpha \beta} = \sum_{k}{w_{k} H_{\alpha \beta}^{k}}
+
+with :math:`w_k` being the weight of k-points.
+
+Additional attention should be paid to the case where one works with k-points 
+in irreducible Brillouin zone (IBZ) only. 
+In that case, at each k-point, a k-star will be generated 
+by applying the symmetry operations.
+Therefore, we modify the above formalism by adding the symmetry operation index 
+for the case dealing with IBZ only
+
+.. math::
+   H_{\alpha \beta}^{k, isym} = \sum_{n}{E_{nk}\langle\phi_{\alpha k, isym}
+        \vert\psi_{nk, isym}\rangle\langle\psi_{nk,isym}
+        \vert\phi_{\beta k, isym}\rangle}
+
+    H_{\alpha \beta} = \sum_{k, isym}{w_{k} H_{\alpha \beta}^{k, isym}/nsym}
+
 
 **Input files**
 
@@ -68,13 +127,13 @@ The output files are now in hdf5 format.
     IMPURITY (upper case) index starts from 1.
     For the main datasets:
   
-        * ``/IMPURITY_1/H1E`` -- one-body part (10 x 10 matrix for d-orbital) 
+        * ``/IMPURITY_1/H1E`` -- :math:`H_{\alpha \beta}`. 
+          one-body part (10 x 10 matrix for d-orbital) 
           of the local Hamiltonian of the first impurity (e.g., Fe atom).
         * ``T_SPHERICALHARMONICS_TO_LOCALBASIS1`` -- unitary transformation 
           (5x5 matrix) from complex spherical harmonics basis (CSH)
-          to default local basis (DB), which can be still the same CSH 
-          if spin-orbit coupling (SOC) is not considered, 
-          or relativistic harmonics otherwise.
+          to default local basis (DB). 
+          In the new version it is redundant and is always set as identity.
         * ``/kptdim`` -- dimension of k-points.
         * ``/NE_LIST`` --  array of (kptdim x 3). With
   
@@ -125,10 +184,14 @@ The output files are now in hdf5 format.
     The indices of KPOINTS (e.g., IKP_1) of SYMMETRY operations (e.g., ISYM_1)
     are one-based. With
   
-        * ``/IKP_1/ISYM_1/HK0`` -- the bare KSH one-particle Hamiltonian matrix 
+        * ``/IKP_1/ISYM_1/HK0`` -- :math:`H_{\alpha \beta}^{k, isym}`.
+          the bare KSH one-particle Hamiltonian matrix 
           at the first k-points and first symmetry operation.
-        * ``T_PSIK0_TO_HK0_BASIS`` -- unitary transformation from KSWB 
-          to KSHB basis.
+        * ``T_PSIK0_TO_HK0_BASIS`` -- 
+          :math:`\langle\psi_{nk}|\phi_{\alpha k}\rangle`. 
+          unitary transformation from KSWB to KSHB basis.
+          NOte that here only the data at the ireducible k-point 
+          is needed.
         * ``/IKP_1/ek0`` -- list of all of the KS band energies 
           at the first k-point.
  
@@ -200,7 +263,7 @@ For the main datasets:
         * 1: fully localized limit (FLL) DC with local orbital 
           occupation (Nf0) self-consistently determined;
         * 12: FLL-DC with Nf0 only updated in the outer 
-        electron density self-consistent loop.
+          electron density self-consistent loop.
 
     * ``/dc_nelf_list`` -- for dc_mode=12, it provides the list of Nf0
       which are fixed at each electron density iteration.
