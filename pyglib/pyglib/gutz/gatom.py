@@ -388,6 +388,8 @@ def h5calc_save_lrot(gatm):
     redundant calculations.
     the results are save in 'GLROT.h5'.
     '''
+    if gatm.giembeddiag != -31:
+        return
     from pyglib.mbody.local_operator_factory import get_lrot_op
     if os.path.isfile('GLROT.h5'):
         return
