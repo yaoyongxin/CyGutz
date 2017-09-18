@@ -26,7 +26,7 @@ gtool:
 
 clean:
 	cd Gutzwiller_Slave_Boson_Solver && make clean && cd ..
-	cd Interface/WIEN2k && make clean && cd ../..
+	cd Interface/Wien2k && make clean && cd ../..
 
 clean_bin:
 	rm -rf ${GUTZ_ROOT2}/*
