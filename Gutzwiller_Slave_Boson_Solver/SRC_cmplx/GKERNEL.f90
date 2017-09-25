@@ -273,6 +273,22 @@ module gkernel
     call gh5_close(f_id)
 
     de=trace_a(wh%co(i)%la2,na2)
+#ifdef flowversion
+    if(gkmem%iembeddiag==-1)then
+        call system('exe_spci '//int_to_str(i))
+    elseif(gkmem%iembeddiag==-2)then
+        call system('exe_spci_mott '//int_to_str(i))
+    elseif(gkmem%iembeddiag==-3)then
+        call system('exe_spci_s2_mott -i '//int_to_str(i))
+    elseif(gkmem%iembeddiag==-4)then
+        call system('exe_spci_j2_mott '//int_to_str(i))
+    elseif(gkmem%iembeddiag==-31)then
+        call system('exe_spci_s2_dsym_mott -i '//int_to_str(i))
+    elseif(gkmem%iembeddiag==-10)then
+        call system('exe_spci_bathtrunc '//int_to_str(i))
+    elseif(gkmem%iembeddiag==-11)then
+        call system('exe_ml '//int_to_str(i))
+#else
     if(gkmem%iembeddiag==-1)then
         call execute_command_line('exe_spci '//int_to_str(i), exitstat=ierr)
         if(ierr/=0)then
@@ -308,6 +324,13 @@ module gkernel
         if(ierr/=0)then
             write(0,'(" Error in running exe_spci_bathtrunc!")')
         endif
+    elseif(gkmem%iembeddiag==-11)then
+        call execute_command_line('exe_ml '//int_to_str(i),  &
+                &exitstat=ierr)
+        if(ierr/=0)then
+            write(0,'(" Error in running exe_ml!")')
+        endif
+#endif
     else
         write(0,'(" Error in solve_hembed: unsupported embedding solver!")')
         stop 99
