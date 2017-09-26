@@ -1,6 +1,6 @@
-'''
-Multiplets analysis for LDA+G+SOC calculations.
-'''
+################################################
+#Multiplets analysis for LDA+G+SOC calculations.
+################################################
 
 import numpy as np
 import h5py
@@ -8,9 +8,42 @@ from pyglib.mbody.multiplets_analysis_lib import get_local_histogram
 
 
 def calc_save_atomic_states(imp=1, num_ev=100):
-    '''
-    Calculate and save the eigen-values of the local many-body density matrix
-    and the labels.
+    r'''
+    Calculate and save the eigen-values of the
+    local many-body density matrix
+    and the labels in file 'multiplets.h5'.
+
+    Parameters:
+
+    * imp: int
+        one-based index of impurity
+    * num_ev: int
+        number of biggest eigenvalues to be calculated
+
+    Note: Results stored in 'multiplets.h5' file, with entries:
+
+    * sum_weights: float
+        sum of the list of weight calculated.
+    * weights: float array
+        array of the weight
+    * n_labels: int array
+        array of electron occupancy
+    * s_labels: float array
+        array of s spin index
+    * l_labels: float array
+        array of l angular momentum index
+    * j_labels: float array
+        array of j total angular momentum index
+    * eval_s: float
+        expectation value of s operator
+    * eval_l: float
+        expectation value of l operator
+    * eval_j: float
+        expectation value of j operator
+    * ent_entropy: float
+        entanglement entropy
+    * deg_labels: int array
+        array of degeneracy.
     '''
     # Get eigen-values and labels of the local atomic states.
     vals, n_labels, s_labels, l_labels, j_labels, \
@@ -37,8 +70,18 @@ def calc_save_atomic_states(imp=1, num_ev=100):
 
 
 def plot_atomic_states(imp=1, num_label=5):
-    '''
-    Plot the atomic state probabilities using the formula \rho = EXp(-F)
+    r'''
+    Plot the atomic state probabilities using the formula
+    :math:`\rho=e^{-F}`.
+
+    Parameters
+
+    * imp: int
+        one-based impurity index
+    * num_label: int
+        number of significant configurations to be labeled in the figure.
+
+    Note: A figure will be saved in 'histogram.pdf' file.
     '''
     # Read in metadata
     with h5py.File("multiplets.h5", 'r') as f:
@@ -58,21 +101,23 @@ def plot_atomic_states(imp=1, num_label=5):
 
     # Scatter plot with annotation.
     import matplotlib.pyplot as plt
-    plt.scatter(f_wt, vals)
+    fig, ax = plt.subplots()
+    ax.scatter(f_wt, vals)
     for label, x, y in zip(labels, f_wt[:num_label], vals[:num_label]):
-        plt.annotate(
+        ax.annotate(
             label,
             xy=(x, y), xytext=(0, 20),
             textcoords='offset points', ha='center', va='bottom',
             bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
             arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
-    plt.xlim(-0.1, 12)
-    plt.ylim(0, 1)
-    plt.xlabel("$f_{n}$")
-    plt.ylabel("$e^{-f_{n}}d_{n}/\sum_{n}{e^{-f_{n}}d_{n}}$")
+    ax.set_xlim(-0.1, 12)
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("$f_{n}$")
+    ax.set_ylabel("$e^{-f_{n}}d_{n}/\sum_{n}{e^{-f_{n}}d_{n}}$")
     plt.title("Eigen-values of the local many-body density matrix")
-
+    fig.tight_layout()
     plt.show()
+    fig.savefig('histogram.pdf')
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
+import os, h5py, glob
 from math import pi, sqrt
 import numpy as np
 from future_builtins import zip
 from pyglib.basic import units
+import matplotlib.pyplot as plt
 
 
 class DOS:
@@ -116,66 +118,106 @@ def get_all_psi_skn_w_ab(e_skn, psi_sksn, bnd_ne):
     return psi_skn_w_ab / psi_sksn.shape[2]
 
 
-
-if __name__ == "__main__":
+def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001):
     '''
-    Test run.
+    get total dos and the total correlated orbital component.
     '''
-    import h5py
-    import glob
-
     with h5py.File("GPARAMBANDS.h5", 'r') as f:
+        # list of k-point weight.
         w_k = f["/kptwt"][...]
+        # band index list specifying the range of bands used
+        # for the construction of correlated orbitals.
         bnd_ne = f["/NE_LIST"][...]
+        # number of symmetry operations.
         nsym = f["/symnop"][0]
+        # number of k-points
         nkp = f["/kptdim"][0]
+        # maximal number of bands calculated over the k-points.
         nbmax = f["/nbmax"][0]
 
     with h5py.File("GLOG.h5", 'r') as f:
+        # Gutzwiller fermi level
         e_fermi = f["/e_fermi"][0]
+        # numbe of spin components
         nspin = f["/nspin"][0]
+        # total number of correlated orbitals with spin included
+        # for cases with spin-orbit interaction.
         nasotot = f["/nasotot"][0]
 
+    if os.path.isfile('ginit.h5'):
+        with h5py.File('ginit.h5', 'r') as f:
+            use_rydberg = 'ryd' in f['/usrqa/unit'][()]
+    else:
+        use_rydberg = True
+
+    # band energy array.
     e_skn = np.zeros((nspin,nkp,nbmax), dtype=np.float)
+    # maximal number of bands for the construction of correlated orbitals.
     nbmaxin = np.max(bnd_ne[:,2]-bnd_ne[:,1]+1)
 
-    psi_sksna = np.zeros((nspin,nkp,nsym,nbmaxin,nasotot), dtype=np.complex)
+    # expansion coefficients of the correlated orbitals in terms of the
+    # band wavefunctions, i.e., <\psi_{sks, n}|\phi_{sks, \alpha}>
+    # with sks := ispin, ikpt, isym.
+    psi_sksna = np.zeros((nspin,nkp,nsym,nbmaxin,nasotot),
+            dtype=np.complex)
 
+    # including the case with MPI run.
     for fname in glob.glob('GBANDS_*h5'):
         with h5py.File(fname, 'r') as f:
             for isp in range(nspin):
-                e_kn = []
                 for k in range(f['/IKP_START'][0],f['/IKP_END'][0]+1):
                     e_n = f['/ISPIN_{}/IKP_{}/ek'.format(isp+1,k)][...]
                     e_n = e_n - e_fermi
-                    e_n *= units.Ryd_eV
+                    # convert to eV
+                    if use_rydberg:
+                        e_n *= units.Ryd_eV
                     nbands = len(e_n)
                     e_skn[isp,k-1,:nbands] = e_n
+                    # for bands not available, push it to high
+                    # irrelevant value.
                     e_skn[isp,k-1,nbands:] = 100.
                     for isym in range(nsym):
                         v = f['/ISPIN_{}/IKP_{}/ISYM_{}/EVEC'.format( \
                                 isp+1,k,isym+1)][:,:nasotot]
                         psi_sksna[isp,k-1,isym,:v.shape[0],:] = v
 
-
-    window = (-10., 15.)
-    dos = DOS(w_k, e_skn,  width=0.4, window=window, npts=1001)
+    # get total dos
+    dos = DOS(w_k, e_skn,  width=delta, window=ewin, npts=npts)
     energies = dos.get_energies()
     dos_t = dos.get_dos_t()
 
+    # get total correlated orbital component.
     psi_skn_w_ab = get_all_psi_skn_w_ab(e_skn, psi_sksna, bnd_ne)
     psi_sksn_f = np.einsum('...ii', psi_skn_w_ab[...,:,:])
     dos_f = dos.get_dos_component(psi_sksn_f)
 
-#    import matplotlib
-#    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
+    return energies, dos_t, dos_f
 
-    plt.figure(0)
-    plt.plot(energies, dos_t[0].real, '-', label='t')
-    plt.plot(energies, dos_f[0].real, 'o', label='f')
+
+def plot_dos_tf(energies, dos_t, dos_f):
+    '''plot total dos and total correlated component.
+    '''
+    fig, ax = plt.subplots()
+    ax.fill_between(
+        energies, 0, dos_t, facecolor='grey', alpha=0.5)
+    ax.plot(energies, dos_t, color='grey', label='tot')
+    ax.plot(energies, dos_f, color='red', label='$f$')
+    ax.axvline(x=0, ls='--')
+    ax.set_ylim(0.)
+    ax.set_ylabel("DOS (states/f.u.)")
+    ax.set_xlabel("E (eV)")
+    plt.title("Density of States with $f$-component")
     plt.legend()
-    plt.xlabel("E (eV)")
-    plt.ylabel("DOS (states/f.u.)")
-#    plt.savefig('dos.pdf')
+    fig.tight_layout()
     plt.show()
+    fig.savefig('gap_j.pdf')
+
+
+
+if __name__ == "__main__":
+    '''
+    Test run.
+    '''
+    energies, dos_t, dos_f = h5get_dos()
+    # pick up-component.
+    plot_dos_tf(energies, dos_t[0], dos_f[0])
