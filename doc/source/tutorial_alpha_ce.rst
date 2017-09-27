@@ -159,4 +159,37 @@ including some typical post-analyses.
     .. autofunction:: pyglib.mbody.multiplets_analysis_soc.calc_save_atomic_states
     .. autofunction:: pyglib.mbody.multiplets_analysis_soc.plot_atomic_states
 
- 6) 
+6) To calculate the bands structure along selected k-path, 
+    follow the steps below:
+
+    (a) Prepare the Ce.klist_band file for the high-symmetry k-path 
+        of the primitive Brillouin Zone. 
+        The SRC_templates directory of Wien2k has some examples.
+        For instance, we can use `fcc.klist` file.
+        Type the command to get the file::
+
+            $ cp ${WIENROOT}/SRC_templates/fcc.klist Ce.klist_band
+
+    (b) Type the following command 
+        to calculate the band structure::
+
+            $ ${WIEN_GUTZ_ROOT2}/run_ga.py -band
+
+    (c) Download the simple script 
+        :download:`plot_band_ce.py<_files/plot_band_ce.py>`
+        and type the following command to plot the band structure::
+
+            $ python ./plot_band_ce.py
+
+        You will see the band structure like the following
+
+        .. image:: _images/ce_bands.png
+          :alt: alternate text
+          :scale: 100 %
+          :align: center
+      
+        The above scirpt calls a predefined function,
+        which serves a s a template to be adapted by users
+        for specific purposes.
+
+        .. autofunction:: pyglib.estructure.bandstruct.plot_band_sturture

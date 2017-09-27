@@ -1,6 +1,8 @@
 import h5py, numpy
 from builtins import range
 from pyglib.estructure.dos import get_bands
+import matplotlib.pyplot as plt
+
 
 def get_greek_label(kname):
     '''return the possible greek label.
@@ -56,9 +58,37 @@ def get_estimated_gap(nocc, fband='GBANDS_0.h5'):
     return max(ecmin - evmax, 0.)
 
 
-def plot_band_sturture():
-    '''plot band structure with overall correlated orbital character.
+def plot_band_sturture(emin=-10., emax=10.):
+    '''plot band structure with overall correlated orbital character
+    in the assigned energy window [emin, emax] in the file `bands.pdf`.
     '''
     klist, ktick_pos, ktick_label = get_k_info()
     e_skn, psi_sksna = get_bands()
+    # get total correlated orbital weight.
+    psi_skn_f = numpy.einsum('...ijk,...ijk->...j', psi_sksna[...,:,:,:], \
+            psi_sksna.conj()[...,:,:,:])/psi_sksna.shape[2].real
+    # multiply a scaling factor
+    psi_skn_f *= 20.
+    # start plotting
+    if psi_skn_f.shape[0] == 1:
+        fig, ax = plt.subplots()
+        for n in range(e_skn.shape[2]):
+            ax.plot(klist, e_skn[0, :, n], 'k-')
+            ax.scatter(klist, e_skn[0,:,n], s = psi_skn_f[0, :, n], \
+                    c = 'r', edgecolors = 'r')
+        ax.axhline(y = 0, ls = ':', lw = 2)
+        # High-symmetry lines and labels
+        for x1 in ktick_pos[:-1]:
+            ax.axvline(x = x1, ls = '--')
+        ax.set_xticks(ktick_pos)
+        ax.set_xticklabels(ktick_label)
+        ax.set_ylabel("E (eV)")
+        ax.set_xlim(klist[0], klist[-1])
+        ax.set_ylim(emin, emax)
+        plt.title("Band structure with $f$-character")
+        plt.show()
+        fig.savefig('bands.pdf')
 
+
+if __name__=='__main__':
+    plot_band_sturture(emin=-3.3, emax=5.8)

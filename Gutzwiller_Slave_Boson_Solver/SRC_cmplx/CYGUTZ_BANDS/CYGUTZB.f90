@@ -99,9 +99,6 @@ program cygutz
     call map_wh_bnd_matrix(wh%r,bnd%r,.false.)
     call map_wh_bnd_matrix(wh%la1,bnd%la1,.false.)
     call calc_band_all(gp%io)
-    call gutz_fermi(gp%io)
-    call calc_nks()
-    call calc_nks_pp(gp%io)
 
     !! Save important data for analysis.
     call postsave_gbands()

@@ -86,38 +86,6 @@ class DOS:
         return np.array(dos_list)
 
 
-def get_all_psi_skn_w(e_skn, psi_sksn, bnd_ne):
-    '''
-    Reduce psi_sksn to psi_skn_w.
-    '''
-    psi_skn_w = np.zeros(list(e_skn.shape) + [psi_sksn.shape[-1]], dtype=float)
-    for isp in range(e_skn.shape[0]):
-        for k in range(e_skn.shape[1]):
-            for isy in range(psi_sksn.shape[2]):
-                for n in range(bnd_ne[k, 1], bnd_ne[k, 2]):
-                    for a in range(psi_sksn.shape[-1]):
-                        psi_skn_w[isp, k, n, a] += (
-                                psi_sksn[isp, k, isy, n - bnd_ne[k, 1], a] *
-                                np.conj(
-                                psi_sksn[isp, k, isy, n - bnd_ne[k, 1], a])).\
-                                real
-    return psi_skn_w / psi_sksn.shape[2]
-
-
-def get_all_psi_skn_w_ab(e_skn, psi_sksn, bnd_ne):
-    '''
-    Reduce psi_sksn to psi_skn_w_ab.
-    '''
-    n_orb = psi_sksn.shape[-1]
-    psi_skn_w_ab = np.zeros(list(e_skn.shape) + [n_orb, n_orb], dtype=complex)
-    for k in range(e_skn.shape[1]):
-        for n in range(bnd_ne[k, 1], bnd_ne[k, 2]):
-            psi_skn_w_ab[:, k, n, :, :] = np.einsum('ijk, ijl->ikl',
-                    psi_sksn[:, k, :, n - bnd_ne[k, 1], :],
-                    np.conj(psi_sksn[:, k, :, n - bnd_ne[k, 1], :]))
-    return psi_skn_w_ab / psi_sksn.shape[2]
-
-
 def get_bands():
     '''get band anergies and the correlated orbital characters.
     '''
@@ -149,34 +117,33 @@ def get_bands():
 
     # band energy array.
     e_skn = np.zeros((nspin,nkp,nbmax), dtype=np.float)
-    # maximal number of bands for the construction of correlated orbitals.
-    nbmaxin = np.max(bnd_ne[:,2]-bnd_ne[:,1]+1)
 
     # expansion coefficients of the correlated orbitals in terms of the
     # band wavefunctions, i.e., <\psi_{sks, n}|\phi_{sks, \alpha}>
     # with sks := ispin, ikpt, isym.
-    psi_sksna = np.zeros((nspin,nkp,nsym,nbmaxin,nasotot),
+    psi_sksna = np.zeros((nspin,nkp,nsym,nbmax,nasotot),
             dtype=np.complex)
 
     # including the case with MPI run.
     for fname in glob.glob('GBANDS_*h5'):
         with h5py.File(fname, 'r') as f:
             for isp in range(nspin):
-                for k in range(f['/IKP_START'][0],f['/IKP_END'][0]+1):
-                    e_n = f['/ISPIN_{}/IKP_{}/ek'.format(isp+1,k)][...]
+                for k in range(f['/IKP_START'][0]-1,f['/IKP_END'][0]):
+                    e_n = f['/ISPIN_{}/IKP_{}/ek'.format(isp+1,k+1)][...]
                     e_n = e_n - e_fermi
                     # convert to eV
                     if use_rydberg:
                         e_n *= units.Ryd_eV
                     nbands = len(e_n)
-                    e_skn[isp,k-1,:nbands] = e_n
+                    e_skn[isp,k,:nbands] = e_n
                     # for bands not available, push it to high
                     # irrelevant value.
-                    e_skn[isp,k-1,nbands:] = 100.
+                    e_skn[isp,k,nbands:] = 100.
                     for isym in range(nsym):
                         v = f['/ISPIN_{}/IKP_{}/ISYM_{}/EVEC'.format( \
-                                isp+1,k,isym+1)][:,:nasotot]
-                        psi_sksna[isp,k-1,isym,:v.shape[0],:] = v
+                                isp+1,k+1,isym+1)][:,:nasotot]
+                        psi_sksna[isp,k,isym,bnd_ne[k,1]-1: \
+                                bnd_ne[k,1]+v.shape[0]-1,:] = v
     return e_skn, psi_sksna
 
 
@@ -187,9 +154,6 @@ def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001):
     with h5py.File("GPARAMBANDS.h5", 'r') as f:
         # list of k-point weight.
         w_k = f["/kptwt"][...]
-        # band index list specifying the range of bands used
-        # for the construction of correlated orbitals.
-        bnd_ne = f["/NE_LIST"][...]
 
     # get band energies and the orbital characters.
     e_skn, psi_sksna = get_bands()
@@ -200,9 +164,9 @@ def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001):
     dos_t = dos.get_dos_t()
 
     # get total correlated orbital component.
-    psi_skn_w_ab = get_all_psi_skn_w_ab(e_skn, psi_sksna, bnd_ne)
-    psi_sksn_f = np.einsum('...ii', psi_skn_w_ab[...,:,:])
-    dos_f = dos.get_dos_component(psi_sksn_f)
+    psi_skn_f = np.einsum('...ijk,...ijk->...j', psi_sksna[...,:,:,:], \
+            psi_sksna.conj()[...,:,:,:])/psi_sksna.shape[2]
+    dos_f = dos.get_dos_component(psi_skn_f)
 
     return energies, dos_t, dos_f
 
