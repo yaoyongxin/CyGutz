@@ -100,11 +100,15 @@ def fcreate_def_gwien(case, scratch='.', so='', para='', idmf='1', cmplx='',
     fdef.close()
 
 
-def onestep(fday, case, exec_name, w_root, para):
+def onestep(fday, case, exec_name, w_root, para, band=None):
     '''wien2k steps
     '''
     time_start = time.strftime("%H:%M:%S")
     cmd = ['{}/x'.format(w_root), para, '-f', case, exec_name]
+    if band == '-band':
+        cmd.append(band)
+        if not os.path.isfile('EFLDA.INP'):
+            shutil.copy2('EFLDA.OUT', 'EFLDA.INP')
     print(' '.join(x for x in cmd))
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
@@ -319,6 +323,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     if band == '-band':
         _band = '_band'
         nmaxiter = 1
+        cygutz = 'CyGutzB'
     else:
         _band = ''
 
@@ -409,7 +414,8 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     else:
         _mpi = mpi
 
-    p_list = ['gwien1', 'gwien2', 'CyGutz', 'exe_spci', 'exe_spci_s2_mott']
+    p_list = ['gwien1', 'gwien2', 'exe_spci', 'exe_spci_s2_mott']
+    p_list.append(cygutz)
     for pa in pa_list:
         if pa not in p_list:
             p_list.append(pa)
@@ -440,9 +446,9 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         if startp in 'lapw0':
             onestep(fday, w_case, 'lapw0', w_root, para)
         if startp in 'lapw0 lapw1':
-            onestep(fday, w_case, 'lapw1', w_root, para)
+            onestep(fday, w_case, 'lapw1', w_root, para, band)
         if startp in 'lapw0 lapw1 lapwso' and p_so:
-            onestep(fday, w_case, 'lapwso', w_root, para)
+            onestep(fday, w_case, 'lapwso', w_root, para, band)
 
     if para != '':
         processes_convert(p_so)
@@ -461,9 +467,11 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
 
         if icycle > 0 or (icycle == 0 and startp in \
                 'lapw0 lapw1 lapwso gwien1 CyGutz'):
-            gonestep(fday, 'CyGutz', _mpi)
+            gonestep(fday, cygutz, _mpi)
+        if band == '-band':
+            sys.exit(0)
         shutil.copy2('GUTZ.LOG', 'SAVE_GUTZ.LOG')
-        if endp == 'CyGutz' or band == '-band':
+        if endp == 'CyGutz':
             sys.exit(0)
         if recycle_rl:
             shutil.copy2('WH_RL_OUT.h5', 'WH_RL_INP.h5')
@@ -489,9 +497,9 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
 
 
         onestep(fday, w_case, 'lapw0', w_root, para)
-        onestep(fday, w_case, 'lapw1', w_root, para)
+        onestep(fday, w_case, 'lapw1', w_root, para, band)
         if p_so:
-            onestep(fday, w_case, 'lapwso', w_root, para)
+            onestep(fday, w_case, 'lapwso', w_root, para, band)
 
 
 def batch_init_ga(dir_template='./template'):

@@ -118,13 +118,10 @@ def get_all_psi_skn_w_ab(e_skn, psi_sksn, bnd_ne):
     return psi_skn_w_ab / psi_sksn.shape[2]
 
 
-def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001):
-    '''
-    get total dos and the total correlated orbital component.
+def get_bands():
+    '''get band anergies and the correlated orbital characters.
     '''
     with h5py.File("GPARAMBANDS.h5", 'r') as f:
-        # list of k-point weight.
-        w_k = f["/kptwt"][...]
         # band index list specifying the range of bands used
         # for the construction of correlated orbitals.
         bnd_ne = f["/NE_LIST"][...]
@@ -180,6 +177,22 @@ def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001):
                         v = f['/ISPIN_{}/IKP_{}/ISYM_{}/EVEC'.format( \
                                 isp+1,k,isym+1)][:,:nasotot]
                         psi_sksna[isp,k-1,isym,:v.shape[0],:] = v
+    return e_skn, psi_sksna
+
+
+def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001):
+    '''
+    get total dos and the total correlated orbital component.
+    '''
+    with h5py.File("GPARAMBANDS.h5", 'r') as f:
+        # list of k-point weight.
+        w_k = f["/kptwt"][...]
+        # band index list specifying the range of bands used
+        # for the construction of correlated orbitals.
+        bnd_ne = f["/NE_LIST"][...]
+
+    # get band energies and the orbital characters.
+    e_skn, psi_sksna = get_bands()
 
     # get total dos
     dos = DOS(w_k, e_skn,  width=delta, window=ewin, npts=npts)

@@ -1,12 +1,14 @@
 SRC_lib = external/primme 
-SRC_exe = SRC_cmplx/CYGUTZ  \
-	  SRC_cmplx/GSPCI  \
-	  SRC_cmplx/GSPCI_ANALYSIS  \
-	  SRC_cmplx/GSPCI_S2_MOTT  \
-	  SRC_cmplx/GSPCI_S2_DSYM_MOTT  \
-	  SRC_cmplx/GSPCI_MOTT  \
-	  SRC_cmplx/GSPCI_J2JPJN_MOTT  \
-	  SRC_cmplx/GSPCI_J2_MOTT_ANALYSIS
+SRC_exe = \
+		SRC_cmplx/CYGUTZ  \
+		SRC_cmplx/CYGUTZ_BANDS \
+		SRC_cmplx/GSPCI  \
+		SRC_cmplx/GSPCI_ANALYSIS  \
+		SRC_cmplx/GSPCI_S2_MOTT  \
+		SRC_cmplx/GSPCI_S2_DSYM_MOTT  \
+		SRC_cmplx/GSPCI_MOTT  \
+		SRC_cmplx/GSPCI_J2JPJN_MOTT  \
+		SRC_cmplx/GSPCI_J2_MOTT_ANALYSIS
 
 all:
 	mkdir -p lib include

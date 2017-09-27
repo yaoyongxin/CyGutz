@@ -88,8 +88,7 @@ module bandstru
       
     type k_points
         integer::dim=-1,diml=-1,ismear,icor,ensemble=0
-        real(q),pointer :: wt(:)=>null(),x(:)=>null(),y(:)=>null(),z(:)=>null()
-        character*10,pointer :: name(:)
+        real(q),pointer :: wt(:)=>null()
         real(q) twt,delta,cordeg
         character::file_name*512
     end type k_points
@@ -140,15 +139,6 @@ module bandstru
     call gh5_read(kpt%ismear,'/ismear',f_id)
     call gh5_read(kpt%delta,'/delta',f_id)
     call gh5_read(bnd%nelet,'/nelectron',f_id)
-    call h5lexists_f(f_id,'/kptx',lexist,gh5_err)
-    if(lexist)then
-        allocate(kpt%x(kpt%dim),kpt%y(kpt%dim),kpt%z(kpt%dim), &
-                &kpt%name(kpt%dim))
-        call gh5_read(kpt%x,kpt%dim,'/kptx',f_id)
-        call gh5_read(kpt%y,kpt%dim,'/kpty',f_id)
-        call gh5_read(kpt%z,kpt%dim,'/kptz',f_id)
-        call gh5_read(kpt%name,10,kpt%dim,'/kptname',f_id)
-    endif
     call h5lexists_f(f_id,'/kptfname',lexist,gh5_err)
     if(lexist)then
         call gh5_read(kpt%file_name,512,'/kptfname',f_id)

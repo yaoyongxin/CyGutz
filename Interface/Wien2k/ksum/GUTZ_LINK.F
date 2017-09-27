@@ -444,6 +444,8 @@ subroutine gutz5_wrt(nkp,wt,nelet,ne,kx,ky,kz,kname,efmod,delta)
     real(8) :: kx(nkp),ky(nkp),kz(nkp)
     character*10::kname(nkp)
     character*5::efmod
+    common /gener/ br1(3,3), br2(3,3)
+    real(8) :: br1, br2
       
     integer i,ismear
     character::file_name*512
@@ -469,6 +471,11 @@ subroutine gutz5_wrt(nkp,wt,nelet,ne,kx,ky,kz,kname,efmod,delta)
     inquire(unit=14,name=file_name)
     file_name=file_name(index(file_name,'/',.true.)+1:)
     call gh5_write(file_name,512,'/kptfname',log_file_id)
+    call gh5_write(kname,10,nkp,'/kptname',log_file_id)
+    call gh5_write(kx,nkp,'/kptx',log_file_id)
+    call gh5_write(ky,nkp,'/kpty',log_file_id)
+    call gh5_write(kz,nkp,'/kptz',log_file_id)
+    call gh5_write(br2,3,3,'/br2_car_dir',log_file_id)
     return
       
 end subroutine gutz5_wrt

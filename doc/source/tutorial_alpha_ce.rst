@@ -158,3 +158,5 @@ including some typical post-analyses.
 
     .. autofunction:: pyglib.mbody.multiplets_analysis_soc.calc_save_atomic_states
     .. autofunction:: pyglib.mbody.multiplets_analysis_soc.plot_atomic_states
+
+ 6) 
