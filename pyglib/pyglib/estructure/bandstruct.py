@@ -1,4 +1,4 @@
-import h5py, numpy
+import h5py, numpy, sys
 from builtins import range
 from pyglib.estructure.dos import get_bands
 import matplotlib.pyplot as plt
@@ -69,25 +69,57 @@ def plot_band_sturture(emin=-10., emax=10.):
             psi_sksna.conj()[...,:,:,:])/psi_sksna.shape[2].real
     # multiply a scaling factor
     psi_skn_f *= 20.
+
     # start plotting
-    if psi_skn_f.shape[0] == 1:
-        fig, ax = plt.subplots()
+    fig, ax = plt.subplots()
+    for n in range(e_skn.shape[2]):
+        ax.plot(klist, e_skn[0, :, n], 'k-')
+        ax.scatter(klist, e_skn[0,:,n], s = psi_skn_f[0, :, n], \
+                c = 'r', edgecolors = 'r')
+    if len(e_skn) == 2:
         for n in range(e_skn.shape[2]):
-            ax.plot(klist, e_skn[0, :, n], 'k-')
-            ax.scatter(klist, e_skn[0,:,n], s = psi_skn_f[0, :, n], \
-                    c = 'r', edgecolors = 'r')
-        ax.axhline(y = 0, ls = ':', lw = 2)
-        # High-symmetry lines and labels
-        for x1 in ktick_pos[:-1]:
-            ax.axvline(x = x1, ls = '--')
-        ax.set_xticks(ktick_pos)
-        ax.set_xticklabels(ktick_label)
-        ax.set_ylabel("E (eV)")
-        ax.set_xlim(klist[0], klist[-1])
-        ax.set_ylim(emin, emax)
-        plt.title("Band structure with $f$-character")
-        plt.show()
-        fig.savefig('bands.pdf')
+            ax.plot(klist, e_skn[1, :, n], 'k--')
+            ax.scatter(klist, e_skn[1,:,n], s = psi_skn_f[1, :, n], \
+                    c = 'b', edgecolors = 'b')
+
+    ax.axhline(y = 0, ls = ':', lw = 2)
+    # High-symmetry lines and labels
+    for x1 in ktick_pos[:-1]:
+        ax.axvline(x = x1, ls = '--')
+    ax.set_xticks(ktick_pos)
+    ax.set_xticklabels(ktick_label)
+    ax.set_ylabel("E (eV)")
+    ax.set_xlim(klist[0], klist[-1])
+    ax.set_ylim(emin, emax)
+    plt.title("Band structure with corr-orb-character")
+    plt.show()
+    fig.savefig('bands.pdf')
+
+
+def driver_plot_bands():
+    msg = r'''
+    Script to plot band structure with
+    overall correlated orbital character.
+
+    inline options:
+
+        -el emin: set energy mesh minimuim
+        -eh emax: set energy mesh miaximum
+    '''
+
+    emin = -3.3
+    emax = 5.8
+    if '-h' in sys.argv:
+        print(msg)
+        sys.exit()
+    else:
+        if '-el' in sys.argv:
+            emin = float(sys.argv[sys.argv.index('-el')+1])
+        if '-eh' in sys.argv:
+            emax = float(sys.argv[sys.argv.index('-eh')+1])
+
+    plot_band_sturture(emin=emin, emax=emax)
+
 
 
 if __name__=='__main__':

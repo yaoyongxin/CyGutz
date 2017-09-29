@@ -1,4 +1,4 @@
-import os, h5py, glob
+import os, h5py, glob, sys
 from math import pi, sqrt
 import numpy as np
 from future_builtins import zip
@@ -172,29 +172,80 @@ def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001):
 
 
 def plot_dos_tf(energies, dos_t, dos_f):
-    '''plot total dos and total correlated component.
+    '''plot total dos and total correlated component
+    and save in file `dos.pdf`.
     '''
     fig, ax = plt.subplots()
-    ax.fill_between(
-        energies, 0, dos_t, facecolor='grey', alpha=0.5)
-    ax.plot(energies, dos_t, color='grey', label='tot')
-    ax.plot(energies, dos_f, color='red', label='$f$')
+    if len(dos_t) == 1:
+        ax.fill_between(
+            energies, 0, dos_t[0], facecolor='grey', alpha=0.5)
+        ax.plot(energies, dos_t[0], color='grey', label='tot')
+        ax.plot(energies, dos_f[0], color='red', label='$corr. orb.$')
+        ax.set_ylim(0.)
+    else:
+        ax.fill_between(
+            energies, 0, dos_t[0], facecolor='grey', alpha=0.5)
+        ax.fill_between(
+            energies, 0, -dos_t[1], facecolor='grey', alpha=0.5)
+        ax.plot(energies, dos_t[0], color='grey', label='tot-up')
+        ax.plot(energies, -dos_t[1], color='grey', label='tot-dn')
+        ax.plot(energies, dos_f[0], color='red', label='$corr-orb-up$')
+        ax.plot(energies, -dos_f[1], color='blue', label='$corr-orb-dn$')
+        ax.axhline(y=0, ls='-', color='black', linewidth=0.5)
+    ax.set_xlim(np.min(energies), np.max(energies))
     ax.axvline(x=0, ls='--')
-    ax.set_ylim(0.)
     ax.set_ylabel("DOS (states/f.u.)")
     ax.set_xlabel("E (eV)")
-    plt.title("Density of States with $f$-component")
+    plt.title("DOS with correlated orbital-component")
     plt.legend()
     fig.tight_layout()
     plt.show()
-    fig.savefig('gap_j.pdf')
+    fig.savefig('dos.pdf')
 
+
+def driver_plot_dos():
+    msg = r'''
+    Script to plot total density of states with
+    overall correlated orbital character.
+
+    inline options:
+
+        -el emin: set energy mesh minimuim
+        -eh emax: set energy mesh miaximum
+        -d delta: set Gaussian smearing factor
+        -n nmesh: set energy mesh size
+    '''
+
+    emin = -5.0
+    emax = 5.0
+    delta = 0.05
+    npts = 1001
+
+    if '-h' in sys.argv:
+        print(msg)
+        sys.exit()
+    else:
+        if '-el' in sys.argv:
+            emin = float(sys.argv[sys.argv.index('-el')+1])
+        if '-eh' in sys.argv:
+            emax = float(sys.argv[sys.argv.index('-eh')+1])
+        if '-d' in sys.argv:
+            delta = float(sys.argv[sys.argv.index('-d')+1])
+        if '-n' in sys.argv:
+            npts = int(sys.argv[sys.argv.index('-n')+1])
+
+    # get dos
+    energies, dos_t, dos_f = h5get_dos(ewin=(emin, emax), delta=delta, \
+            npts=npts)
+
+    # pick up-component to plot
+    plot_dos_tf(energies, dos_t, dos_f)
 
 
 if __name__ == "__main__":
     '''
     Test run.
     '''
-    energies, dos_t, dos_f = h5get_dos()
+    energies, dos_t, dos_f = h5get_dos(ewin=(-8., 5.))
     # pick up-component.
-    plot_dos_tf(energies, dos_t[0], dos_f[0])
+    plot_dos_tf(energies, dos_t, dos_f)

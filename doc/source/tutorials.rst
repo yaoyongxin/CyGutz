@@ -13,5 +13,6 @@ The lecture and handson notes can be downloaded here
   tutorial_bethe_latt
   tutorial_checkboard
   tutorial_alpha_ce
+  tutorial_alpha_fe
   tutorial_wien2k_vscan
   tutorial_gwien_vscan

@@ -108,28 +108,24 @@ including some typical post-analyses.
         $ ${WIEN_GUTZ_ROOT2}/save_ldag -d lapwg
 
 4) Let us learn how to plot the density of states of Ce 
-    after the self-consistent DFT+G calculation.  
+    after the self-consistent DFT+G calculation. 
+    To plot density of states with Ce-4f character, type::
 
-    (a) get the simple script 
-        :download:`plot_dos_ce.py<./_files/plot_dos_ce.py>`
+        $ ${WIEN_GUTZ_ROOT2}/plot_dos_tf.py -h # help info
+        $ ${WIEN_GUTZ_ROOT2}/plot_dos_tf.py -el -3.0 -eh 5.0
 
-    (b) type::
+    you will get dos like
 
-            $ python ./plot_dos_ce.py
+    .. image:: _images/ce_dos.png
+       :alt: alternate text
+       :scale: 100 %
+       :align: center
 
-        you will get dos like
-
-        .. image:: _images/ce_dos.png
-           :alt: alternate text
-           :scale: 100 %
-           :align: center
-
-    The above scirpt calls two predefined functions, 
+    The above scirpt calls a predefined functions, 
     which serves a s a template to be adapted by users
     for specific purposes.
 
-    .. autofunction:: pyglib.estructure.dos.h5get_dos
-    .. autofunction:: pyglib.estructure.dos.plot_dos_tf
+    .. autofunction:: pyglib.estructure.dos.driver_plot_dos
 
 5) Another important analysis is the eigen-values of 
     the local reduced many-body density matrix 
@@ -175,11 +171,10 @@ including some typical post-analyses.
 
             $ ${WIEN_GUTZ_ROOT2}/run_ga.py -band
 
-    (c) Download the simple script 
-        :download:`plot_band_ce.py<_files/plot_band_ce.py>`
-        and type the following command to plot the band structure::
+    (c) To plot the band structure with Ce-3f character, type::
 
-            $ python ./plot_band_ce.py
+            $ ${WIEN_GUTZ_ROOT2}/plot_band_tf.py -h # help info
+            $ ${WIEN_GUTZ_ROOT2}/plot_band_tf.py
 
         You will see the band structure like the following
 
@@ -192,4 +187,4 @@ including some typical post-analyses.
         which serves a s a template to be adapted by users
         for specific purposes.
 
-        .. autofunction:: pyglib.estructure.bandstruct.plot_band_sturture
+        .. autofunction:: pyglib.estructure.bandstruct.driver_plot_bands
