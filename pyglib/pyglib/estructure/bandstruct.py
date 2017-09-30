@@ -1,4 +1,4 @@
-import h5py, numpy, sys
+import h5py, numpy, sys, glob
 from builtins import range
 from pyglib.estructure.dos import get_bands
 import matplotlib.pyplot as plt
@@ -42,7 +42,7 @@ def get_k_info():
     return klist, ktick_pos, ktick_label
 
 
-def get_estimated_gap(nocc, fband='GBANDS_0.h5'):
+def get_estimated_gap(nocc=None):
     '''Given the number of occupied bands and the band energy file,
     estimate the band gap.
     '''
@@ -50,12 +50,103 @@ def get_estimated_gap(nocc, fband='GBANDS_0.h5'):
     evmax = -1.e10
     # conduction band minimum
     ecmin = 1.e10
-    with h5py.File(fband, 'r') as f:
-        for ik in range(f['/IKP_START'][()], f['/IKP_END'][()]+1):
-            ek = f['/ISPIN_1/IKP_{}/ek'.format(ik)][()]
-            evmax = max(ek[nocc-1], evmax)
-            ecmin = min(ek[nocc], ecmin)
+
+    # if fermi level is not given, check the fermi level
+    if nocc is None:
+        with h5py.File('GLOG.h5') as f:
+            e_fermi = f['/e_fermi'][0]
+    else:
+        e_fermi = None
+
+    for fband in glob.glob('GBANDS_*.h5'):
+        with h5py.File(fband, 'r') as f:
+            for ik in range(f['/IKP_START'][()], f['/IKP_END'][()]+1):
+                ek = f['/ISPIN_1/IKP_{}/ek'.format(ik)][()]
+
+                if e_fermi is not None:
+                    noccp = numpy.argwhere(ek < e_fermi)[-1] + 1
+                    if nocc is None:
+                        nocc = noccp
+                    elif nocc != noccp:
+                        print(' Number of occupied bands not fixed, \n'+ \
+                                ' Must be metallic!')
+                        return 0.
+
+                evmax = max(ek[nocc-1], evmax)
+                ecmin = min(ek[nocc], ecmin)
     return max(ecmin - evmax, 0.)
+
+
+def get_estimated_gaps(nocc=None):
+    '''Given the number of occupied bands and the band energy file,
+    estimate the direct/indirect band gap with associated k-index.
+    '''
+    # valence band maximum
+    evmax = -1.e10
+    kvmax = -1
+    # conduction band minimum
+    ecmin = 1.e10
+    kcmin = -1
+    # direct band gap value
+    dgap = 1000.
+    kdgap = -1
+
+    # if fermi level is not given, check the fermi level
+    if nocc is None:
+        with h5py.File('GLOG.h5') as f:
+            e_fermi = f['/e_fermi'][0]
+    else:
+        e_fermi = None
+
+    for fband in glob.glob('GBANDS_*.h5'):
+        with h5py.File(fband, 'r') as f:
+            for ik in range(f['/IKP_START'][()], f['/IKP_END'][()]+1):
+                ek = f['/ISPIN_1/IKP_{}/ek'.format(ik)][()]
+
+                if e_fermi is not None:
+                    noccp = numpy.argwhere(ek < e_fermi)[-1] + 1
+                    if nocc is None:
+                        nocc = noccp
+                    elif nocc != noccp:
+                        print(' Number of occupied bands not fixed, \n'+ \
+                                ' Must be metallic!')
+                        return 0., -1, -1, 0., -1
+
+                if ek[nocc-1] > evmax:
+                    evmax = ek[nocc-1]
+                    # 0-based k-index
+                    kvmax = ik - 1
+                if ek[nocc] < ecmin:
+                    ecmin = ek[nocc]
+                    kcmin = ik - 1
+                if ek[nocc] - ek[nocc-1] < dgap:
+                    dgap = ek[nocc] - ek[nocc-1]
+                    kdgap = ik - 1
+    # indirect band gap size
+    idgap = max(ecmin - evmax, 0.)
+    return idgap, kvmax, kcmin, dgap, kdgap
+
+
+def driver_get_estimated_gaps():
+    '''script to print estimated direct/indirect band gaps.
+    '''
+    msg = r'''
+    Script to print estimated direct/indirect band gaps.
+
+    inline options:
+
+        -n n: occupied number of bands.
+    '''
+    nocc = None
+    if '-h' in sys.argv:
+        print(msg)
+        sys.exit()
+    if '-n' in sys.argv:
+        nocc = int(sys.argv[sys.argv.index('-n')+1])
+    idgap, kvmax, kcmin, dgap, kdgap = get_estimated_gaps(nocc=nocc)
+    print(' Direct gap = {} with k = {}'.format(dgap, kdgap))
+    print(' Inirect gap = {} with kv = {} kc = {}'.format(idgap, \
+            kvmax, kcmin))
 
 
 def plot_band_sturture(emin=-10., emax=10.):

@@ -96,8 +96,8 @@ def get_self_energy_cf_nosoc(l_list, ispin, rotations):
     J = []
     for Jh1 in Jhalf:
         J1 = np.zeros(self_energy.shape, dtype=np.complex)
-        J1[:dim_t,0::2] = Jh1
-        J1[dim_t:,1::2] = Jh1
+        J1[0::2,0::2] = Jh1
+        J1[1::2,1::2] = Jh1
         J.append(J1)
 
     U = np.zeros(self_energy.shape, dtype=np.complex)
