@@ -241,12 +241,13 @@ module gkernel
     subroutine solve_hembed(i,na4,io)
     integer,intent(in)::i,na4,io
 
-    integer na2,iter,ityp,ierr,ia
+    integer na2,iter,ityp,ierr,ia,ll
     real(q) etot,de,mag_mom
     complex(q) h1e4(na4,na4),dm(na4,na4),h1e2(na4/2,na4/2)
     
     na2=na4/2
     ityp=wh%ityp_imp(i)
+    ll = (na2/2-1)/2
 
     h1e2=wh%co(i)%h1e
     ! adding (orbital dependent) DC term to h1e
@@ -285,7 +286,7 @@ module gkernel
     elseif(gkmem%iembeddiag==-10)then
         call system('exe_spci_bathtrunc '//int_to_str(i))
     elseif(gkmem%iembeddiag==-11)then
-        call system('exe_ml '//int_to_str(i))
+        call system('gs_ml.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
 #else
     if(gkmem%iembeddiag==-1)then
         call execute_command_line('exe_spci '//int_to_str(i), exitstat=ierr)
@@ -323,10 +324,10 @@ module gkernel
             write(0,'(" Error in running exe_spci_bathtrunc!")')
         endif
     elseif(gkmem%iembeddiag==-11)then
-        call execute_command_line('exe_ml '//int_to_str(i),  &
-                &exitstat=ierr)
+        call execute_command_line(' gs_ml.py -i '//int_to_str(i)//' -l '// &
+                &int_to_str(ll), exitstat=ierr)
         if(ierr/=0)then
-            write(0,'(" Error in running exe_ml!")')
+            write(0,'(" Error in running gs_ml.py!")')
         endif
 #endif
     else
