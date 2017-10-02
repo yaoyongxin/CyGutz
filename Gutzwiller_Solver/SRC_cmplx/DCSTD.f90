@@ -61,8 +61,8 @@ module dcstd
 
     type dc_std
         integer::mode=1
-        real(q),allocatable::e(:),vpot(:),u_avg(:),j_avg(:),nelf(:), &
-                &vpot2(:,:)
+        real(q),allocatable::e(:),vpot(:),u_avg(:),j_avg(:),nelf(:)
+        complex(q),allocatable::vpot2(:,:,:)
     end type dc_std
 
     type(dc_std)::dc
@@ -76,6 +76,7 @@ module dcstd
 
     allocate(dc%vpot(wh%num_imp),dc%u_avg(wh%num_imp),dc%j_avg(wh%num_imp), &
             &dc%nelf(wh%num_imp),dc%e(wh%num_imp))
+    dc%u_avg=0; dc%j_avg=0; dc%nelf=0
     call set_nelf_list(io)
     return
 
@@ -98,8 +99,9 @@ module dcstd
     endif
     call h5lexists_f(f_id,'/VDC2_LIST',lexist,gh5_err)
     if(lexist)then
-        allocate(dc%vpot2(wh%na2max,wh%num_imp))
-        call gh5_read(dc%vpot2,wh%na2max,wh%num_imp,'/VDC2_LIST',f_id)
+        allocate(dc%vpot2(wh%na2max,wh%na2max,wh%num_imp))
+        call gh5_read(dc%vpot2,wh%na2max,wh%na2max,wh%num_imp, &
+                &'/VDC2_LIST',f_id)
     endif
     call gh5_close(f_id)
 

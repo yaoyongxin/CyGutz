@@ -475,7 +475,7 @@ subroutine gutz5_wrt(nkp,wt,nelet,ne,kx,ky,kz,kname,efmod,delta)
     call gh5_write(kx,nkp,'/kptx',log_file_id)
     call gh5_write(ky,nkp,'/kpty',log_file_id)
     call gh5_write(kz,nkp,'/kptz',log_file_id)
-    call gh5_write(br2,3,3,'/br2_car_dir',log_file_id)
+    call gh5_write(br2,3,3,'/recip_prim_vec',log_file_id)
     return
       
 end subroutine gutz5_wrt

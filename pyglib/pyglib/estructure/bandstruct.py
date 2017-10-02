@@ -1,3 +1,4 @@
+from __future__ import print_function
 import h5py, numpy, sys, glob
 from builtins import range
 from pyglib.estructure.dos import get_bands
@@ -11,7 +12,7 @@ def get_greek_label(kname):
             'XI', 'PI', 'UPSILON', 'PHI', 'PSI', 'OMEGA']:
         return '$\{}{}$'.format(kname[0].upper(), kname[1:].lower())
     else:
-      return kname
+      return '${}$'.format(kname)
 
 
 def get_k_info():
@@ -24,7 +25,7 @@ def get_k_info():
         kz = f['/kptz'][()]
         kn = f['/kptname'][()]
         # reciprocal lattice vectors ordered as colomn vectors
-        br = f['/br2_car_dir'][()]
+        br = f['/recip_prim_vec'][()]
 
     ktick_pos = []
     ktick_label = []
@@ -33,7 +34,7 @@ def get_k_info():
             klist = [0.]
         else:
             dk = numpy.array([kx[i]-kx[i-1], ky[i]-ky[i-1], kz[i]-kz[i-1]])
-            dl = dk.dot(br.T).dot(br).dot(dk)
+            dl = dk.dot(br).dot(br.T).dot(dk)
             klist.append(klist[i-1]+numpy.sqrt(dl))
         klabel = kn[i].strip()
         if klabel != '':
@@ -55,23 +56,15 @@ def get_estimated_gap(nocc=None):
     if nocc is None:
         with h5py.File('GLOG.h5') as f:
             e_fermi = f['/e_fermi'][0]
-    else:
-        e_fermi = None
 
     for fband in glob.glob('GBANDS_*.h5'):
         with h5py.File(fband, 'r') as f:
             for ik in range(f['/IKP_START'][()], f['/IKP_END'][()]+1):
                 ek = f['/ISPIN_1/IKP_{}/ek'.format(ik)][()]
-
-                if e_fermi is not None:
+                if nocc is None:
                     noccp = numpy.argwhere(ek < e_fermi)[-1] + 1
-                    if nocc is None:
-                        nocc = noccp
-                    elif nocc != noccp:
-                        print(' Number of occupied bands not fixed, \n'+ \
-                                ' Must be metallic!')
-                        return 0.
-
+                    nocc = noccp[0]
+                    print(' number of occupied bands = {}'.format(nocc))
                 evmax = max(ek[nocc-1], evmax)
                 ecmin = min(ek[nocc], ecmin)
     return max(ecmin - evmax, 0.)
@@ -95,22 +88,16 @@ def get_estimated_gaps(nocc=None):
     if nocc is None:
         with h5py.File('GLOG.h5') as f:
             e_fermi = f['/e_fermi'][0]
-    else:
-        e_fermi = None
 
     for fband in glob.glob('GBANDS_*.h5'):
         with h5py.File(fband, 'r') as f:
             for ik in range(f['/IKP_START'][()], f['/IKP_END'][()]+1):
                 ek = f['/ISPIN_1/IKP_{}/ek'.format(ik)][()]
 
-                if e_fermi is not None:
+                if nocc is None:
                     noccp = numpy.argwhere(ek < e_fermi)[-1] + 1
-                    if nocc is None:
-                        nocc = noccp
-                    elif nocc != noccp:
-                        print(' Number of occupied bands not fixed, \n'+ \
-                                ' Must be metallic!')
-                        return 0., -1, -1, 0., -1
+                    nocc = noccp[0]
+                    print(' number of occupied bands = {}'.format(nocc))
 
                 if ek[nocc-1] > evmax:
                     evmax = ek[nocc-1]
