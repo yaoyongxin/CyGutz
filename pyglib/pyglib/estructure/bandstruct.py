@@ -130,10 +130,13 @@ def driver_get_estimated_gaps():
         sys.exit()
     if '-n' in sys.argv:
         nocc = int(sys.argv[sys.argv.index('-n')+1])
+    with h5py.File('GPARAMBANDS.h5', 'r') as f:
+        kname = f['/kptname'][()]
     idgap, kvmax, kcmin, dgap, kdgap = get_estimated_gaps(nocc=nocc)
-    print(' Direct gap = {} with k = {}'.format(dgap, kdgap))
-    print(' Inirect gap = {} with kv = {} kc = {}'.format(idgap, \
-            kvmax, kcmin))
+    print(' Direct gap = {} with k = {} {}'.format(dgap, kdgap, \
+            kname[kdgap]))
+    print(' Inirect gap = {} with kv = {} {} kc = {} {}'.format(idgap, \
+            kvmax, kname[kvmax], kcmin, kname[kcmin]))
 
 
 def plot_band_sturture(emin=-10., emax=10.):
@@ -162,7 +165,7 @@ def plot_band_sturture(emin=-10., emax=10.):
 
     ax.axhline(y = 0, ls = ':', lw = 2)
     # High-symmetry lines and labels
-    for x1 in ktick_pos[:-1]:
+    for x1 in ktick_pos[1:-1]:
         ax.axvline(x = x1, ls = '--')
     ax.set_xticks(ktick_pos)
     ax.set_xticklabels(ktick_label)

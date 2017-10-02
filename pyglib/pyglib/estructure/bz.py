@@ -39,7 +39,7 @@ def get_k_label(kpt, br_latt):
         elif numpy.allclose(kpt, [0., 0., 0.5]):
             return 'Z'
         else:
-            return 'random'
+            return ' '
     else:
         # to be implemented.
         return ' '
