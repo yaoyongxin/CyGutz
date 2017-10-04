@@ -266,10 +266,12 @@ def h5save_usr_qa_setup(material, log):
                 "          1: CISD (Configuration interaction\n" +
                 "             singles & doubles based on HF, experimental).\n"+
                 "        -31: Valence truncation ED for S=0 \n" +
-                "             and local symmetry enforced.\n" +
+                "             and local symmetry enforced, experimental.\n" +
+                "        -11: machine learning solver for soc only. \n" +
+                "        -12: syten (dmrg) solver. \n" +
                 "         10: HF (Mixing one-particle DM, experimental).")
         iembeddiag = get_usr_input(" Please select LDIAG: ",
-                ['-3', '-1', '0', '1', '10', '-31'])
+                ['-12', '-11', '-3', '-1', '0', '1', '10', '-31'])
         usr_input.write(iembeddiag + '\n')
     iembeddiag = int(iembeddiag)
     f['/usrqa/iembeddiag'] = iembeddiag
