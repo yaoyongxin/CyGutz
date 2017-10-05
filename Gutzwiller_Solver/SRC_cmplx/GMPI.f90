@@ -54,10 +54,10 @@
 
 module gmpi
     use gprec
-#ifdef mpi_mode
-    use mpi
-#endif
     implicit none
+#ifdef mpi_mode
+    include "mpif.h"
+#endif
     private
     type g_mpi
         integer::master=0

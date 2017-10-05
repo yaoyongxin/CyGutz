@@ -26,7 +26,7 @@ GPRIMME.o: ../GPRIMME.f90
             -c $< ${HDF5_INCLUDE} $(INCLUDE)
 
 %.o: ../%.f90
-	${PF90} ${FREE_FORM} ${FFLAGS} -cpp ${Fmpi_define} \
+	${PF90} ${FREE_FORM} ${FFLAGS} -cpp ${Fmpi_define} ${Fstd_define} \
 			-c $< ${HDF5_INCLUDE} $(INCLUDE)
 
 clean:

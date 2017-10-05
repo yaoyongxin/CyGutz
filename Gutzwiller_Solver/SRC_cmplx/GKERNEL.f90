@@ -287,6 +287,8 @@ module gkernel
         call system('exe_spci_bathtrunc '//int_to_str(i))
     elseif(gkmem%iembeddiag==-11)then
         call system('gs_ml.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
+    elseif(gkmem%iembeddiag==-12)then
+        call system('gs_syten.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
 #else
     if(gkmem%iembeddiag==-1)then
         call execute_command_line('exe_spci '//int_to_str(i), exitstat=ierr)
@@ -328,6 +330,12 @@ module gkernel
                 &int_to_str(ll), exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running gs_ml.py!")')
+        endif
+    elseif(gkmem%iembeddiag==-12)then
+        call execute_command_line(' gs_syten.py -i '//int_to_str(i)//' -l '// &
+                &int_to_str(ll), exitstat=ierr)
+        if(ierr/=0)then
+            write(0,'(" Error in running gs_syten.py!")')
         endif
 #endif
     else

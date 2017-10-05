@@ -58,11 +58,10 @@ subroutine set_gmpi()
     use gmpi
     use ghdf5_base
     use bandstru
-#ifdef mpi_mode
-    use mpi
-#endif
     implicit none
-      
+#ifdef mpi_mode
+    include "mpif.h"
+#endif
     integer nk1,i,imap,isum
     integer local_imp(wh%num_imp)
     character*77 f_name

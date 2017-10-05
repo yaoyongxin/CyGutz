@@ -55,9 +55,6 @@
 program cygutz
 
     use ghdf5_base, only: gh5_init, gh5_end
-#ifdef mpi_mode
-    use mpi
-#endif
     use gparam
     use bandstru
     use warehouse
@@ -68,6 +65,9 @@ program cygutz
     use psave
     use gtime
     implicit none
+#ifdef mpi_mode
+    include "mpif.h"
+#endif
     integer ierr
     external::g_fcn
     
