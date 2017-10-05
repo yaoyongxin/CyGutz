@@ -24,6 +24,9 @@ install:
 gtool:
 	cp -r pygtool/* ${GUTZ_ROOT2}
 
+tests:
+	cd test && ./tscan.py && cd ..
+
 clean:
 	cd Gutzwiller_Solver && make clean && cd ..
 	cd Interface/Wien2k && make clean && cd ../..

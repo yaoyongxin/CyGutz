@@ -40,27 +40,33 @@ def modify_gparam():
                 f['/giembeddiag'][()] = [int(sys.argv[sys.argv.index( \
                         '-iembeddiag') + 1])]
     # change settings in 'ginit.h5', re-initialize if becessary
-    re_init = False
-    with h5py.File('ginit.h5', 'a') as f:
-        if '-imix' in sys.argv:
-            f['/usrqa/lnewton'][()] = int(sys.argv[sys.argv.index( \
-                    '-imix') + 1])
-        if '-iembeddiag' in sys.argv:
-            f['/usrqa/iembeddiag'][()] = int(sys.argv[sys.argv.index( \
-                    '-iembeddiag') + 1])
-        if '-dc_mode' in sys.argv:
-            f['/usrqa/ldc'][()] = int(sys.argv[sys.argv.index( \
-                    '-dc_mode') + 1])
-        if '-unique_j_ev' in sys.argv:
-            stmp = sys.argv[sys.argv.index('-unique_j_ev')+1]
-            f['/usrqa/unique_j_list_ev'][()] = [float(s) for s in
-                    stmp.split('-')]
-            re_init = True
-        if '-unique_u_ev' in sys.argv:
-            stmp = sys.argv[sys.argv.index('-unique_u_ev')+1]
-            f['/usrqa/unique_u_list_ev'][()] = [float(s) for s in
-                    stmp.split('-')]
-            re_init = True
+    if '-unique_j_ev' in sys.argv or '-unique_u_ev' in sys.argv:
+        re_init = True
+    else:
+        re_init = False
+
+    if os.path.isfile('ginit.h5'):
+        with h5py.File('ginit.h5', 'a') as f:
+            if '-imix' in sys.argv:
+                f['/usrqa/lnewton'][()] = int(sys.argv[sys.argv.index( \
+                        '-imix') + 1])
+            if '-iembeddiag' in sys.argv:
+                f['/usrqa/iembeddiag'][()] = int(sys.argv[sys.argv.index( \
+                        '-iembeddiag') + 1])
+            if '-dc_mode' in sys.argv:
+                f['/usrqa/ldc'][()] = int(sys.argv[sys.argv.index( \
+                        '-dc_mode') + 1])
+            if '-unique_j_ev' in sys.argv:
+                stmp = sys.argv[sys.argv.index('-unique_j_ev')+1]
+                f['/usrqa/unique_j_list_ev'][()] = [float(s) for s in
+                        stmp.split('-')]
+            if '-unique_u_ev' in sys.argv:
+                stmp = sys.argv[sys.argv.index('-unique_u_ev')+1]
+                f['/usrqa/unique_u_list_ev'][()] = [float(s) for s in
+                        stmp.split('-')]
+    else:
+        if re_init:
+            raise ValueError(' file ginit.h5 does not exist!')
 
     if re_init:
         ginit()
