@@ -32,6 +32,7 @@ module gparam
     endif
 
     idx=index(cmd,'-n ')
+
     if(idx>0)then
         read(cmd(idx+2:),*)g_maxiter
         if(io>0)then

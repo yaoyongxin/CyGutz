@@ -148,7 +148,8 @@ module gkernel
         do imore=1,3
             call ghybrd( &
                     &av,gkmem%nx,gkmem%x,gkmem%fvec,rtol,epsfcn,io)
-            if(gkmem%iter>=nitmin.or.gkmem%maxerr<gkmem%rtol)exit
+            if(gkmem%iter>=nitmin.or.gkmem%maxerr<gkmem%rtol.or. &
+                    &gkmem%iter<=3)exit
         enddo
     case(-1,1)
         call broyden_mix( &
@@ -448,6 +449,7 @@ subroutine g_fcn(n,x,fvec,iflag)
             iflag=-1
         endif
     endif
+
     if(gkmem%iter>=gkmem%max_iter)iflag=-1
 
     call set_time_point(2,3)
