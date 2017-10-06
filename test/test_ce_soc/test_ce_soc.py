@@ -1,12 +1,5 @@
-import unittest, tempfile, os, shutil, glob, h5py, numpy, subprocess
-
-
-def compare_data(path):
-    with h5py.File('GLOG.h5', 'r') as f:
-        data1 = f[path][()]
-    with h5py.File('GLOG_REF.h5', 'r') as f:
-        data2 = f[path][()]
-    return numpy.allclose(data1, data2)
+import unittest, tempfile, os, shutil, glob, subprocess
+from pyglib.basic.data import compare_array as compare_data
 
 
 class KnowValues(unittest.TestCase):

@@ -38,3 +38,6 @@ exe_*
 # Directory
 doc/build
 Gutzwiller_Slave_Boson_Solver/include
+
+#
+Makefile.in
