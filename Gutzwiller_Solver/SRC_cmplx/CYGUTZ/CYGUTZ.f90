@@ -59,7 +59,6 @@ program cygutz
     use bandstru
     use warehouse
     use dcstd
-    use magnetism
     use gmpi
     use gkernel
     use psave
@@ -110,21 +109,8 @@ program cygutz
     ! double counting
     call init_dc_std(gp%io)
 
-    ! magnetic solution initialization
-    call init_magnetism(gp%io)
-
-    ! add spin-splitting to h1e to initialize lambda_1
-    if(associated(mag%bz_field))then
-        call add_local_bz_splitting_to_h1e(mag%bz_field,0,1.d0)
-    endif
-
-    !! Initialise the kernel
+    ! Initialise the kernel
     call init_gkernel(gp%io)
-
-    ! remove spin-splitting from h1e 
-    if(associated(mag%bz_field))then
-        call add_local_bz_splitting_to_h1e(mag%bz_field,0,-1.d0)
-    endif
 
     ! check the quasi-particle part with initial guess of {R, lambda}
     call map_wh_bnd_matrix(wh%r,bnd%r,.false.)

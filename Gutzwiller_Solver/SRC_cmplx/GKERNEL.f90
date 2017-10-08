@@ -252,8 +252,8 @@ module gkernel
 
     h1e2=wh%co(i)%h1e
     ! adding (orbital dependent) DC term to h1e
-    if(allocated(dc%vpot2))then
-        h1e2(:na2,:na2)=h1e2(:na2,:na2)+dc%vpot2(:na2,:na2,i)
+    if(associated(wh%co(i)%vext))then
+        h1e2(:na2,:na2)=h1e2(:na2,:na2)+wh%co(i)%vext
     endif
 
     call gh5_open_w('EMBED_HAMIL_'//trim(int_to_str(i))//'.h5',f_id) 

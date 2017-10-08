@@ -65,7 +65,7 @@ module corrorb
         integer :: dim_hs_l
         complex(q),pointer :: nks(:,:),nc_var(:,:),nc_phy(:,:),isimix(:,:), &
                 &r(:,:),r0(:,:),z(:,:),d(:,:),d0(:,:), &
-                &la1(:,:),la2(:,:),h1e(:,:), &
+                &la1(:,:),la2(:,:),h1e(:,:),vext(:,:)=>null(), &
                 &sx(:,:),sy(:,:),sz(:,:),lx(:,:),ly(:,:),lz(:,:),&
                 &hs_l(:,:,:),v2e(:,:,:,:),r_coef(:),v_j2e(:,:,:,:)
         real(q),pointer :: nks_coef(:),la1_coef(:),ncv_coef(:)

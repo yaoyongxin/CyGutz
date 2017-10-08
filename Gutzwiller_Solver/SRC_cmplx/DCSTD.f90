@@ -62,7 +62,6 @@ module dcstd
     type dc_std
         integer::mode=1
         real(q),allocatable::e(:),vpot(:),u_avg(:),j_avg(:),nelf(:)
-        complex(q),allocatable::vpot2(:,:,:)
     end type dc_std
 
     type(dc_std)::dc
@@ -96,12 +95,6 @@ module dcstd
     endif
     if(dc%mode>1)then
         call gh5_read(dc%nelf,wh%num_imp,'/dc_nelf_list',f_id)
-    endif
-    call h5lexists_f(f_id,'/VDC2_LIST',lexist,gh5_err)
-    if(lexist)then
-        allocate(dc%vpot2(wh%na2max,wh%na2max,wh%num_imp))
-        call gh5_read(dc%vpot2,wh%na2max,wh%na2max,wh%num_imp, &
-                &'/VDC2_LIST',f_id)
     endif
     call gh5_close(f_id)
 

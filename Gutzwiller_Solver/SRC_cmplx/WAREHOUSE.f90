@@ -92,6 +92,7 @@ module warehouse
         integer :: r_factor=2
         complex(q),pointer :: r(:),r0(:),d(:),d0(:),la1(:),la2(:),z(:), &
                 &copy(:),nks(:),nc_var(:),nc_phy(:),h1e(:),isimix(:), &
+                &vext(:)=>null(),&
                 &sx(:)=>null(),sy(:)=>null(),sz(:)=>null(), &
                 &lx(:)=>null(),ly(:)=>null(),lz(:)=>null(),r_coef(:), &
                 ! additional rotations for bare hamiltonian.
@@ -123,6 +124,12 @@ module warehouse
     allocate(wh%co(wh%num_imp))
     call set_v2e_list(io)
     call gh5_close(f_id)
+
+    inquire(file='GVEXT.h5',exist=lexist)
+    if(lexist)then
+        call gh5_open_r('GVEXT.h5',f_id)
+        call set_wh_vext(io)
+    endif
 
     inquire(file='GMOTT.h5',exist=lexist)
     if(lexist)call gh5_open_r('GMOTT.h5',f_id)
@@ -202,6 +209,10 @@ module warehouse
         wh%co(i)%la1   (1:na2,1:na2) => wh%la1   (ibase+1:ibase+na22)
         wh%co(i)%la2   (1:na2,1:na2) => wh%la2   (ibase+1:ibase+na22)
         wh%co(i)%h1e   (1:na2,1:na2) => wh%h1e   (ibase+1:ibase+na22)
+
+        if(associated(wh%vext))then
+            wh%co(i)%vext(1:na2,1:na2) => wh%vext(ibase+1:ibase+na22)
+        endif
 
         if(associated(wh%sx))then
             wh%co(i)%sx(1:na2,1:na2) => wh%sx(ibase+1:ibase+na22)
@@ -337,7 +348,7 @@ module warehouse
             &wh%ncv_coef(wh%hm_l%dimhst),wh%r_coef(wh%hm_r%dimhst), &
             &wh%et1(wh%num_imp), wh%eu2(wh%num_imp))
     wh%r=0; wh%r0=0; wh%z=0; wh%d=0; wh%d0=0; wh%la1=0; wh%la2=0
-    wh%nks=0; wh%isimix=0; wh%nc_var=0; wh%nc_phy=0; wh%h1e=0
+    wh%nks=0; wh%isimix=0; wh%nc_var=0; wh%nc_phy=0
     return
       
     end subroutine alloc_warehouse
@@ -621,6 +632,22 @@ module warehouse
     end subroutine set_wh_db2sab
      
 
+    ! read in a list of local external potentials.
+    subroutine set_wh_vext(io)
+    integer,intent(in)::io
+
+    allocate(wh%vext(wh%na2112))
+    call gh5_read_wh_matrix_list('/VEXT',wh%na2_imp,wh%vext)
+    if(io>0)then
+        write(io,'(" list of local vext read in.")')
+        call output_matrices('v_ext',wh%vext,wh%na2112,wh%num_imp, &
+                &wh%na2_imp,io,0)
+    endif
+    return
+ 
+    end subroutine set_wh_vext
+
+
     !*************************************************************************
     ! Mott localized spin-orbital information
     !*************************************************************************
@@ -855,31 +882,6 @@ module warehouse
     end subroutine calc_ncphy_pp
 
 
-    subroutine add_local_bz_splitting_to_h1e(bz_list,io,fact)
-    integer,intent(in)::io
-    real(q),intent(in)::bz_list(wh%num_imp)
-    real(q),intent(in)::fact
-
-    integer i,ia,ia2
-
-    do i=1,wh%num_imp
-        do ia=1,wh%na2_imp(i)/2
-            ia2=ia*2
-            ! spin-up component
-            wh%co(i)%h1e(ia2-1,ia2-1)=wh%co(i)%h1e(ia2-1,ia2-1)-bz_list(i)*fact
-            ! spin-dn component
-            wh%co(i)%h1e(ia2,ia2)=wh%co(i)%h1e(ia2,ia2)+bz_list(i)*fact
-        enddo
-    enddo
-    if(io>0)then
-        call output_matrices('h1e-with-bz',wh%h1e,wh%na2112,wh%num_imp, &
-                &wh%na2_imp,io,-1)
-    endif
-    return
-
-    end subroutine add_local_bz_splitting_to_h1e
-
-    
     ! for wh%h1e, etc.
     subroutine calc_herm_matrices_pp(matrices,sname,mb,ltrans,io,mode)
     complex(q),intent(inout)::matrices(wh%na2112)
