@@ -11,9 +11,8 @@ def save_gparam(iso=1, ispin=1, ityp_list=[0], imap_list=[0], na2_list=[2],
         utrans_list=None, ldc=0, u_avg_list=None, j_avg_list=None,
         nelf_list=None, rotations_list=None, lie_odd_params_list=None,
         lie_even_params_list=None, jgenerator_list=None,
-        sp_rotations_list=None, vdc2_list=None,
-        nval_bot_list=[0], nval_top_list=[2],
-        updn_list=[]):
+        sp_rotations_list=None,
+        nval_bot_list=[0], nval_top_list=[2]):
 
     if '-n' in sys.argv:
         max_iter = np.int32(sys.argv[sys.argv.index('-n') + 1])
@@ -37,10 +36,6 @@ def save_gparam(iso=1, ispin=1, ityp_list=[0], imap_list=[0], na2_list=[2],
             f['/dc_j_avg'] = j_avg_list
         if ldc > 1:
             f['/dc_nelf_list'] = nelf_list
-        if vdc2_list is not None:
-            f['/VDC2_LIST'] = np.asarray(vdc2_list).T
-        if updn_list != []:
-            f['/updn_list'] = updn_list
 
         if nval_bot_list is not None:
             f['/nval_bot_ityp'] = np.asarray(nval_bot_list)

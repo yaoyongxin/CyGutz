@@ -65,14 +65,6 @@ class gAtoms(Atoms):
             idx_equivalent_atoms = idx_equivalent_atoms.tolist()
             self.set_idx_equivalent_atoms(idx_equivalent_atoms)
 
-            if self.iso != self.ispin == 2:
-                self.updn_full_list = h5auto_read(f, '/usrqa/updn_full_list')
-                self.b_field = h5auto_read(f,
-                        '/usrqa/bfield_ev_per_bohr_magneton', 0.5)
-                if 'ryd' in self.unit:
-                    self.b_field /= Ryd_eV
-                self.updn_full_list = self.updn_full_list*self.b_field
-
             unique_corr_symbol_list = h5auto_read(f, \
                     '/usrqa/unique_corr_symbol_list')
             self.unique_corr_symbol_list = unique_corr_symbol_list.tolist()
@@ -112,7 +104,6 @@ class gAtoms(Atoms):
         nf_list = []
         u_list = []
         j_list = []
-        updn_list = []
         for i, s in enumerate(self.symbols):
             if s in self.unique_corr_symbol_list:
                 corr_list.append(i)
@@ -126,13 +117,10 @@ class gAtoms(Atoms):
                 idx_equ = self.idx_equivalent_atoms[i]
                 imap = self.idx_equivalent_atoms.index(idx_equ)
                 imap_list.append(imap)
-                if self.iso != self.ispin == 2:
-                    updn_list.append(self.updn_full_list[i])
         self.corr_list = corr_list
         self.ityp_list = ityp_list
         self.imap_list = imap_list
         self.df_list = df_list
-        self.updn_list = updn_list
         self.u_list = u_list
         self.j_list = j_list
 

@@ -9,9 +9,7 @@ def read_wien_structure():
     structure_file = get_wiencase() + '.struct'
     from ase.io.wien2k import read_struct
     material = read_struct(structure_file)
-    from pyglib.dft.wien import get_local_rotations
-    locrot_list = get_local_rotations(structure_file)
-    return material, structure_file, locrot_list
+    return material, structure_file, None
 
 
 def read_vasp_poscar():

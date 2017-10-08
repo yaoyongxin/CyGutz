@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import sys
-
+from pyglib.gutz.init_magnet_conf import init_magnet_conf
 
 def initialize():
     '''
@@ -63,13 +63,15 @@ def initialize():
             jgenerator_list=material.jgenerator_list,
             sp_rotations_list=material.sp_rotations_list,
             nval_bot_list=material.nval_bot_list,
-            nval_top_list=material.nval_top_list,
-            updn_list=material.updn_list)
+            nval_top_list=material.nval_top_list)
 
     # local rotation matrix (l) in Hilbert space.
     h5calc_save_lrot(material)
-
     log_file.close()
+
+    # magnetic setup
+    if material.ispin == 2:
+        init_magnet_conf()
 
 
 if __name__ == '__main__':

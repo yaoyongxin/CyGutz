@@ -10,12 +10,6 @@ def get_orbital_transformation(l, nspin):
     '''
 
     u_trans = np.identity((2*l+1), dtype=complex)
-
-    # Test for the weird phase
-    if l == 2:
-        u_trans[1,1] = -1.j
-        u_trans[3,3] =  1.j
-
     if nspin == 2:
         u_trans = block_diag(u_trans, u_trans)
     return u_trans

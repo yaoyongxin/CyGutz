@@ -37,16 +37,6 @@ def h5save_usr_qa_setup(material, log):
         print(spin_polarization, file=usr_input)
     f['/usrqa/spin_polarization'] = spin_polarization
 
-    if spin_polarization == 'y':
-        if '-bfield' in sys.argv:
-            # unit eV/bohr magneton
-            b_field = float(sys.argv[sys.argv.index('-bfield') + 1])
-        else:
-            b_field = raw_input(' Enter local B-field strength in unit of' +
-                    ' eV/bohr magneton:\n ')
-            b_field = float(b_field)
-        f['/usrqa/bfield_ev_per_bohr_magneton'] = b_field
-
     # Orbital symmetry breaking
     if '-opl' in sys.argv:
         orbital_polarization = sys.argv[sys.argv.index('-opl') + 1]
@@ -122,8 +112,6 @@ def h5save_usr_qa_setup(material, log):
         string_idx_equivalent_atoms = sys.argv[sys.argv.index('-eqidx') + 1]
         idx_equivalent_atoms = [
                 int(s) for s in string_idx_equivalent_atoms.split()]
-        if 'y' == spin_polarization != spin_orbit_coup:
-            string_updn_list = sys.argv[sys.argv.index('-eqidx') + 2]
     else:
         idx_equivalent_atoms = material.get_EquivalentAtoms()
         yn = get_usr_input("\n Symmetrically-equivalent atom indices: " \
@@ -145,24 +133,6 @@ def h5save_usr_qa_setup(material, log):
                     print(string_idx_equivalent_atoms, file=usr_input)
                     print(yn1, file=usr_input)
                     break
-
-        if 'y' == spin_polarization != spin_orbit_coup:
-            string_updn_list = raw_input(
-                    "\n Enter up(1) dn(-1) or 0 for spin-moment of the atoms"+
-                    "\n separated by a blank space (e.g., '1 -1 ...'):\n ")
-
-    if 'y' == spin_polarization != spin_orbit_coup:
-        updn_full_list = [int(s) for s in string_updn_list.split()]
-
-        # sanity check
-        if len(updn_full_list) != len(idx_equivalent_atoms):
-            raise ValueError('different number of elements in updn_full_list' +
-                    ' and idx_equivalent_atoms!')
-        for i, idx_equ in enumerate(idx_equivalent_atoms):
-            if updn_full_list[i] != updn_full_list[idx_equ]:
-                raise ValueError('different spin moment direction for ' +
-                        'equivalent atom pair {}-{}!'.format(i, idx_equ))
-        f['/usrqa/updn_full_list'] = updn_full_list
 
     f['/usrqa/idx_equivalent_atoms'] = idx_equivalent_atoms
 

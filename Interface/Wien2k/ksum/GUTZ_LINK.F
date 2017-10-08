@@ -280,7 +280,7 @@ subroutine fermi_gs(ztot,delta,iso,ispin,nspin,e,we,nbmax,wtk,nkpt,&
     real(8) efermi,emin,emax,nel,nel0,dnnt,ef0,ef1,de,wt,fac,e1,eta
     integer ib,ikp,isp,nnt,nc,rso,rspo
     real(8),parameter::tol=1.e-6_8,pi =3.141592653589793238_8
-    integer,parameter::ncmax=1000
+    integer,parameter::ncmax=10000
       
     rso=3-iso; rspo=3-max(iso,ispin); nbtop=0
     nnt=ztot/rso; dnnt=ztot/rso-nnt
