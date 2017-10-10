@@ -192,6 +192,7 @@ def get_representation(J, Lie_parameters):
     for theta in Lie_parameters:
         repr = get_rotation(J, theta, method="eigh")
         try:
+            # try removing the small elements.
             repr = repr.multiply(np.abs(repr) > 1.e-8)
         except:
             pass

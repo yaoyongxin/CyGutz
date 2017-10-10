@@ -4,7 +4,6 @@ module gparam
 
     integer::g_write=-100, g_maxiter=-100, g_iembeddiag=-1000, &
             &g_updaterho=1, g_imix=-100
-    real(q)::g_levelshift=0._q, g_initbfield=5._q
 
     contains
 
@@ -48,27 +47,11 @@ module gparam
         endif
     endif
 
-    idx=index(cmd,'-l ')
-    if(idx>0)then
-        read(cmd(idx+2:),*)g_levelshift
-        if(io>0)then
-            write(io,'(" command argument g_levelshift = ",f0.2)')g_levelshift
-        endif
-    endif
-
     idx=index(cmd,'-r ')
     if(idx>0)then
         read(cmd(idx+2:),*)g_updaterho
         if(io>0)then
             write(io,'(" command argument g_updaterho = ",i2)')g_updaterho
-        endif
-    endif
-
-    idx=index(cmd,'-b ')
-    if(idx>0)then
-        read(cmd(idx+2:),*)g_initbfield
-        if(io>0)then
-            write(io,'(" command argument g_initbfield = ",f0.4)')g_initbfield
         endif
     endif
     return

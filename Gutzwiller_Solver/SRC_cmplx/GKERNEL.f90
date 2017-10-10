@@ -252,7 +252,7 @@ module gkernel
 
     h1e2=wh%co(i)%h1e
     ! adding (orbital dependent) DC term to h1e
-    if(associated(wh%co(i)%vext))then
+    if(associated(wh%co(i)%vext).and.wh%ivext>0)then
         h1e2(:na2,:na2)=h1e2(:na2,:na2)+wh%co(i)%vext
     endif
 

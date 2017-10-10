@@ -24,7 +24,6 @@ including some typical post-analyses.
     Answer the questions as follows:
 
     * Do you want to BREAK SPIN-SYMMETRY: y
-    * Enter local B-field strength in unit of eV/bohr magneton: 0.3
     * Do you want to COMPLETELY break orbital-symmetry: n
     * Do you want to take into account the SPIN-ORBIT interaction: n
     * Do you want to take into account the CRYSTAL FIELD effect: y
@@ -58,6 +57,19 @@ including some typical post-analyses.
     Different integers are used for the spin-up and down conponents, 
     inidcating spin-polarization. 
     The self-energy is diagonal due to cubic symmetry.
+    
+    To set up the magnetic configuration, type::
+
+        $ ${WIEN_GUTZ_ROOT2}/init_magnetism.py
+
+    Answer the questions as follows:
+
+    * enter spin up or down: up
+    * please enter the magnitude of the field: 0.3
+    * Is the external field applied only at initial step (0) ...: 0
+
+    Here we add a 0.3 eV/Bohr magneton local magnetic field to 
+    break spin symmetry **INITIALLY**.
 
 3) Type the command below to 
     run the DFT+G calculation::

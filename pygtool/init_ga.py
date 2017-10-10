@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-import sys
+import sys, glob
 from pyglib.gutz.init import initialize
 from pyglib.iface.ifwien import h4set_indmfl
 
 
 initialize()
-if '-no-indmfl' not in sys.argv and '-vasp' not in sys.argv:
+fstruct = glob.glob('*struct')
+if '-no-indmfl' not in sys.argv and len(fstruct) == 1:
     h4set_indmfl()

@@ -1,6 +1,5 @@
 from __future__ import print_function
-import os
-import h5py
+import os, h5py
 from pyglib.gutz.gatom import gAtoms
 
 
@@ -20,7 +19,7 @@ def read_vasp_poscar():
 
 def h5save_structure_params():
     import sys
-    if '-vasp' in sys.argv:
+    if os.path.isfile('POSCAR'):
         material = read_vasp_poscar()
         case = None
         locrot_list = None

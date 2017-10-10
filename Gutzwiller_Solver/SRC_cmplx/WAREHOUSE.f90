@@ -84,7 +84,7 @@ module warehouse
                 &nval_bot_ityp(:),nval_top_ityp(:)
         real(q),allocatable :: et1(:),eu2(:)
         integer :: na2112,na2max,nasomax,nasotot
-        integer :: iso,ispin,ispo,rspo,nspin
+        integer :: iso,ispin,ispo,rspo,nspin,ivext=1
         type(corr_orb),allocatable::co(:)
         type(frozen),pointer::fz(:)
 
@@ -129,6 +129,8 @@ module warehouse
     if(lexist)then
         call gh5_open_r('GVEXT.h5',f_id)
         call set_wh_vext(io)
+        call gh5_read(wh%ivext, '/givext', f_id)
+        call gh5_close(f_id)
     endif
 
     inquire(file='GMOTT.h5',exist=lexist)
@@ -366,6 +368,9 @@ module warehouse
     else
         wh%la1=wh%h1e
         call set_diagonal_r(r_default)
+        if(wh%ivext==0.and.associated(wh%vext))then
+            wh%la1=wh%la1+wh%vext
+        endif
     endif
     call modify_r_la1_frozen(0, 30._q)
     call calc_r_pp(io,'r-inp')

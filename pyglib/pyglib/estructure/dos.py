@@ -113,7 +113,7 @@ def get_bands():
         with h5py.File('ginit.h5', 'r') as f:
             use_rydberg = 'ryd' in f['/usrqa/unit'][()]
     else:
-        use_rydberg = True
+        use_rydberg = False
 
     # band energy array.
     e_skn = np.zeros((nspin,nkp,nbmax), dtype=np.float)

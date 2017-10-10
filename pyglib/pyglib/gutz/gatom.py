@@ -341,7 +341,21 @@ class gAtoms(Atoms):
         if self.Lie_Jodd_list is not None:
             sp_rotations_list = []
             for J, lies in it.izip(self.jgenerator_list, self.Lie_Jodd_list):
-                sp_rotations_list.append(atsym.get_representation(J, lies))
+                if self.iso == 1:
+                    J_ = [J1[::2, ::2] for J1 in J]
+                else:
+                    J_ = J
+                sp_rotations_ = atsym.get_representation(J_, lies)
+                if self.iso == 1:
+                    sp_rotations = []
+                    for sp_r_ in sp_rotations_:
+                        sp_r = np.zeros_like(J[0])
+                        sp_r[::2, ::2] = sp_r_
+                        sp_r[1::2, 1::2] = sp_r[::2, ::2]
+                        sp_rotations.append(sp_r)
+                else:
+                    sp_rotations = sp_rotations_
+                sp_rotations_list.append(sp_rotations)
             self.sp_rotations_list = sp_rotations_list
         else:
             self.sp_rotations_list = None

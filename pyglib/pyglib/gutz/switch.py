@@ -13,7 +13,9 @@ def modify_gparam():
                 ' -dc_nelf_list n1-n2-... -- change n_dc to n list \n' +
                 ' -unique_j_ev j1-j2-... -- change unique_j_list_ev \n' +
                 ' -unique_u_ev u1-u2-... -- change unique_u_list_ev \n' +
-                ' -maxiter n -- change gmaxiter to n \n')
+                ' -maxiter n -- change gmaxiter to n \n' +
+                ' -nval_bot_ityp n1-n2-... -- change valence lower limit \n'+
+                ' -nval_top_ityp n1-n2-... -- change valence upper limit')
         return
     with h5py.File('GPARAM.h5', 'a') as f:
         if '-imix' in sys.argv:
@@ -31,6 +33,14 @@ def modify_gparam():
         if '-dc_nelf_list' in sys.argv:
             stmp = sys.argv[sys.argv.index('-dc_nelf_list')+1]
             f['/dc_nelf_list'][()] = [float(s) for s in
+                    stmp.split('-')]
+        if '-nval_bot_ityp' in sys.argv:
+            stmp = sys.argv[sys.argv.index('-nval_bot_ityp')+1]
+            f['/nval_bot_ityp'][()] = [int(s) for s in
+                    stmp.split('-')]
+        if '-nval_top_ityp' in sys.argv:
+            stmp = sys.argv[sys.argv.index('-nval_top_ityp')+1]
+            f['/nval_top_ityp'][()] = [int(s) for s in
                     stmp.split('-')]
 
     # change GMOTT.h5 if necessary

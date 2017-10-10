@@ -69,10 +69,6 @@ def initialize():
     h5calc_save_lrot(material)
     log_file.close()
 
-    # magnetic setup
-    if material.ispin == 2:
-        init_magnet_conf()
-
 
 if __name__ == '__main__':
     initialize()

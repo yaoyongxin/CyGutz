@@ -23,6 +23,7 @@ def get_b_field_list():
     bvec_list = []
     for imp in range(num_imp):
         if imap_imp[imp] == imp + 1:
+            print('\n IMPURITY {}'.format(imp+1))
             if iso == 2:
                 while True:
                     vec = raw_input(
@@ -49,7 +50,11 @@ def get_b_field_list():
         else:
             bvec_list.append(bvec_list[imap_imp[imp] - 1])
     f.close()
-    return bvec_list
+    givext = get_usr_input( \
+            '\n Is the external field applied only at initial step (0) \n'+ \
+            ' or fixed through all the iterations (1).', ['0', '1'])
+    givext = int(givext)
+    return bvec_list, givext
 
 
 def get_vext_list(bvec_list):
@@ -74,19 +79,20 @@ def get_vext_list(bvec_list):
     return vext_list
 
 
-def h5wrt_gmagnet(vext_list, fn='GVEXT.h5'):
+def h5wrt_gmagnet(vext_list, g_ivext, fn='GVEXT.h5'):
     with h5py.File(fn, 'w') as f:
         for imp, vext in enumerate(vext_list):
             f['/IMPURITY_{}/VEXT'.format(imp+1)] = vext.T
+        f['/givext'] = [g_ivext]
 
 
 def init_magnet_conf():
     '''
     initialize the the magnetic configuration for magnetic calculation.
     '''
-    bvec_list = get_b_field_list()
+    bvec_list, g_ivext = get_b_field_list()
     vext_list = get_vext_list(bvec_list)
-    h5wrt_gmagnet(vext_list)
+    h5wrt_gmagnet(vext_list, g_ivext)
 
 
 
