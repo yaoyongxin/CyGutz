@@ -547,6 +547,9 @@ subroutine g_fcn_n(n,x,fvec)
     endif
     call calc_la1_hf_list()
     call add_vdc_to_la1_list()
+    if(associated(wh%vext).and.wh%ivext>0)then
+        wh%la1=wh%la1+wh%vext
+    endif
     call calc_la1_pp(io,'la1-inp')
     call map_wh_bnd_matrix(wh%la1,bnd%la1,.false.)
     call calc_band_all(io)

@@ -38,8 +38,9 @@ def get_J_vector(l_list):
 
 def get_JU_relat_sph_harm_random_phase(l_list):
     '''get J vector in relativisitic spherical harmonics (RSH) basis,
-    and the unitary transformation U from complex spherical harmonics (CSH)
-    to RSH. There is a random phase associated RSH due to diagonalization.
+    and the unitary transformation U from complex spherical harmonics
+    (CSH) to RSH.
+    There is a random phase associated RSH due to diagonalization.
     '''
     for i, _l in enumerate(l_list):
         _Jx, _Jy, _Jz =  get_J_vector(_l)
