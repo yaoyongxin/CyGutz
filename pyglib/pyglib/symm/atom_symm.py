@@ -105,7 +105,7 @@ def get_plus2pi(Jz):
     elif val < 1.e-7:
         plus2pi = False
     else:
-        print(vals)
+        print(' eigen-vales of Jz:\n {}'.format(vals))
         raise AssertionError('Error in eigen-values of Jz!')
     return plus2pi
 
@@ -256,7 +256,8 @@ def check_product_table(G, representation):
 
 def get_eigen_space(H, l_list, tol=1.e-6):
     '''
-    Get eigen spaces of a Hermitian matrix H.
+    Get eigen spaces of a Hermitian matrix H,
+    in accordance with the possible block form specified by l_list.
     '''
     from scipy.linalg import block_diag
     val_list = []
@@ -277,6 +278,7 @@ def get_eigen_space(H, l_list, tol=1.e-6):
         if np.abs((vals[i] - val) / val) < tol:
             eigen_space.append(vecs[:, i])
         else:
+            # note eigen_space in c-convention
             list_eigen_space.append(np.array(eigen_space))
             eigen_space = []
             eigen_space.append(vecs[:, i])
@@ -310,25 +312,26 @@ def get_characters_espace(representation, V):
     Get the character (vector) of one eigen-space defined by V.
     '''
     chi = []
-    repr = []
+    rep = []
     for R in representation:
+        # note here V in c-convention
         VHRV = V.conj().dot(R).dot(V.T)
         if VHRV.shape == (1,):
             tr = VHRV[0]
         else:
             tr = np.trace(VHRV)
         chi.append(tr)
-        repr.append(VHRV)
-    return np.array(chi), repr
+        rep.append(VHRV)
+    return np.array(chi), rep
 
 
 def get_sub_repr_characters(representation, list_eigen_space):
     list_chi = []
     list_repr = []
     for i, V in enumerate(list_eigen_space):
-        chi, repr = get_characters_espace(representation, V)
+        chi, rep = get_characters_espace(representation, V)
         list_chi.append(chi)
-        list_repr.append(repr)
+        list_repr.append(rep)
     return np.array(list_chi), list_repr
 
 
@@ -337,7 +340,7 @@ def check_sum_chi2_1(chi):
     h = len(chi)  # order of the group
     sum_chi2 = np.vdot(chi, chi).real
     if np.abs(sum_chi2 - h) > 1.e-5:
-        print('Error in sum_chi2 = ' + str(np.abs(sum_chi2 - h)))
+        print(' Error in sum_chi2 = ' + str(np.abs(sum_chi2 - h)))
         irr = 'NO'
     return irr
 
@@ -354,28 +357,33 @@ def check_sum_chi2(list_chi):
 
 
 def get_ired_representation(representation):
+    '''get irreducible representations.
+    '''
     l = representation[0].shape[0]
     from pyglib.math.matrix_util import get_matrices_bk_list, sym_array
     from scipy.linalg import block_diag
-    check = 'NO'
+    check = 'no'
     if '-allmix' in sys.argv:
         l_list = [l]
     else:
         l_list = get_matrices_bk_list(representation)
-    #
-    while check == 'NO':
+    print(' list of (sub)dimensions of the representation:\n {}'\
+            .format(l_list))
+
+    while check == 'no':
         X = []
         for l1 in l_list:
             X.append(np.random.rand(l1, l1) + np.random.rand(l1, l1) * 1.j)
         X = block_diag(*X)
-        X += np.conj(X).T  # make X Hermitian
+        # make X Hermitian
+        X += X.conj().T
         H = sym_array(X, representation)
         check_commute_G(H, representation)
         list_eigen_space = get_eigen_space(H, l_list)
         list_chi, list_repr = get_sub_repr_characters(
             representation, list_eigen_space)
         check = check_sum_chi2(list_chi)
-        if check == 'OK':
+        if check == 'ok':
             break
     return list_eigen_space, list_chi, list_repr
 
@@ -407,8 +415,9 @@ def get_chi_repr(list_chi, list_repr, list_eigen_space):
                     list_distinct_chi.append(list_chi[j])
         list_chi_repr.append(chi_repr)
         list_chi_space.append(np.asarray(chi_space))
-        print(' chi_space {} dimension = {}'.format(len(list_chi_space) - 1, \
+        print( ' chi_space {} dimension = {}'.format(len(list_chi_space) - 1,\
                 np.asarray(chi_space).shape))
+
     return list_chi_repr, list_chi_space, list_distinct_chi
 
 
@@ -463,7 +472,8 @@ def get_U_Jnew(list_chi_space, list_chi_U, reorder=True):
             for j in range(len(chi_space)):
                 for k in range(len(chi_space[0])):
                     U_Jnew.append(chi_space[j][k])
-    U_Jnew = np.array(U_Jnew).T  # back to Fortran convention
+    # back to Fortran convention
+    U_Jnew = np.array(U_Jnew).T
     return U_Jnew
 
 
@@ -484,7 +494,8 @@ def get_sigma_struct(list_chi_space):
     sigma = []
     ibase = 0
     for chi_space in list_chi_space:
-        N = len(chi_space)  # number of equivalent irred. repr.
+        # number of equivalent irred. repr.
+        N = len(chi_space)
         L = len(chi_space[0])
         M = get_seq_matrix(N) + ibase
         for i in range(L):
@@ -551,7 +562,7 @@ def get_atom_Jnew(Rotations, J):
     from scipy.linalg import block_diag
     Jnew = []
     for J1 in J:
-        Jnew.append(np.dot(np.conj(U).T, np.dot(J1, U)))
+        Jnew.append(U.conj().T.dot(J1).dot(U))
     return Jnew, U, block_diag(*sigma)
 
 

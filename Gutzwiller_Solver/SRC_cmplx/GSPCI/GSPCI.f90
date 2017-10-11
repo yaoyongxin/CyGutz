@@ -80,7 +80,7 @@ module gspci
 
 
     subroutine gspci_gh5exe()
-    integer i,ierr,norb,norb2,nval_bot,nval_top
+    integer i,ierr,norb,norb2,nval_bot,nval_top,nv
     integer,allocatable::m_struct(:,:)
     character*32 str
     real(q) etot,de
@@ -118,7 +118,11 @@ module gspci
     if(lexist)then
         allocate(v(dmem%nstates))
         call gh5_open_r('EMBED_HAMIL_RES_'//trim(int_to_str(i))//'.h5',f_id)
-        call gh5_read(v,dmem%nstates,'/evec',f_id)
+        call gh5_read(nv,'/dimv',f_id)
+        if(nv==dmem%nstates)then
+            allocate(dmem%v(nv))
+            call gh5_read(dmem%v,nv,'/evec',f_id)
+        endif
         call gh5_close(f_id)
     endif
 
