@@ -37,6 +37,7 @@ module ghdf5_base
                 & gh5_read_1d_zarray, gh5_read_2d_zarray, &
                 & gh5_read_4d_zarray, &
                 & gh5_read_3d_darray, gh5_read_3d_zarray, &
+                & gh5_read_3d_iarray, &
                 & gh5_read_5d_darray, gh5_read_5d_zarray, &
                 & gh5_read_1d_sarray
     end interface
@@ -279,6 +280,21 @@ module ghdf5_base
       
     end subroutine gh5_read_2d_iarray
     
+
+    subroutine gh5_read_3d_iarray(iarray, n1, n2, n3, path, f_id)
+    integer, intent(in) :: n1, n2, n3
+    integer, intent(out) :: iarray(n1, n2, n3)
+    character(len=*), intent(in) :: path
+    integer(hid_t), intent(in) :: f_id
+      
+    integer n(3)
+      
+    n(1) = n1; n(2) = n2; n(3) = n3
+    call gh5_read_iarray(iarray, 3, n, path, f_id)
+    return
+      
+    end subroutine gh5_read_3d_iarray
+
 
     subroutine gh5_write_1d_darray(darray, n1, path, f_id)
     integer, intent(in) :: n1

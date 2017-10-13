@@ -120,8 +120,8 @@ module gspci
         call gh5_open_r('EMBED_HAMIL_RES_'//trim(int_to_str(i))//'.h5',f_id)
         call gh5_read(nv,'/dimv',f_id)
         if(nv==dmem%nstates)then
-            allocate(dmem%v(nv))
-            call gh5_read(dmem%v,nv,'/evec',f_id)
+            allocate(v(nv))
+            call gh5_read(v,nv,'/evec',f_id)
         endif
         call gh5_close(f_id)
     endif

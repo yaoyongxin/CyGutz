@@ -1,5 +1,4 @@
 #!/usr/bin/env python
 
-import pyglib.gsolver as gsolver
-dpath = gsolver.__path__[0]
-gsolver.gs_ml.driver_gs_ml(dpath)
+from pyglib.gsolver.gs_ml_v2 import driver_gs_ml
+driver_gs_ml()

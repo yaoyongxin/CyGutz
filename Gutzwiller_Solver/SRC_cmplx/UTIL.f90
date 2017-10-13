@@ -171,11 +171,11 @@ module gutil
     end interface chk_eigens_matrix_list
 
     interface phi_mat_to_vec
-        module procedure zphi_mat_to_vec
+        module procedure zphi_mat_to_vec,zphi_mat_to_vec2
     end interface phi_mat_to_vec
 
     interface phi_vec_to_mat
-        module procedure zphi_vec_to_mat
+        module procedure zphi_vec_to_mat,zphi_vec_to_mat2
     end interface phi_vec_to_mat
 
     contains
@@ -2515,6 +2515,60 @@ module gutil
     return
 
     end subroutine zphi_mat_to_vec
+
+
+    ! convert a valence block of phi-vector to phi-matrix.
+    subroutine zphi_vec_to_mat2(v,a,n,bs_r,nr,bs_l,nl,norb,ibs,ibs_base)
+    integer,intent(in)::n,nr,nl,norb,ibs_base ! nl<n for mott phase
+    complex(q),intent(in)::v(nr*nl)
+    integer,intent(in)::bs_r(nr),bs_l(nl),ibs(0:ishft(1,norb)-1)
+    complex(q),intent(out)::a(n,n)
+    
+    integer i,j,bs,ibl,ibr,nmax,iv
+
+    a=0 ! \phi_{\Gamma, n}
+    iv=0
+    nmax=ishft(1,norb)-1
+    do i=1,nr
+        bs=bs_r(i)
+        ibr=ibs(bs)-ibs_base+1 
+        do j=1,nl
+            bs=bs_l(j)
+            bs=nmax-bs ! post particle-hole transformation
+            ibl=ibs(bs)-ibs_base+1 ! get the correct index for phi-matrix
+            iv=iv+1
+            a(ibr,ibl)=v(iv)
+        enddo
+    enddo
+    return
+
+    end subroutine zphi_vec_to_mat2
+
+
+    ! convert a valence block of phi-vector to phi-matrix.
+    subroutine zphi_mat_to_vec2(v,a,n,bs_r,nr,bs_l,nl,norb,ibs,ibs_base)
+    integer,intent(in)::n,nr,nl,norb,ibs_base ! nl<n for mott phase
+    complex(q),intent(inout)::v(nr*nl)
+    integer,intent(in)::bs_r(nr),bs_l(nl),ibs(0:ishft(1,norb)-1)
+    complex(q),intent(in)::a(n,n)
+    
+    integer i,j,bs,ibl,ibr,nmax,iv
+
+    iv=0
+    nmax=ishft(1,norb)-1
+    do i=1,nr
+        bs=bs_r(i)
+        ibr=ibs(bs)-ibs_base+1 
+        do j=1,nl
+            bs=bs_l(j) 
+            bs=nmax-bs ! post particle-hole transformation
+            ibl=ibs(bs)-ibs_base+1 ! get the correct index for phi-matrix
+            v(iv)=v(iv)+a(ibr,ibl)
+        enddo
+    enddo
+    return
+
+    end subroutine zphi_mat_to_vec2
 
 
 

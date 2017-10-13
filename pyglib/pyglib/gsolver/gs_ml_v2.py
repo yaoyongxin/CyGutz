@@ -1,7 +1,8 @@
 from __future__ import print_function
 #Gutzwiller embedding Hamiltonian solver using machine learning.
 
-import h5py, time, pickle, os, sys, numpy
+import h5py, time, pickle, sys, numpy
+import pyglib.gsolver as gsolver
 
 
 def get_input_soc_only(imp=1, l=3):
@@ -17,17 +18,15 @@ def get_input_soc_only(imp=1, l=3):
         e2 = f['/H1E'][j2, j2]
         l1 = f['/LAMBDA'][0,0]
         l2 = f['/LAMBDA'][j2, j2]
-    mu = (e1+e2-l1-l2)/4.0
-    e1 = e1 - mu
-    e2 = e2 - mu
-    l1 = l1 + mu
-    l2 = l2 + mu
-    return numpy.array([[d1, d2, e1, e2, l1, l2]]).real
+    delta = (e1+e2+l1+l2)/4.0
+    delta1 = (e1-e2)/2.0
+    delta2 = (l1-l2)/2.0
+    eshift = l1*2*l + l2*(2*l + 2)
+    return numpy.array([[d1, d2, delta, delta1, delta2]]).real, eshift
 
 
-def driver_gs_ml(dpath, l=3):
+def driver_gs_ml(l=3):
     '''driver for the machines learning based Gutzwiller solver.
-    The ml model is stored in the path of dpath.
     '''
     start_time = time.clock()
 
@@ -37,21 +36,19 @@ def driver_gs_ml(dpath, l=3):
     if '-l' in sys.argv:
         l = int(sys.argv[sys.argv.index('-l')+1])
     if l == 3:
-        subd = 'f_so'
+        subd = 'f_so_v2'
     else:
         raise ValueError(' l = {} not available!'.format(l))
 
     print(' solving emb. hamil. for impurity {}\n'.format(imp) +\
             ' with l = {} based on machine learning.'.format(l))
 
-    inp = get_input_soc_only(imp=imp, l=l)
-    res = []
-    for i in range(7):
-        with open('{}/{}/kr_{}.pkl'.format(dpath, subd, i), \
-                    'rb') as f:
-            kr = pickle.load(f)
-            res.append(kr.predict(inp))
-    res = numpy.asarray(res)[:, 0]
+    dpath = gsolver.__path__[0]
+    inp, eshft = get_input_soc_only(imp=imp, l=l)
+    with open('{}/{}/kr_fso.pkl'.format(dpath, subd), \
+                'rb') as f:
+        kr = pickle.load(f)
+    res = kr.predict(inp)[0, :]
 
     # density matrix
     na2 = (2*l+1)*2
@@ -67,12 +64,21 @@ def driver_gs_ml(dpath, l=3):
         dm[i + na2, i + na2] = res[3]
         dm[i, i + na2] = res[5]
         dm[i + na2, i] = numpy.conj(res[5])
+    etot = kr.predict(inp)[0, 6]
+    # convert to molecule energy
+    etot -= eshft
 
     with h5py.File('EMBED_HAMIL_RES_{}.h5'.format(imp), 'w') as f:
         f['/DM'] = dm.T
-        f['/emol'] = res[-1:]
+        f['/emol'] = [etot.real]
 
     end_time = time.clock()
 
-    print('total time: {}'.format(end_time - start_time))
+    print(' total time: {}'.format(end_time - start_time))
     sys.exit(0)
+
+
+
+if __name__ == '__main__':
+    driver_gs_ml()
+
