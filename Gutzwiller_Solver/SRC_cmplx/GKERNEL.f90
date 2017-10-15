@@ -321,7 +321,7 @@ module gkernel
         endif
     elseif(gkmem%iembeddiag==-5)then
         call execute_command_line('exe_spci_j2_mott_gap_trunc -i '// &
-                &int_to_str(i)//' -l 0.0',exitstat=ierr)
+                &int_to_str(i)//' -l 0.0 -e 1',exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running exe_spci_j2_mott_gap_trunc-5!")')
         endif
