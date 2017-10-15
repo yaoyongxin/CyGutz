@@ -76,10 +76,13 @@ subroutine set_dmem_phy()
     do n=0,dmem%norb
         fs: do i=dmem%idx(n),dmem%idx(n+1)-1
             do ig=1,dmem%ngp
+
+
                 call sum_empty_slots_fs(dmem%bs(i),dmem%ngpm(ig), &
                         &dmem%gpm_list(1:dmem%ngpm(ig),ig),sume)
-                if((dmem%ngpm(ig)-sume)<dmem%nval_gp(1,ig,1).or. &
-                        &sume>dmem%nval_gp(2,ig,1))then
+                sume=dmem%ngpm(ig)-sume
+                if(sume<dmem%nval_gp(1,1,ig).or. &
+                        &sume>dmem%nval_gp(2,1,ig))then
                     cycle fs
                 endif
             enddo
@@ -109,21 +112,22 @@ subroutine set_dmem_mott()
     do n=0,dmem%norb
         if(n<=dmem%norb-dmem%nelect_mott)then
             fs: do i=dmem%idx(n),dmem%idx(n+1)-1
-                call sum_empty_slots_fs(dmem%bs(i),dmem%norb_mott, &
-                        &dmem%iorb_mott,sume)
-                if(sume==dmem%nelect_mott)then
-                    do ig=1,dmem%ngp
-                        call sum_empty_slots_fs(dmem%bs(i),dmem%ngpm(ig), &
-                                &dmem%gpm_list(1:dmem%ngpm(ig),ig),sume)
-                        if(sume<dmem%nval_gp(1,ig,2).or. &
-                                &sume>dmem%nval_gp(2,ig,2))then
-                            cycle fs
-                        endif
-                    enddo
-                    dmem%bs_l(isum)=dmem%bs(i)
-                    dmem%ibs_l(dmem%bs(i))=isum
-                    isum=isum+1
+                if(dmem%nelect_mott>0)then
+                    call sum_empty_slots_fs(dmem%bs(i),dmem%norb_mott, &
+                            &dmem%iorb_mott,sume)
+                    if(sume/=dmem%nelect_mott)continue
                 endif
+                do ig=1,dmem%ngp
+                    call sum_empty_slots_fs(dmem%bs(i),dmem%ngpm(ig), &
+                            &dmem%gpm_list(1:dmem%ngpm(ig),ig),sume)
+                    if(sume<dmem%nval_gp(1,2,ig).or. &
+                            &sume>dmem%nval_gp(2,2,ig))then
+                        cycle fs
+                    endif
+                enddo
+                dmem%bs_l(isum)=dmem%bs(i)
+                dmem%ibs_l(dmem%bs(i))=isum
+                isum=isum+1
             enddo fs
         endif
         dmem%idx_l(n+1)=isum
@@ -193,6 +197,7 @@ subroutine expval_gspci_npij(v1,npij)
                 call act_state(itmp,i-1,.true.,isgn1)
                 if(isgn1==0)cycle
                 ibs1=dmem%ibs_r(itmp)
+                if(ibs1==0)cycle
                 npij(i,j)=npij(i,j)+ &
                         &zdotc(nfs_l, &
                         &v1(nbase+(ibs1-dmem%idx_r(ival))*nfs_l+1), &
@@ -241,6 +246,7 @@ subroutine expval_gspci_npij2(cm,v1,v2,zes)
                 call act_state(itmp,i-1,.true.,isgn1)
                 if(isgn1==0)cycle
                 ibs1=dmem%ibs_r(itmp)
+                if(ibs1==0)cycle
                 if(abs(cm(i,j))>1.d-10)then
                     zes=zes+zdotc(nfs_l, &
                             &v2(nbase+(ibs1-dmem%idx_r(ival))*nfs_l+1), &
@@ -291,6 +297,7 @@ subroutine av1_gspci_npij(cm,v1,v2)
                 call act_state(itmp,i-1,.true.,isgn1)
                 if(isgn1==0)cycle
                 ibs1=dmem%ibs_r(itmp)
+                if(ibs1==0)cycle
                 if(abs(cm(i,j))>1.d-10)then
                     call zaxpy(nfs_l,cm(i,j)*isgn1, &
                             &v1(nbase+(i1-dmem%idx_r(ival))*nfs_l+1),1,&
@@ -325,8 +332,7 @@ subroutine expval_gspci_mij(v1,mij)
             &nfs_r1,nfs_r2,nfs_l1,nfs_l2
 
     nbase=0
-    mbase=(dmem%idx_r(dmem%nval_bot+1)-&
-            & dmem%idx_r(dmem%nval_bot)) &
+    mbase=(dmem%idx_r(dmem%nval_bot+1)-dmem%idx_r(dmem%nval_bot)) &
             &*(dmem%idx_l(dmem%norb-dmem%nval_bot+1)-&
             & dmem%idx_l(dmem%norb-dmem%nval_bot))
     do ival=dmem%nval_bot+1,dmem%nval_top
@@ -336,24 +342,28 @@ subroutine expval_gspci_mij(v1,mij)
         nfs_r2=dmem%idx_r(ival+1)-dmem%idx_r(ival)
         nfs_l2=dmem%idx_l(dmem%norb-ival+1)- &
                 &dmem%idx_l(dmem%norb-ival)
-        if(nfs_l1<=0)then
+
+        if(nfs_l1*nfs_r1<=0)then
             mbase=mbase+nfs_r2*nfs_l2
             cycle
         endif
-        if(nfs_l2<=0)then
+        if(nfs_l2*nfs_r2<=0)then
             nbase=nbase+nfs_r1*nfs_l1
             cycle
         endif
+
         do i1=dmem%idx_r(ival),dmem%idx_r(ival+1)-1
             do i=1,dmem%norb; do j=1,dmem%norb
                 itmp=dmem%bs_r(i1)
                 isgn1=1
+                ! c_j |v1>
                 call act_state(itmp,j-1,.false.,isgn1)
                 if(isgn1==0)cycle
                 if(mod(ival-1,2)==1)then
                     isgn1=-isgn1  ! additional sign for f_i^\dagger
                 endif
                 ibs1=dmem%ibs_r(itmp)
+                if(ibs1==0)cycle
                 do i2=dmem%idx_l(dmem%norb-ival), &
                         &dmem%idx_l(dmem%norb-ival+1)-1
                     istate=mbase+(i1-dmem%idx_r(ival))*nfs_l2+i2- &
@@ -361,16 +371,18 @@ subroutine expval_gspci_mij(v1,mij)
                     if(abs(v1(istate))<1.d-16)cycle
                     itmp=dmem%bs_l(i2)
                     isgn2=isgn1
+                    ! f_i^/dagger c_j |v1>
                     call act_state(itmp,i-1,.true.,isgn2)
                     if(isgn2==0)cycle
                     ibs2=dmem%ibs_l(itmp)
-                    if(ibs2<=0)cycle
+                    if(ibs2==0)cycle
                     jstate=nbase+(ibs1-dmem%idx_r(ival-1))*nfs_l1+ &
                             &ibs2-dmem%idx_l(dmem%norb-ival+1)+1
                     mij(i,j)=mij(i,j)+conjg(v1(jstate))*v1(istate)*isgn2
                 enddo
             enddo; enddo
         enddo
+        mbase=mbase+nfs_r2*nfs_l2
         nbase=nbase+nfs_r1*nfs_l1
     enddo
     return
@@ -387,13 +399,14 @@ subroutine av1_gspci_mij(v1,v2)
     complex(q),intent(in)::v1(*)
     complex(q),intent(inout)::v2(*)
 
-    integer ival,istate,i1,i2,jstate,nbase,nnz,inz,nnz1, &
+    integer ival,istate,i1,i2,j1,jstate,nbase,nnz,inz,nnz1, &
             &itmp,isgn2,ibs2,nfs_r1,nfs_r2,nfs_l1,nfs_l2
     integer,allocatable::isgn1(:),is(:),js(:),ibs1(:),is1(:)
     complex(q),allocatable::dij(:)
 
-    nnz=count(abs(dmem%daalpha)<1.d-10)
+    nnz=count(abs(dmem%daalpha)>=1.d-10)
     allocate(isgn1(nnz),is(nnz),is1(nnz),js(nnz),ibs1(nnz),dij(nnz))
+
     nnz=0
     do i1=1,dmem%norb; do i2=1,dmem%norb
         if(abs(dmem%daalpha(i1,i2))<1.d-10)cycle
@@ -402,8 +415,7 @@ subroutine av1_gspci_mij(v1,v2)
     enddo; enddo
 
     nbase=0
-    istate=(dmem%idx_r(dmem%nval_bot+1)-&
-            & dmem%idx_r(dmem%nval_bot)) &
+    istate=(dmem%idx_r(dmem%nval_bot+1)-dmem%idx_r(dmem%nval_bot)) &
             &*(dmem%idx_l(dmem%norb-dmem%nval_bot+1)-&
             & dmem%idx_l(dmem%norb-dmem%nval_bot))
     do ival=dmem%nval_bot+1,dmem%nval_top
@@ -413,11 +425,11 @@ subroutine av1_gspci_mij(v1,v2)
         nfs_r2=dmem%idx_r(ival+1)-dmem%idx_r(ival)
         nfs_l2=dmem%idx_l(dmem%norb-ival+1)- &
                 &dmem%idx_l(dmem%norb-ival)
-        if(nfs_l1<=0)then
+        if(nfs_l1*nfs_r1<=0)then
             istate=istate+nfs_r2*nfs_l2
             cycle
         endif
-        if(nfs_l2<=0)then
+        if(nfs_l2*nfs_r2<=0)then
             nbase=nbase+nfs_r1*nfs_l1
             cycle
         endif
@@ -426,9 +438,12 @@ subroutine av1_gspci_mij(v1,v2)
             do inz=1,nnz
                 itmp=dmem%bs_r(i1)
                 isgn1(nnz1)=1
+                ! c_js |v1>
                 call act_state(itmp,js(inz)-1,.false.,isgn1(nnz1))
                 if(isgn1(nnz1)==0)cycle
-                ibs1(nnz1)=dmem%ibs_r(itmp)
+                j1=dmem%ibs_r(itmp)
+                if(j1==0)cycle
+                ibs1(nnz1)=j1
                 is1(nnz1)=is(inz)
                 dij(nnz1)=dmem%daalpha(is(inz),js(inz))
                 nnz1=nnz1+1
@@ -448,10 +463,11 @@ subroutine av1_gspci_mij(v1,v2)
                 do inz=1,nnz1
                     itmp=dmem%bs_l(i2)
                     isgn2=isgn1(inz)
+                    ! f_is^\dagger c_js |v1>
                     call act_state(itmp,is1(inz)-1,.true.,isgn2)
                     if(isgn2==0)cycle
                     ibs2=dmem%ibs_l(itmp)
-                    if(ibs2<=0)cycle
+                    if(ibs2==0)cycle
                     jstate=nbase+(ibs1(inz)-dmem%idx_r(ival-1))*nfs_l1+ &
                             &ibs2-dmem%idx_l(dmem%norb-ival+1)+1
                     v2(jstate)=v2(jstate)+conjg(dij(inz))*v1(istate)*isgn2
@@ -884,7 +900,7 @@ subroutine calc_ucsr_spci()
                         call act_state(itmp(2),q-1,.true.,isgn(2))
                         if(isgn(2)==0)cycle
                         jstate=dmem%ibs_r(itmp(2))
-                        if(jstate>i)cycle
+                        if(jstate>i.or.jstate==0)cycle
                         jstate=jstate-dmem%idx_r(ival)+1
                         z_row(jstate)=z_row(jstate)+isgn(2)*dmem%h1e(p,q)
                     enddo
@@ -910,7 +926,7 @@ subroutine calc_ucsr_spci()
                                 call act_state(itmp(4),s-1,.true.,isgn(4))
                                 if(isgn(4)==0)cycle
                                 jstate=dmem%ibs_r(itmp(4))
-                                if(jstate>i)cycle
+                                if(jstate>i.or.jstate==0)cycle
                                 jstate=jstate-dmem%idx_r(ival)+1
                                 z_row(jstate)=z_row(jstate)+isgn(4)* &
                                         &dmem%v2e(p,s,q,r)
@@ -945,7 +961,7 @@ subroutine av1_gspci_dlh(v1,v2)
     use sparse
     implicit none
     complex(q),intent(in)::v1(*)
-    complex(q),intent(out)::v2(*)
+    complex(q),intent(inout)::v2(*)
 
     integer i,j
 
@@ -1266,6 +1282,7 @@ subroutine calc_npcoo_nblk(npcoo,ival)
             call act_state(itmp1,ia2-1,.true.,isgn)
             if(isgn==0)cycle
             ibs=dmem%ibs_r(itmp1)
+            if(ibs==0)cycle
             isum=isum+1
             npcoo(ia1,ia2)%i(isum)=i1-nbase
             npcoo(ia1,ia2)%j(isum)=ibs-nbase

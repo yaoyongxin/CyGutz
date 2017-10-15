@@ -307,6 +307,7 @@ subroutine expval_gspci_mij(v1,mij)
                 enddo
             enddo; enddo
         enddo
+        mbase=mbase+nfs2*nfs_l2
         nbase=nbase+nfs1*nfs_l1
     enddo
     return

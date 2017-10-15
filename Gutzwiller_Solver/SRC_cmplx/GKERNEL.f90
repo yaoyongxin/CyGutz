@@ -284,7 +284,7 @@ module gkernel
         call system('exe_spci_j2_mott_gap_trunc -i '//int_to_str(i))
     elseif(gkmem%iembeddiag==-5)then
         call system('exe_spci_j2_mott_gap_trunc -i '//int_to_str(i)//&
-                &' -l 0.0')
+                &' -l 0.0 -e 1')
     elseif(gkmem%iembeddiag==-6)then
         call system('exe_spci_j2_mott_gap_trunc -i '//int_to_str(i))
     elseif(gkmem%iembeddiag==-31)then
