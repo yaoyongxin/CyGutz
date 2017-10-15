@@ -68,8 +68,9 @@ def get_self_energy_cf_soc(l_list, rotations):
     Get the self energy structure in the case of crystal field splitting
     and with spin-orbit interaction.
     '''
-    Jorig = get_J_generator(l_list, iso=2)
-    J, U, self_energy = atsym.get_atom_Jnew(rotations, Jorig)
+    j_rel, u_csh2rel = get_JU_relat_sph_harm_random_phase(l_list)
+    J, U, self_energy = atsym.get_atom_Jnew(rotations, j_rel)
+    U = u_csh2rel.dot(U)
     return J, U, self_energy
 
 

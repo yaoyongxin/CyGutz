@@ -100,9 +100,9 @@ def h5get_mfit_ev(nmesh_fac=10, fsave='results.h5', path='/lapw'):
         f[path+'/eosfit/p_list'] = ph
     splot.xy2_plot([v_list, vh], [e_list, eh], ['o', '-'], ['raw', 'fitting'],
             xlabel='V ($\AA^3$/primitive cell)',
-            ylabel='E (eV/primitive cell)', fsave=path[1:]+'_evfit.pdf')
+            ylabel='E (eV/primitive cell)', fsave=path+'_evfit.pdf')
     splot.xy_plot(vh, ph, xlabel='V ($\AA^3$/primitive cell)',
-            ylabel='P (GPa)', fsave=path[1:]+'_pvfit.pdf')
+            ylabel='P (GPa)', fsave=path+'_pvfit.pdf')
 
 
 def eos_spline(v, e, tol):

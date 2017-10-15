@@ -244,6 +244,35 @@ def get_complex_to_real_sph_harm(l):
     return c2r
 
 
+def get_jvec_comp_sph_harm_to_rel_harm(j_csh, l_list):
+    '''get the J vector in complex spherical harmonics representation
+    to relativistic harmonics representation.
+    the transformation matrix is also returned.
+    '''
+    lmbase = 0
+    for il, l in enumerate(l_list):
+        lm2 = (l*2+1)*2
+        jx = j_csh[0][lmbase:lmbase+lm2, lmbase:lmbase+lm2]
+        jy = j_csh[1][lmbase:lmbase+lm2, lmbase:lmbase+lm2]
+        jz = j_csh[2][lmbase:lmbase+lm2, lmbase:lmbase+lm2]
+        lmbase += lm2
+        j2 = jx.dot(jx) + jy.dot(jy) + jz.dot(jz)
+        w, v = np.linalg.eigh(j2)
+        jx = v.conj().T.dot(jx).dot(v)
+        jy = v.conj().T.dot(jy).dot(v)
+        jz = v.conj().T.dot(jz).dot(v)
+        if il == 0:
+            j_rel = [jx, jy, jz]
+            u_csh2rel = v
+        else:
+            j_rel[0] = block_diag(j_rel[0], jx)
+            j_rel[1] = block_diag(j_rel[1], jy)
+            j_rel[2] = block_diag(j_rel[2], jz)
+            u_csh2rel = block_diag(u_csh2rel, v)
+    return j_rel, u_csh2rel
+
+
+
 if __name__ == "__main__":
     Lx, Ly, Lz = get_L_vector(0)
     print(Lx, Ly, Lz)

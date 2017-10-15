@@ -197,14 +197,14 @@ step 7: energy-volume curve from lapw
 
 We can easily check the energy vs volume curve by typing::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py ev_lapw
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py -ev lapw
 
 The figure is plotted in a pdf file ''ev_lapw.pdf''.
 The numerical data are also stored in metadata file ''results.h5''.
 
 Get the pressure-volume curve by typing::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py eos_fit_lapw
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py -pv lapw
 
 The energy-volume curve and pressure-volume curve 
 from fitting to the Murnaghan equation of state are saved as 
@@ -246,14 +246,14 @@ Save the lapwso results by typing::
 
 We can similarly check the energy vs volume curve by typing::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py ev_lapwso
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py -ev lapwso
 
 The figure is plotted in a pdf file ''ev_lapwso.pdf''.
 The numerical data are also stored in metadata file ''results.h5''.
 
 Get the pressure-volume curve by typing::
 
-    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py eos_fit_lapwso
+    $ ${WIEN_GUTZ_ROOT2}/stepin_wien_gutz.py -pv lapwso
 
 The energy-volume curve and pressure-volume curve
 from fitting to the Murnaghan equation of state are saved as

@@ -232,7 +232,7 @@ def h5save_usr_qa_setup(material, log):
         print("\n Please select the method to solve embedding Hamiltonian.\n"+
                 " LDIAG = -3: Valence truncation ED for S=0 (spin-singlet)\n"+
                 "         -1: Valence truncation ED.\n" +
-                "         -4: Valence truncation ED with J=0." +
+                "         -4: Valence truncation ED with J=0.\n" +
                 "         -5: Sub-valence truncation ED, exptl.\n" +
                 "         -6: Sub-valence truncation ED with J=0, exptl.\n" +
                 "        -31: Valence truncation ED for S=0 \n" +
@@ -240,8 +240,9 @@ def h5save_usr_qa_setup(material, log):
                 "        -11: machine learning solver for soc only, exptl.\n" +
                 "        -12: syten (dmrg) solver, exptl. \n" +
                 "         10: HF (Mixing one-particle DM, exptl.).")
-        iembeddiag = get_usr_input(" Please select LDIAG: ",
-                ['-12', '-11', '-3', '-1', '0', '1', '10', '-31'])
+        iembeddiag = get_usr_input(" Please select LDIAG: ",  \
+                ['-12', '-11', '-6', '-5', '-4', '-3', '-1',  \
+                '0', '1', '10', '-31'])
         usr_input.write(iembeddiag + '\n')
     iembeddiag = int(iembeddiag)
     f['/usrqa/iembeddiag'] = iembeddiag

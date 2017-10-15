@@ -277,8 +277,8 @@ def compare_pv_plot(path_list, fres='results.h5'):
         for path in path_list:
             if path in f:
                 label_list.append(path)
-                p_list.append(f['/'+path+'/p_list'][()])
-                v_list.append(f['/'+path+'/v_list'][()])
+                p_list.append(f['/'+path+'/eosfit/p_list'][()])
+                v_list.append(f['/'+path+'/eosfit/v_list'][()])
                 pattern_list.append('o')
                 postfix += path.split('/')[0]
         if v_list != []:
