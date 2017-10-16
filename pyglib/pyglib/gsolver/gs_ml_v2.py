@@ -18,11 +18,28 @@ def get_input_soc_only(imp=1, l=3):
         e2 = f['/H1E'][j2, j2]
         l1 = f['/LAMBDA'][0,0]
         l2 = f['/LAMBDA'][j2, j2]
+
+    # to real
+    phase1 = d1/numpy.sqrt(d1.real**2 + d1.imag**2)
+    phase2 = d2/numpy.sqrt(d2.real**2 + d2.imag**2)
+    # to positive
+    if d1*numpy.conj(phase1).real > 0:
+        phase1 *= -1.0
+    if d2*numpy.conj(phase2).real > 0:
+        phase2 *= -1.0
+
+    d1 *= numpy.conj(phase1)
+    d2 *= numpy.conj(phase2)
+
     delta = (e1+e2+l1+l2)/4.0
     delta1 = (e1-e2)/2.0
     delta2 = (l1-l2)/2.0
     eshift = l1*2*l + l2*(2*l + 2)
-    return numpy.array([[d1, d2, delta, delta1, delta2]]).real, eshift
+    x_list = numpy.array([[d1, d2, delta, delta1, delta2]])
+    if numpy.max(numpy.abs(x_list.imag)) > 1.e-8:
+        print(' warning: imaginary part detected in ml input!')
+    x_list = x_list.real
+    return x_list, eshift, [phase1, phase2]
 
 
 def driver_gs_ml(l=3):
@@ -44,7 +61,7 @@ def driver_gs_ml(l=3):
             ' with l = {} based on machine learning.'.format(l))
 
     dpath = gsolver.__path__[0]
-    inp, eshft = get_input_soc_only(imp=imp, l=l)
+    inp, eshft, phase = get_input_soc_only(imp=imp, l=l)
     with open('{}/{}/kr_fso.pkl'.format(dpath, subd), \
                 'rb') as f:
         kr = pickle.load(f)
@@ -57,13 +74,13 @@ def driver_gs_ml(l=3):
     for i in range(2*l):
         dm[i, i] = res[0]
         dm[i + na2, i + na2] = res[2]
-        dm[i, i + na2] = res[4]
-        dm[i + na2, i] = numpy.conj(res[4])
+        dm[i, i + na2] = res[4]*numpy.conj(phase[0])
+        dm[i + na2, i] = numpy.conj(res[4])*phase[0]
     for i in range(2*l, na2):
         dm[i, i] = res[1]
         dm[i + na2, i + na2] = res[3]
-        dm[i, i + na2] = res[5]
-        dm[i + na2, i] = numpy.conj(res[5])
+        dm[i, i + na2] = res[5]*numpy.conj(phase[1])
+        dm[i + na2, i] = numpy.conj(res[5])*phase[1]
     etot = kr.predict(inp)[0, 6]
     # convert to molecule energy
     etot -= eshft
