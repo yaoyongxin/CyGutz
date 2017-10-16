@@ -94,7 +94,12 @@ module dcstd
         call gh5_read(dc%j_avg,wh%num_imp,'/dc_j_avg',f_id)
     endif
     if(dc%mode>1)then
-        call gh5_read(dc%nelf,wh%num_imp,'/dc_nelf_list',f_id)
+        call h5lexists_f(f_id,'/dc_nelf_list',lexist,gh5_err)
+        if(lexist)then
+            call gh5_read(dc%nelf,wh%num_imp,'/dc_nelf_list',f_id)
+        else
+            dc%nelf=wh%co(:)%net
+        endif
     endif
     call gh5_close(f_id)
 
@@ -147,9 +152,10 @@ module dcstd
     endif
     if(dc%mode==2)return
 
-    dc%nelf=wh%co(:)%net
     if(io>0)then
         call gh5_open_w('GDC_NELF_OUT.h5',f_id)
+        call gh5_write(dc%nelf,wh%num_imp,'/dc_nelf_list_inp',f_id)
+        dc%nelf=wh%co(:)%net
         call gh5_write(dc%nelf,wh%num_imp,'/dc_nelf_list_out',f_id)
         call gh5_close(f_id)
     endif

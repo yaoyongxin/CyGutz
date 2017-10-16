@@ -34,7 +34,7 @@ def save_gparam(iso=1, ispin=1, ityp_list=[0], imap_list=[0], na2_list=[2],
         if ldc > 0:
             f['/dc_u_avg'] = u_avg_list
             f['/dc_j_avg'] = j_avg_list
-        if ldc > 1:
+        if nelf_list is not None:
             f['/dc_nelf_list'] = nelf_list
 
         if nval_bot_list is not None:

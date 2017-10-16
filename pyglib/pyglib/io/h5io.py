@@ -5,8 +5,6 @@ def h5auto_read(f, path, default=None):
     if path in f:
         return f[path][()]
     else:
-        if default is None:
-            raise ValueError(' {} does not exist!'.format(path))
         return default
 
 

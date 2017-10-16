@@ -151,16 +151,11 @@ def h5save_usr_qa_setup(material, log):
             ipos += 1
             stmp = sys.argv[ipos]
             unique_j_list = [float(s) for s in stmp.split('-')]
-        if ldc > 1:
-            ipos += 1
-            stmp = sys.argv[ipos]
-            unique_nf_list = [float(s) for s in stmp.split('-')]
     else:
         unique_df_list = []
         unique_corr_symbol_list = []
         unique_u_list = []
         unique_j_list = []
-        unique_nf_list = []
         for i, s in enumerate(material.symbols):
             if s in material.symbols[:i]:
                 continue
@@ -193,23 +188,8 @@ def h5save_usr_qa_setup(material, log):
                 unique_u_list.append(UJ[0])
                 unique_j_list.append(UJ[1])
 
-            if ldc > 1:
-                while True:
-                    answer = raw_input(
-                            '\n Please provide initial guess of the number of' +
-                            '\n localized {}-electrons: '.format(df))
-                    try:
-                        nf = float(answer)
-                        break
-                    except:
-                        continue
-                print(answer, file=usr_input)
-                unique_nf_list.append(nf)
-
     f['/usrqa/unique_corr_symbol_list'] = unique_corr_symbol_list
     f['/usrqa/unique_df_list'] = unique_df_list
-    if ldc > 1:
-        f['/usrqa/unique_nf_list'] = unique_nf_list
     if lhub > 0:
         f['/usrqa/unique_u_list_ev'] = unique_u_list
         f['/usrqa/unique_j_list_ev'] = unique_j_list

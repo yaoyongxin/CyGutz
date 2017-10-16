@@ -4,7 +4,8 @@ module ghdf5_base
     implicit none
     private
     public :: gh5_init, gh5_end, gh5_write, gh5_read, gh5_create_group, &
-            & gh5_open_w, gh5_open_r, gh5_close,f_id,gh5_err
+            & gh5_open_w, gh5_open_r, gh5_open_rw, &
+            & gh5_close, f_id, gh5_err
       
     integer(hid_t) :: f_id=-1
     integer(hid_t) :: group_id, dset_id, dspace_id

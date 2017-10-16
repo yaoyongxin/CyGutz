@@ -200,17 +200,20 @@ def diff(fday, case, mix_dc, avg_dc):
     with h5py.File("GPARAM.h5", 'a') as f:
         dc_mode = f["/dc_mode"][0]
         if dc_mode == 12:
-            nelf_list_in = f["/dc_nelf_list"][()]
             with h5py.File("GDC_NELF_OUT.h5", 'r') as fp:
+                nelf_list_inp = fp["/dc_nelf_list_inp"][()]
                 nelf_list_out = fp["/dc_nelf_list_out"][()]
-            nelf_diff_list = nelf_list_out - nelf_list_in
+            nelf_diff_list = nelf_list_out - nelf_list_inp
             dcv_err = np.max(np.abs(nelf_diff_list))
-            nelf_list_mix = nelf_list_in + mix_dc*nelf_diff_list
+            nelf_list_mix = nelf_list_inp + mix_dc*nelf_diff_list
             if avg_dc:
                 val = np.sum(nelf_list_mix)/len(nelf_list_mix)
-                nelf_list_mix = [val for x in nelf_list_in]
+                nelf_list_mix = [val for x in nelf_list_inp]
                 dcv_err = np.sum(nelf_diff_list)/len(nelf_list_mix)
-            f["/dc_nelf_list"][()] = nelf_list_mix
+            if '/dc_nelf_list' in f:
+                f["/dc_nelf_list"][()] = nelf_list_mix
+            else:
+                f["/dc_nelf_list"] = nelf_list_mix
         else:
             dcv_err = 0.
 
@@ -513,6 +516,8 @@ def batch_init_ga(dir_template='./template'):
         os.chdir(dname+'/case')
         shutil.copy(cwd+'/'+dir_template+'/ginit.h5', './')
         shutil.copy(cwd+'/'+dir_template+'/GPARAM.h5', './')
+        if os.path.isfile(cwd+'/'+dir_template+'/GESOLVER.h5'):
+            shutil.copy(cwd+'/'+dir_template+'/GESOLVER.h5', './')
         shutil.copy(cwd+'/'+dir_template+'/case.indmfl', './')
         os.chdir(cwd)
 

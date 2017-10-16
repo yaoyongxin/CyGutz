@@ -70,8 +70,7 @@ class gAtoms(Atoms):
             self.unique_corr_symbol_list = unique_corr_symbol_list.tolist()
             self.unique_df_list = h5auto_read(f, \
                     '/usrqa/unique_df_list')
-            if self.ldc > 1:
-                self.unique_nf_list = np.asfarray(h5auto_read(f, \
+            self.unique_nf_list = np.asfarray(h5auto_read(f, \
                         '/usrqa/unique_nf_list'))
             if self.lhub > 0:
                 self.unique_u_list = np.asfarray(h5auto_read(f, \
@@ -109,7 +108,7 @@ class gAtoms(Atoms):
                 corr_list.append(i)
                 ityp_list.append(self.unique_corr_symbol_list.index(s))
                 df_list.append(self.unique_df_list[ityp_list[-1]])
-                if self.ldc > 1:
+                if self.unique_nf_list is not None:
                     nf_list.append(self.unique_nf_list[ityp_list[-1]])
                 if self.lhub > 0:
                     u_list.append(self.unique_u_list[ityp_list[-1]])
@@ -124,7 +123,9 @@ class gAtoms(Atoms):
         self.u_list = u_list
         self.j_list = j_list
 
-        if self.modify_mode and self.ldc > 1:
+        if len(nf_list) == 0:
+            nf_list = None
+        if self.modify_mode:
             with h5py.File('GPARAM.h5', 'r') as f:
                 if '/dc_nelf_list' in f:
                     self.nelf_list = f['/dc_nelf_list'][()]
