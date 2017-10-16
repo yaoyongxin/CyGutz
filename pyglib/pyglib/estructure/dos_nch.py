@@ -291,8 +291,6 @@ if __name__ == "__main__":
     psi_sksn_f = np.einsum('...ii', psi_skn_w_ab[...,:,:])
     dos_f = dos.get_dos_component(psi_sksn_f)
 
-#    import matplotlib
-#    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
     plt.figure(0)

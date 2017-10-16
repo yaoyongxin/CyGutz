@@ -70,8 +70,9 @@ class gAtoms(Atoms):
             self.unique_corr_symbol_list = unique_corr_symbol_list.tolist()
             self.unique_df_list = h5auto_read(f, \
                     '/usrqa/unique_df_list')
-            self.unique_nf_list = np.asfarray(h5auto_read(f, \
-                        '/usrqa/unique_nf_list'))
+            self.unique_nf_list = h5auto_read(f, '/usrqa/unique_nf_list')
+            if self.unique_nf_list is not None:
+                self.unique_nf_list = np.asfarray(self.unique_nf_list)
             if self.lhub > 0:
                 self.unique_u_list = np.asfarray(h5auto_read(f, \
                         '/usrqa/unique_u_list_ev'))
