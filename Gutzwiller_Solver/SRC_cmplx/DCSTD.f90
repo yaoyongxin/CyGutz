@@ -143,14 +143,12 @@ module dcstd
     character(20) fmt
 
 
-    if(dc%mode<=1)return
     ndiff=wh%co(:)%net-dc%nelf
     idx=maxloc(abs(ndiff))
 
     if(io>0)then
         write(io,'(" max nelf diff=",f14.8)')ndiff(idx(1))
     endif
-    if(dc%mode==2)return
 
     if(io>0)then
         call gh5_open_w('GDC_NELF_OUT.h5',f_id)

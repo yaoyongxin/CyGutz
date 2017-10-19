@@ -170,6 +170,26 @@ def Rtrans_U_supdn_to_spin_fast_sdnup(U):
     return np.dot(U, V)
 
 
+def get_utrans_orbfast_supdn_to_spin_fast_supdn(n):
+    '''
+    get a unitary transformation from orbital fast spin up-down
+    basis to spin fast spin up-down basis.
+    '''
+    v = np.zeros((n, n), dtype=int)
+    i = 0
+
+    # spin up block
+    for j in range(0, n, 2):
+        v[i][j] = 1
+        i += 1
+
+    # spin down block
+    for j in range(1, n, 2):
+        v[i][j] = 1
+        i += 1
+    return v
+
+
 def trans_JJ_to_CH_sup_sdn(L):
     '''
     trafoso provides transformation matrices from

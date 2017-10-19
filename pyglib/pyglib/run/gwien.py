@@ -198,8 +198,7 @@ def diff(fday, case, mix_dc, avg_dc):
         d_etot = 1.0
 
     with h5py.File("GPARAM.h5", 'a') as f:
-        dc_mode = f["/dc_mode"][0]
-        if dc_mode == 12:
+        if os.path.isfile("GDC_NELF_OUT.h5"):
             with h5py.File("GDC_NELF_OUT.h5", 'r') as fp:
                 nelf_list_inp = fp["/dc_nelf_list_inp"][()]
                 nelf_list_out = fp["/dc_nelf_list_out"][()]
