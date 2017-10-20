@@ -77,7 +77,12 @@ module sparse
     type zvector
         complex(q),pointer :: a(:)=>null()
     end type zvector
-      
+
+    type ivector
+        integer :: imin=0,imax=0
+        integer,pointer :: i(:)=>null()
+    end type ivector
+
     contains
     
 

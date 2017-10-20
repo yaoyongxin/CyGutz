@@ -418,14 +418,18 @@ module gutil
     end subroutine set_binoms
 
 
-    subroutine set_fock_state_indices(norb,binom,idx,bs,ibs)
+    subroutine set_fock_state_indices(norb,binom,idx,bs,ibs,bs_sz)
     integer,intent(in)::norb,binom(:,0:)
     integer,pointer,intent(inout)::idx(:),bs(:),ibs(:)
+    real(q),pointer,optional,intent(inout)::bs_sz(:)
 
     integer i,nbs,num1
 
     nbs=ishft(1,norb)
     allocate(idx(0:norb+1),bs(nbs),ibs(0:nbs-1))
+    if(present(bs_sz))then
+        allocate(bs_sz(nbs))
+    endif
     idx(0:1)=1
     do i=2,norb+1
         idx(i)=idx(i-1)+binom(norb,i-2)
@@ -433,6 +437,9 @@ module gutil
     do i=0,nbs-1
         num1=popcnt(i)+1
         bs(idx(num1))=i
+        if(present(bs_sz))then
+            call calc_state_sz(i,norb,bs_sz(idx(num1)),0)
+        endif
         idx(num1)=idx(num1)+1
     enddo
     do i=1,nbs

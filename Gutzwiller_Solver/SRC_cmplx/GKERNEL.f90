@@ -287,6 +287,8 @@ module gkernel
                 &' -l 0.0 -e 1')
     elseif(gkmem%iembeddiag==-6)then
         call system('exe_spci_j2_mott_gap_trunc -i '//int_to_str(i))
+    elseif(gkmem%iembeddiag==21)then
+        call system('exe_spci_sz_mott '//int_to_str(i))
     elseif(gkmem%iembeddiag==-31)then
         call system('exe_spci_s2_dsym_mott -i '//int_to_str(i))
     elseif(gkmem%iembeddiag==-10)then
@@ -330,6 +332,12 @@ module gkernel
                 &int_to_str(i),exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running exe_spci_j2_mott_gap_trunc-6!")')
+        endif
+    elseif(gkmem%iembeddiag==-21)then
+        call execute_command_line('exe_spci_sz_mott '//int_to_str(i),  &
+                &exitstat=ierr)
+        if(ierr/=0)then
+            write(0,'(" Error in running exe_spci_sz_mott!")')
         endif
     elseif(gkmem%iembeddiag==-31)then
         call execute_command_line('exe_spci_s2_dsym_mott -i '//int_to_str(i),  &

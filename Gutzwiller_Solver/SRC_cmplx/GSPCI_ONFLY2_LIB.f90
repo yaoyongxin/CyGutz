@@ -37,6 +37,7 @@ subroutine set_full_fock_states_l_spci()
                 &(dmem%idx(i+1)-dmem%idx(i))* &
                 &(dmem%idx_l(dmem%norb-i+1)-dmem%idx_l(dmem%norb-i))
     enddo
+    write(0,'(" dim_phi = ", i0)')dmem%nstates
     return
 
 end subroutine set_full_fock_states_l_spci

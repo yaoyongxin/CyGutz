@@ -217,12 +217,13 @@ def h5save_usr_qa_setup(material, log):
                 "         -6: Sub-valence truncation ED with J=0, exptl.\n" +
                 "        -31: Valence truncation ED for S=0 \n" +
                 "             and local symmetry enforced, experimental.\n" +
-                "        -11: machine learning solver for soc only, exptl.\n" +
+                "        -11: machine learning solver for soc only, exptl.\n"+
                 "        -12: syten (dmrg) solver, exptl. \n" +
+                "        -21: Valence truncation ED with Sz symmetry.\n" +
                 "         10: HF (Mixing one-particle DM, exptl.).")
         iembeddiag = get_usr_input(" Please select LDIAG: ",  \
                 ['-12', '-11', '-6', '-5', '-4', '-3', '-1',  \
-                '0', '1', '10', '-31'])
+                '0', '1', '10', '-31', '-21'])
         usr_input.write(iembeddiag + '\n')
     iembeddiag = int(iembeddiag)
     f['/usrqa/iembeddiag'] = iembeddiag
