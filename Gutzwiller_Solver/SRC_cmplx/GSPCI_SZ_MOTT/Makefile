@@ -34,14 +34,3 @@ clean:
 
 install:
 	cp exe_spci_sz_mott ${DESTDIR}
-
-update:
-	mkdir -p ${dir_release}/GSPCI_SZ_MOTT
-	for file in GSPCI MAIN ; \
-          do \
-              if ! cmp -s ./$${file}.f90 \
-			  		${dir_release}/GSPCI_SZ_MOTT/$${file}.f90 ; \
-                then echo $${file}.f90 && \
-                cp ./$${file}.f90 ${dir_release}/GSPCI_SZ_MOTT/. ; \
-              fi \
-          done
