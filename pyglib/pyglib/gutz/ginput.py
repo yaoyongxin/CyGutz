@@ -31,9 +31,8 @@ def save_gparam(iso=1, ispin=1, ityp_list=[0], imap_list=[0], na2_list=[2],
         f['/gmaxiter'] = np.asarray([max_iter], dtype=np.int32)
         f['/dc_mode'] = np.asarray([ldc], dtype=np.int32)
 
-        if ldc > 0:
-            f['/dc_u_avg'] = u_avg_list
-            f['/dc_j_avg'] = j_avg_list
+        f['/dc_u_avg'] = u_avg_list
+        f['/dc_j_avg'] = j_avg_list
         if nelf_list is not None:
             f['/dc_nelf_list'] = nelf_list
 
