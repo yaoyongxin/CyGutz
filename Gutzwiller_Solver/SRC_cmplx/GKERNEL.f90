@@ -242,13 +242,22 @@ module gkernel
     subroutine solve_hembed(i,na4,io)
     integer,intent(in)::i,na4,io
 
-    integer na2,iter,ityp,ierr,ia,ll
+    integer na2,iter,ityp,ierr,ia,ll,stat
     real(q) etot,de,mag_mom
     complex(q) h1e4(na4,na4),dm(na4,na4),h1e2(na4/2,na4/2)
     
     na2=na4/2
     ityp=wh%ityp_imp(i)
     ll = (na2/2-1)/2
+
+    ! remove V2E_imp.inp file in the first iteration.
+    if(gkmem%iter<=1)then
+        open(unit=123, iostat=stat, file="V2E_"//trim(int_to_str(i))//'.INP', &
+                &status='old')
+        if(stat==0)then
+            close(123, status='delete')
+        endif
+    endif
 
     h1e2=wh%co(i)%h1e
     ! adding (orbital dependent) DC term to h1e
