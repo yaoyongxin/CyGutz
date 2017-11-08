@@ -29,7 +29,7 @@ def twrite_u_matrix_real(v2e, fname, shreshold=1.e-7):
                     for l, v1234 in enumerate(v123):
                         if j == l:
                             continue
-                        if numpy.abs(v1234) > 1.e-7:
+                        if numpy.abs(v1234) > shreshold:
                             # order of cd_i cd_k c_l c_j
                             # absorbing 1/2 factor
                             f.write('{:2d} {:2d} {:2d} {:2d} {:16.12f}\n'\
@@ -116,14 +116,15 @@ def wrt_text_rembed(h1e, lambdac, daalpha, v2e, imp=1):
     v1e = get_whole_h1e(h1e, lambdac, daalpha)
 
     max_imag = numpy.max(numpy.abs(v1e.imag))
-    # taking care of f_b fd_a = fd_a f_b + \delta_a,b
-    v1e += numpy.eye(v1e.shape[0])*lambdac.trace()/lambdac.shape[0]
+
+    # taking care of f_b fd_a = fd_a f_b + \delta_a,b.
+    # v1e += numpy.eye(v1e.shape[0])*lambdac.trace()/lambdac.shape[0]
+    # but here the convention is for a typical molecule.
 
     if v2e is not None:
         max_imag = max(max_imag, numpy.max(numpy.abs(v2e.imag)))
     if max_imag > 1.e-7:
         print(' maximal imaginary part = {}'.format(max_imag))
-        raise AssertionError(' embedding hamiltonian not real!')
 
     # write one-body part
     twrite_2d_array_real(v1e, 'H1E_{}.INP'.format(imp), shreshold=1.e-7)
@@ -145,6 +146,30 @@ def get_dm_cshupdn(imp=1):
     if numpy.max(numpy.abs(dm.imag)) < 1.e-7:
         dm = dm.real
     numpy.savetxt('dm.dat', dm)
+
+
+def h5wrt_dm_sab_rc(imp=1):
+    '''transform the density matrix (real) into symmetry adapted basis
+    and write in EMBEB_HAMIL_{IMP}.h5 file in complex format.
+    '''
+    # read in density matrix (real)
+    fname = "GDMRG_{}.OUT".format(imp)
+    dm = numpy.loadtxt(fname)
+
+    # cast to complex
+    dm = numpy.array(dm, dtype=complex)
+
+    # get transformation matrix to symmetry adapted basis
+    line = open(fname, "r").readline()
+    e_mol = float(line.split()[1])
+    u_sab2sf = get_u_sab2cshupdn(imp=imp)
+    u2_sab2sf = block_diag(u_sab2sf, u_sab2sf)
+
+    # unitary transformation
+    dm = u2_sab2sf.conj().dot(dm).dot(u2_sab2sf.T)
+    with h5py.File("EMBED_HAMIL_RES_{}.h5".format(imp), 'w') as f:
+        f["/DM"] = dm.T
+        f["/emol"] = [e_mol]
 
 
 def chk_consistent_dm(imp=1):

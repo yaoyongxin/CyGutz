@@ -1,8 +1,5 @@
 include ../../../Makefile.in
 
-dir_release = \
-	    ~/bitbucket/cygutz_release/V2.0/Gutzwiller_Slave_Boson_Solver/SRC_cmplx
-
 DCPP = 
 
 #FFLAGS = -O0 -check bound -check pointer -check arg_temp_created \
@@ -35,8 +32,3 @@ clean:
 
 install:
 	cp exe_spci_j2_mott_analysis ${DESTDIR}
-
-update:
-	mkdir -p ${dir_release}/GSPCI_J2_MOTT_ANALYSIS
-	cp *f90 ${dir_release}/GSPCI_J2_MOTT_ANALYSIS/.
-	cp Makefile ${dir_release}/GSPCI_J2_MOTT_ANALYSIS/.
