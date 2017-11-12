@@ -6,7 +6,7 @@ from pyglib.math.matrix_util import \
         get_utrans_orbfast_supdn_to_spin_fast_supdn
 
 
-def twrite_2d_array_real(a, fname, shreshold=1.e-7):
+def twrite_2d_array_real(a, fname, shreshold=1.e-10):
     '''write 2d array (real) in text form of i, j, a_ij.
     '''
     with open(fname, 'w') as f:
@@ -17,7 +17,18 @@ def twrite_2d_array_real(a, fname, shreshold=1.e-7):
                             i+1, j+1, a12.real))
 
 
-def twrite_u_matrix_real(v2e, fname, shreshold=1.e-7):
+def twrite_2d_array_cmplx(a, fname, shreshold=1.e-10):
+    '''write 2d array (real) in text form of i, j, a_ij.
+    '''
+    with open(fname, 'w') as f:
+        for i, a1 in enumerate(a):
+            for j, a12 in enumerate(a1):
+                if numpy.abs(a12) > shreshold:
+                    f.write('{:2d} {:2d} {:16.12f} {:16.12f}\n'.format(\
+                            i+1, j+1, a12.real, a12.imag))
+
+
+def twrite_u_matrix_real(v2e, fname, shreshold=1.e-10):
     '''write u-matrix in text form of i, k, l, j, v2e_(ij)(kl).
     '''
     with open(fname, 'w') as f:
@@ -37,6 +48,27 @@ def twrite_u_matrix_real(v2e, fname, shreshold=1.e-7):
                                     v1234.real/2))
 
 
+def twrite_u_matrix_cmplx(v2e, fname, shreshold=1.e-10):
+    '''write u-matrix in text form of i, k, l, j, v2e_(ij)(kl).
+    '''
+    with open(fname, 'w') as f:
+        for i, v1 in enumerate(v2e):
+            for j, v12 in enumerate(v1):
+                for k, v123 in enumerate(v12):
+                    if i == k:
+                        continue
+                    for l, v1234 in enumerate(v123):
+                        if j == l:
+                            continue
+                        if numpy.abs(v1234) > shreshold:
+                            # order of cd_i cd_k c_l c_j
+                            # absorbing 1/2 factor
+                            f.write(('{:2d} {:2d} {:2d} {:2d}'+
+                                    ' {:16.12f} {:16.12f}\n')\
+                                    .format(i+1, k+1, l+1, j+1, \
+                                    v1234.real/2, v1234.imag/2))
+
+
 def get_u_sab2cshupdn(imp=1):
     '''get unitary transformation from symmetry-adapted basis
     to complex spherical harmonics basis with
@@ -53,14 +85,14 @@ def get_u_sab2cshupdn(imp=1):
     return u_sab2sf
 
 
-def h5gen_embedh_spin_updn(imp=1, h5wrt=False):
+def h5gen_embedh_spin_updn(imp=1, lwrt_csh=False, lv2e=False):
     # embedding hamiltonian parameters
     # upper case path indicates fortran convention.
     with h5py.File('EMBED_HAMIL_{}.h5'.format(imp), 'r') as f:
         daalpha = f['/D'][()].T
         lambdac = f['/LAMBDA'][()].T
         h1e     = f['/H1E'][()].T
-        if not os.path.isfile('V2E_{}.INP'.format(imp)) or h5wrt:
+        if lv2e:
             v2e = f['/V2E'][()].T
         else:
             v2e = None
@@ -87,16 +119,37 @@ def h5gen_embedh_spin_updn(imp=1, h5wrt=False):
     else:
         v2e_= None
 
-    if h5wrt:
+    if lwrt_csh:
         shutil.copy('EMBED_HAMIL_{}.h5'.format(imp), \
                 'EMBED_HAMIL_CSH_{}.h5'.format(imp))
         with h5py.File('EMBED_HAMIL_CSH_{}.h5'.format(imp), 'a') as f:
             f['/D'][()] = daalpha_.T
             f['/LAMBDA'][()] = lambdac_.T
             f['/H1E'][()] = h1e_.T
-            f['/V2E'][()] = v2e_.T
-
+            if v2e_ is not None:
+                f['/V2E'][()] = v2e_.T
     return h1e_, lambdac_, daalpha_, v2e_
+
+
+def h5wrt_rembed_hamil(h1e, lambdac, daalpha, v2e, imp=1):
+    '''write the real version of the embedding Hamiltonian in hdf5 format.
+    '''
+    h1e, lambdac, daalpha, v2e = [get_real_with_chk(a) for a in [h1e, \
+            lambdac, daalpha, v2e]]
+    fdst = "EMBED_HAMIL_{}r.h5".format(imp)
+    if os.path.isfile(fdst):
+        with h5py.File(fdst, "a") as f:
+            f['/D'][()] = daalpha.T
+            f['/LAMBDA'][()] = lambdac.T
+            f['/H1E'][()] = h1e.T
+    else:
+        shutil.copy('EMBED_HAMIL_{}.h5'.format(imp), fdst)
+        with h5py.File(fdst, "a") as f:
+            del f['/D'], f['/LAMBDA'], f['/H1E'], f['/V2E']
+            f['/D'] = daalpha.T
+            f['/LAMBDA'] = lambdac.T
+            f['/H1E'] = h1e.T
+            f['/V2E'] = v2e.T
 
 
 def get_whole_h1e(h1e, lambdac, daalpha):
@@ -115,23 +168,34 @@ def wrt_text_rembed(h1e, lambdac, daalpha, v2e, imp=1):
     '''
     v1e = get_whole_h1e(h1e, lambdac, daalpha)
 
-    max_imag = numpy.max(numpy.abs(v1e.imag))
+    # taking care of f_b fd_a = fd_a f_b + \delta_a,b.
+    # v1e += numpy.eye(v1e.shape[0])*lambdac.trace()/lambdac.shape[0]
+    # but here the convention is for a typical molecule.
+    v1e, v2e = [get_real_with_chk(a) for a in [v1e, v2e]]
+
+    # write one-body part
+    twrite_2d_array_real(v1e, 'H1E_{}.INP'.format(imp), shreshold=1.e-10)
+
+    # write two-body part
+    if v2e is not None:
+        twrite_u_matrix_real(v2e, 'V2E_{}.INP'.format(imp))
+
+
+def wrt_text_cembed(h1e, lambdac, daalpha, v2e, imp=1):
+    '''write the complex embedding hamiltonian parameters in text format.
+    '''
+    v1e = get_whole_h1e(h1e, lambdac, daalpha)
 
     # taking care of f_b fd_a = fd_a f_b + \delta_a,b.
     # v1e += numpy.eye(v1e.shape[0])*lambdac.trace()/lambdac.shape[0]
     # but here the convention is for a typical molecule.
 
-    if v2e is not None:
-        max_imag = max(max_imag, numpy.max(numpy.abs(v2e.imag)))
-    if max_imag > 1.e-7:
-        print(' maximal imaginary part = {}'.format(max_imag))
-
     # write one-body part
-    twrite_2d_array_real(v1e, 'H1E_{}.INP'.format(imp), shreshold=1.e-7)
+    twrite_2d_array_cmplx(v1e, 'H1E_{}.INP'.format(imp), shreshold=1.e-10)
 
     # write two-body part
     if v2e is not None:
-        twrite_u_matrix_real(v2e, 'V2E_{}.INP'.format(imp))
+        twrite_u_matrix_cmplx(v2e, 'V2E_{}.INP'.format(imp))
 
 
 def get_dm_cshupdn(imp=1):
@@ -143,25 +207,53 @@ def get_dm_cshupdn(imp=1):
     u_sab2sf = get_u_sab2cshupdn(imp=imp)
     u2_sab2sf = block_diag(u_sab2sf, u_sab2sf)
     dm = u2_sab2sf.T.dot(dm).dot(u2_sab2sf.conj())
-    if numpy.max(numpy.abs(dm.imag)) < 1.e-7:
+    if numpy.max(numpy.abs(dm.imag)) < 1.e-10:
         dm = dm.real
     numpy.savetxt('dm.dat', dm)
 
 
-def h5wrt_dm_sab_rc(imp=1):
-    '''transform the density matrix (real) into symmetry adapted basis
-    and write in EMBEB_HAMIL_{IMP}.h5 file in complex format.
+def get_real_with_chk(a, threshold=1.e-10):
+    '''return real version of a with a warning if the imaginary part
+    is larger than the threshold.
+    '''
+    if a is None:
+        return a
+    max_imag = numpy.max(numpy.abs(a.imag))
+    if max_imag > 1.e-10:
+        print(' maximal imaginary part = {}'.format(max_imag))
+    return a.real
+
+
+def get_res_idmrg(imp=1):
+    '''get density matrix and energy from idmrg calculation.
     '''
     # read in density matrix (real)
     fname = "GDMRG_{}.OUT".format(imp)
     dm = numpy.loadtxt(fname)
-
-    # cast to complex
-    dm = numpy.array(dm, dtype=complex)
+    if dm.shape[1] == dm.shape[0]*2:
+        dm = dm.view(complex)
 
     # get transformation matrix to symmetry adapted basis
     line = open(fname, "r").readline()
     e_mol = float(line.split()[1])
+
+    return dm, e_mol
+
+
+def get_res_rspci_mott_onfly(imp=1):
+    '''get density matrix and energy from rspci_mott_onfly calculation.
+    '''
+    with h5py.File("EMBED_HAMIL_RES_{}r.h5".format(imp), "r") as f:
+        dm = f["/DM"][()].T
+        e_mol = f["/emol"][0]
+    return dm, e_mol
+
+
+def h5wrt_dm_sab_cmplx(dm, e_mol, imp=1):
+    '''transform the density matrix (real) into symmetry adapted basis
+    and write in EMBEB_HAMIL_{IMP}.h5 file in complex format.
+    '''
+    # get the comp_sph_harm to sab transformation
     u_sab2sf = get_u_sab2cshupdn(imp=imp)
     u2_sab2sf = block_diag(u_sab2sf, u_sab2sf)
 
@@ -170,6 +262,16 @@ def h5wrt_dm_sab_rc(imp=1):
     with h5py.File("EMBED_HAMIL_RES_{}.h5".format(imp), 'w') as f:
         f["/DM"] = dm.T
         f["/emol"] = [e_mol]
+        f["/dimv"] = [0]
+
+
+def h5wrt_dm_sab_rc(dm, e_mol, imp=1):
+    '''transform the density matrix (real) into symmetry adapted basis
+    and write in EMBEB_HAMIL_{IMP}.h5 file in complex format.
+    '''
+    # cast to complex
+    dm = numpy.array(dm, dtype=complex)
+    h5wrt_dm_sab_cmplx(dm, e_mol, imp=imp)
 
 
 def chk_consistent_dm(imp=1):
@@ -196,5 +298,5 @@ def chk_consistent_dm(imp=1):
 
 
 if __name__ == '__main__':
-    h1e, lambdac, daalpha, v2e = h5gen_embedh_spin_updn(h5wrt=True)
+    h1e, lambdac, daalpha, v2e = h5gen_embedh_spin_updn()
     wrt_text_rembed(h1e, lambdac, daalpha, v2e)
