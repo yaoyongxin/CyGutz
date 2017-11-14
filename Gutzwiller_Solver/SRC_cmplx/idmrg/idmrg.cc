@@ -21,8 +21,9 @@ int main(int argc, char* argv[])
 
     // number of particles, default is N   (half filling)
     auto Npart = input.getInt("Npart",N);
-    auto Nsweeps = input.getInt("Nsweeps",50);
+    auto Nsweeps = input.getInt("Nsweeps",5);
     auto maxM = input.getInt("maxM",50);
+    auto ecut = input.getReal("Ecut",1.e-6);
     auto conserveSz = input.getYesNo("ConserveSz",false);
     auto quiet = input.getYesNo("quiet",false);
 
@@ -75,36 +76,82 @@ int main(int argc, char* argv[])
     infile.close();
   
     auto H = IQMPO(ampo);
-  
-    // set initial state
-    auto state = InitState(sites);
-    for (int i=1; i<=N; ++i) 
-    {
-        if(i%2==1)
-        {
-            state.set(i,"Up");
-        }
-        else
-        {
-            state.set(i,"Dn");
-        }
-    }
-  
-    auto psi = IQMPS(state);
-    Print(totalQN(psi));
-  
-    // setup dmrg calculations
-    auto sweeps = Sweeps(Nsweeps);
-    sweeps.minm() = 10, 20, 50;
-    sweeps.maxm() = 50, maxM;
+    IQMPS psi;
+    Sweeps sweeps;
 
-    // quite delicate, keep it.
-    sweeps.cutoff() = 1E-12;
-    sweeps.noise() = 1E-5, 1E-6, 1E-10, 1E-12;
+    // check if previous solution psi exists
+    infile.open("PSI_"+simp+".INP");
+    bool psi_exist = false;
+    if(infile.good())
+    {
+        infile.close();
+        psi = readFromFile<IQMPS>("PSI_"+simp+".INP");
+        sweeps = Sweeps(1);
+        sweeps.minm() = 50;
+        sweeps.maxm() = maxM;
+        sweeps.cutoff() = 1E-12;
+        sweeps.noise() = 1E-12;
+        psi_exist = true;
+        std::cout << "Previous solution read in." << std::endl;
+    }
+    else
+    {
+        // set initial state
+        auto state = InitState(sites);
+        for (int i=1; i<=N; ++i) 
+        {
+            if(i%2==1)
+            {
+                state.set(i,"Up");
+            }
+            else
+            {
+                state.set(i,"Dn");
+            }
+        }
   
-    // Begin the DMRG calculation
+        psi = IQMPS(state);
+  
+        // setup dmrg calculations
+        sweeps = Sweeps(Nsweeps);
+        sweeps.minm() = 10, 20, 50;
+        sweeps.maxm() = 50, maxM;
+
+        // quite delicate, keep it.
+        sweeps.cutoff() = 1E-12;
+        sweeps.noise() = 1E-5, 1E-6, 1E-10, 1E-12;
+    }
+
+    Print(totalQN(psi));
     auto energy = dmrg(psi,H,sweeps,{"Quiet", quiet});
-  
+
+    // begin dmrg loop until convergence
+    if(!psi_exist)
+    {
+        sweeps = Sweeps(1);
+        sweeps.minm() = 50;
+        sweeps.maxm() = maxM;
+        sweeps.cutoff() = 1E-12;
+        sweeps.noise() = 1E-12;
+    }
+
+    auto energy_pre = energy;
+
+    for(int i=0; i<1000; i++)
+    {
+        energy = dmrg(psi,H,sweeps,{"Quiet", quiet});
+        if(abs(energy_pre-energy)<ecut)
+        {
+            std::cout << "Idmrg converged with " << i+Nsweeps
+                    << " iterations." << std::endl;
+            break;
+        }
+        energy_pre = energy;
+    }
+
+    // save final solution 
+    // writeToFile("PSI_"+simp+".INP",psi);
+
     // record final energy by DMRG
     oufile << "#e_embed: " << std::setprecision(12) << energy << std::endl;
 

@@ -163,7 +163,7 @@ def get_whole_h1e(h1e, lambdac, daalpha):
     return v1e
 
 
-def wrt_text_rembed(h1e, lambdac, daalpha, v2e, imp=1):
+def wrt_text_rembed(h1e, lambdac, daalpha, v2e, imp=1, shreshold=1.e-10):
     '''write the real embedding hamiltonian parameters in text format.
     '''
     v1e = get_whole_h1e(h1e, lambdac, daalpha)
@@ -174,11 +174,12 @@ def wrt_text_rembed(h1e, lambdac, daalpha, v2e, imp=1):
     v1e, v2e = [get_real_with_chk(a) for a in [v1e, v2e]]
 
     # write one-body part
-    twrite_2d_array_real(v1e, 'H1E_{}.INP'.format(imp), shreshold=1.e-10)
+    twrite_2d_array_real(v1e, 'H1E_{}.INP'.format(imp), shreshold=shreshold)
 
     # write two-body part
     if v2e is not None:
-        twrite_u_matrix_real(v2e, 'V2E_{}.INP'.format(imp))
+        twrite_u_matrix_real(v2e, 'V2E_{}.INP'.format(imp),
+                shreshold=shreshold)
 
 
 def wrt_text_cembed(h1e, lambdac, daalpha, v2e, imp=1):
@@ -294,6 +295,15 @@ def chk_consistent_dm(imp=1):
     v1e = get_whole_h1e(h1e, lambdac, daalpha)
     res2 = numpy.sum(dm*v1e)
     print(res1, res2)
+
+
+def embed_hamil_to_ctext(imp=1):
+    with h5py.File("EMBED_HAMIL_{}.h5".format(imp), 'r') as f:
+        daalpha = f['/D'][()].T
+        lambdac = f['/LAMBDA'][()].T
+        h1e     = f['/H1E'][()].T
+        v2e     = f['/V2E'][()].T
+    wrt_text_cembed(h1e, lambdac, daalpha, v2e, imp=imp)
 
 
 

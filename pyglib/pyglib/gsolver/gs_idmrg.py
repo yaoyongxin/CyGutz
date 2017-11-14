@@ -2,7 +2,8 @@ import os, sys, subprocess
 from pyglib.gutz import embedh
 
 
-def create_idmrg_ctl_file(imp=1, N=14, Npart=14, Nsweeps=50, maxM=50):
+def create_idmrg_ctl_file(imp=1, N=14, Npart=14, Nsweeps=5, ecut=1.e-6,
+        maxM=200):
     '''write idmrg control file.
     '''
     fname = "GDMRG_{}.CTL".format(imp)
@@ -17,9 +18,10 @@ def create_idmrg_ctl_file(imp=1, N=14, Npart=14, Nsweeps=50, maxM=50):
     ConserveSz = no
     quiet = yes
     Nsweeps = {}
+    Ecut = {}
     maxM = {}
     }}
-'''.format(N, Npart, Nsweeps, maxM))
+'''.format(N, Npart, Nsweeps, ecut, maxM))
 
 
 def driver_idmrg(imp=1):
