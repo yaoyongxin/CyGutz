@@ -20,7 +20,7 @@ def initialize():
 
     # Q & A
     from pyglib.gutz.usrqa import h5save_usr_qa_setup
-    h5save_usr_qa_setup(material, log_file)
+    h5save_usr_qa_setup(material, log=log_file)
 
     # Setting the attributes to material
     material.h5set()

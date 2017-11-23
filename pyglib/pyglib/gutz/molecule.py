@@ -1,7 +1,6 @@
 from __future__ import print_function
 from builtins import zip
-import sys
-import numpy as np
+import sys, numpy
 from pymatgen import Molecule
 
 
@@ -16,52 +15,53 @@ class gmolecule(Molecule):
     '''adding equivalent indices to atoms.
     '''
     def __init__(self, species, coords, equivalent_indices=[], charge=0,
-            spin_multiplicity=None, validate_proximity=False,
-            site_properties=None):
+            fm_direction=None, spin_multiplicity=None,
+            validate_proximity=False, site_properties=None):
         super(Molecule, self).__init__(species, coords, charge=charge,
                 spin_multiplicity=spin_multiplicity,
                 validate_proximity=validate_proximity,
                 site_properties=site_properties)
+        self.fm_direction = fm_direction
         self.equivalent_indices = equivalent_indices
 
 
 def xtal_get_local_rot(symbols, scaled_positions, cell, iat, dist_cut_,
-        equivalent_indices=[], locrot=None, Nmax=4, tol=1.e-5,
-        log=sys.stdout):
+        equivalent_indices=[], locrot=None, fm_direction=None,
+        Nmax=4, tol=1.e-5, log=sys.stdout):
     '''
     Get rotation operations of center atom iat in crystal.
     '''
     mol = xtal_extract_mol(symbols, scaled_positions, cell, iat,
             dist_cut_, equivalent_indices=equivalent_indices,
-            locrot=locrot, Nmax=Nmax)
+            locrot=locrot, fm_direction=fm_direction, Nmax=Nmax)
     return mol_get_rot_list(mol, tol=tol, log=log)
 
 
 def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
-        locrot=None, Nmax=10, equivalent_indices=[]):
+        locrot=None, fm_direction=None, Nmax=10, equivalent_indices=[]):
     '''
     Extracting molecule of center atom iat from crystal.
     atom iat is the molecule center
     '''
-    center = np.copy(scaled_positions[iat])
-    new_scaled_positions = np.copy(scaled_positions)
+    center = numpy.copy(scaled_positions[iat])
+    new_scaled_positions = numpy.copy(scaled_positions)
     new_scaled_positions = new_scaled_positions - center
     molecule_positions = []
     molecule_symbols = []
     pair_dist = []
     eq_indices = []
     # Get the (2*Nmax+1)x(2*Nmax+1)x(2*Nmax+1) block
-    Nmax_list = np.arange(-Nmax, Nmax)
+    Nmax_list = numpy.arange(-Nmax, Nmax)
     for i in Nmax_list:
         for j in Nmax_list:
             for k in Nmax_list:
                 for jat, sp in enumerate(new_scaled_positions):
-                    n_sp = sp + np.array([i, j, k])
+                    n_sp = sp + numpy.array([i, j, k])
                     n_p = \
-                            n_sp[0] * np.array(cell[0]) + \
-                            n_sp[1] * np.array(cell[1]) + \
-                            n_sp[2] * np.array(cell[2])
-                    pair_dist.append(np.linalg.norm(n_p))
+                            n_sp[0] * numpy.array(cell[0]) + \
+                            n_sp[1] * numpy.array(cell[1]) + \
+                            n_sp[2] * numpy.array(cell[2])
+                    pair_dist.append(numpy.linalg.norm(n_p))
                     molecule_positions.append(n_p)
                     molecule_symbols.append(symbols[jat])
                     if len(equivalent_indices) > 0:
@@ -98,7 +98,7 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
     for symbo, position in zip(molecule_symbols, molecule_positions):
         print(" {:3s} {:6.2f} {:6.2f} {:6.2f}  {:8.4f}".format(
                 *([symbo] + position.tolist() +
-                [np.sqrt(np.dot(position, position))])))
+                [numpy.sqrt(numpy.dot(position, position))])))
 
     global imol
     with open('{}_{}.xyz'.format(mol_name, imol), 'w') as f:
@@ -108,7 +108,7 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
                     *([symbo] + position.tolist())), file=f)
     imol += 1
     return gmolecule(molecule_symbols, molecule_positions,
-            equivalent_indices=eq_indices)
+            equivalent_indices=eq_indices, fm_direction=fm_direction)
 
 
 def xyz_get_rot_list(symbols, positions, tol=1.e-5, log=sys.stdout):
@@ -137,15 +137,23 @@ def mol_get_rot_list0(mol, tol=1.e-5, log=sys.stdout):
 
 
 def chk_rot_keep(mol, rot, tol=1.e-5):
-    coords = mol.cart_coords
-    for i, coord in enumerate(coords):
-        coordp = np.dot(rot, coord)
-        diff = coords - coordp
-        ind = np.where(np.all(np.abs(diff) < tol, axis=1))[0]
-        if len(ind) != 1:
-            print(' WARNING: identified rotation ids: {}'.format(ind))
-            return False
-        if mol.equivalent_indices[i] != mol.equivalent_indices[ind[0]]:
+    if len(mol.equivalent_indices) > 1:
+        coords = mol.cart_coords
+        for i, coord in enumerate(coords):
+            coordp = numpy.dot(rot, coord)
+            diff = coords - coordp
+            ind = numpy.where(numpy.all(numpy.abs(diff) < tol, axis=1))[0]
+            if len(ind) != 1:
+                print(' WARNING: identified rotation ids: {}'.format(ind))
+                return False
+            if mol.equivalent_indices[i] != mol.equivalent_indices[ind[0]]:
+                return False
+    if mol.fm_direction is not None:
+        vec = numpy.dot(rot, mol.fm_direction)
+# ok if in the same or oposite direction.
+#        if (not numpy.allclose(vec, mol.fm_direction, rtol=tol)) and \
+#                (not numpy.allclose(-vec, mol.fm_direction, rtol=tol)):
+        if not numpy.allclose(vec, mol.fm_direction, rtol=tol):
             return False
     return True
 
@@ -157,6 +165,7 @@ def mol_get_rot_list_screening(mol, rot_list):
     print(' number of rotations before screening: {}'.format(len(rot_list)))
     rot_list_tmp = rot_list
     rot_list = []
+    numpy.set_printoptions(precision=3, suppress=True)
     for rot in rot_list_tmp:
         if chk_rot_keep(mol, rot):
             rot_list.append(rot)
@@ -168,7 +177,7 @@ def mol_get_rot_list_screening(mol, rot_list):
 
 def mol_get_rot_list(mol, tol=1.e-5, log=sys.stdout):
     rot_list = mol_get_rot_list0(mol, tol=tol, log=log)
-    if len(mol.equivalent_indices) > 0:
+    if len(mol.equivalent_indices) > 0 or mol.fm_direction is not None:
         rot_list = mol_get_rot_list_screening(mol, rot_list)
     return rot_list
 

@@ -94,6 +94,13 @@ class gAtoms(Atoms):
                     '/usrqa/iembeddiag', default=-1)
             self.set_giembeddiag(iembeddiag)
 
+            ferromagnetism = f["/usrqa/ferromagnetism"][()]
+            if "y" == ferromagnetism:
+                self.fm_direction = \
+                        f["/usrqa/unique_magmom_direction_list"][0]
+            else:
+                self.fm_direction = None
+
 
     # corr_list = list of indeces of correlated atoms listed in self.symbols
     def set_CorrAtoms(self):
@@ -188,12 +195,12 @@ class gAtoms(Atoms):
             locrot = self.locrot_list[iat]
         else:
             locrot = None
-
         equivalent_indices = self.idx_equivalent_atoms
+
         from pyglib.gutz.molecule import xtal_get_local_rot
         return xtal_get_local_rot(symbols, scaled_positions, cell, iat,
                 self.sym_dist_cut, equivalent_indices=equivalent_indices,
-                locrot=locrot, Nmax=Nmax)
+                locrot=locrot, fm_direction=self.fm_direction, Nmax=Nmax)
 
 
     def get_EquivalentAtoms(self):

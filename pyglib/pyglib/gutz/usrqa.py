@@ -1,11 +1,8 @@
 from __future__ import print_function
-
-import sys, os
-import numpy as np
-import h5py
+import sys, os, numpy, h5py
 
 
-def h5save_usr_qa_setup(material, log):
+def h5save_usr_qa_setup(material, log=sys.stdout):
     '''
     A list of questions to be answered to initialize the CyGutz job.
     '''
@@ -37,6 +34,13 @@ def h5save_usr_qa_setup(material, log):
         print(spin_polarization, file=usr_input)
     f['/usrqa/spin_polarization'] = spin_polarization
 
+    # Ferromagnetic or not
+    if 'y' == spin_polarization:
+        ferromagnetism = get_usr_input(
+                "\n Is it a ferromagnetic (FM) calculation?", ['y', 'n'])
+        print(ferromagnetism, file=usr_input)
+        f['/usrqa/ferromagnetism'] = ferromagnetism
+
     # Orbital symmetry breaking
     if '-opl' in sys.argv:
         orbital_polarization = sys.argv[sys.argv.index('-opl') + 1]
@@ -58,8 +62,10 @@ def h5save_usr_qa_setup(material, log):
     f['/usrqa/spin_orbit_coup'] = spin_orbit_coup
 
     if 'y' == spin_polarization == spin_orbit_coup:
-        print('Warning: magnetism with spin-orbit coupling is in ' +
+        print(' Warning: magnetism with spin-orbit coupling is in ' +
                 'experimental stage.')
+        if 'y' == ferromagnetism:
+            ferro_magmom_direction = get_direction(log=usr_input)
 
     # Crystal field
     if 'n' in orbital_polarization:
@@ -156,6 +162,7 @@ def h5save_usr_qa_setup(material, log):
         unique_corr_symbol_list = []
         unique_u_list = []
         unique_j_list = []
+        unique_magmom_direction_list = []
         for i, s in enumerate(material.symbols):
             if s in material.symbols[:i]:
                 continue
@@ -180,7 +187,7 @@ def h5save_usr_qa_setup(material, log):
                             '\n separated by a space (eV): ')
                     try:
                         answer = answer.split()
-                        UJ = [np.float(answer[i]) for i in range(2)]
+                        UJ = [float(answer[i]) for i in range(2)]
                         break
                     except:
                         pass
@@ -188,11 +195,23 @@ def h5save_usr_qa_setup(material, log):
                 unique_u_list.append(UJ[0])
                 unique_j_list.append(UJ[1])
 
+            if 'y' == spin_polarization == spin_orbit_coup:
+                if 'y' == ferromagnetism:
+                    vec = ferro_magmom_direction
+                else:
+                    vec = get_direction(log=usr_input)
+            else:
+                vec = [1., 0., 0.]
+            unique_magmom_direction_list.append(vec)
+
     f['/usrqa/unique_corr_symbol_list'] = unique_corr_symbol_list
     f['/usrqa/unique_df_list'] = unique_df_list
     if lhub > 0:
         f['/usrqa/unique_u_list_ev'] = unique_u_list
         f['/usrqa/unique_j_list_ev'] = unique_j_list
+    if 'y' == spin_polarization:
+        f['/usrqa/unique_magmom_direction_list'] = \
+                unique_magmom_direction_list
 
     if '-newton' in sys.argv:
         lnewton = sys.argv.index('-newton')+1
@@ -262,4 +281,23 @@ def answer_valid(answer, accept_list):
         if ans not in accept_list:
             return False
     return True
+
+
+def get_direction(log=sys.stdout):
+    '''get direction array(3).
+    '''
+    while True:
+        vec_ = raw_input(
+                '\n please enter direction (to be normalized) \n'+\
+                ' of the magnetic moment by components \n'+\
+                ' in global coordinate system: x y z\n ')
+        vec = vec_.split()
+        vec = numpy.array(map(float, vec))
+        if len(vec) == 3:
+            vec = vec/numpy.linalg.norm(vec)
+            break
+        else:
+            print(' enter 3 float numbers with finger space only.')
+    print(vec_, file=log)
+    return vec
 

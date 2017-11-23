@@ -5,56 +5,59 @@ from pyglib.math.matrix_util import sym_array
 from pyglib.gutz.usrqa import get_usr_input
 from pyglib.basic.units import Ryd_eV
 
+
 def get_b_field_list():
     '''get the list of magnetic field by q&a.
     '''
     with h5py.File('ginit.h5', 'r') as f:
         unit = f['/usrqa/unit'][()]
+        unique_magmom_direction_list = \
+                f["/usrqa/unique_magmom_direction_list"][()]
     if 'ryd' in unit:
         unit = Ryd_eV
     else:
         unit = 1.0
-    f = h5py.File('GPARAM.h5', 'r')
-    num_imp = f["/num_imp"][0]
-    imap_imp = f['/IMAP_IMP'][()]
-    iso = f['/iso'][0]
+
+    with h5py.File('GPARAM.h5', 'r') as f:
+        ispin = f["/ispin"][0]
+        if ispin == 1:
+            return None, None
+        num_imp = f["/num_imp"][0]
+        imap_imp = f['/IMAP_IMP'][()]
+
     print(' total {} impurities with equivalence indices \n {}'.format( \
             num_imp, imap_imp))
     bvec_list = []
+    imp_unique = 0
     for imp in range(num_imp):
         if imap_imp[imp] == imp + 1:
             print('\n IMPURITY {}'.format(imp+1))
-            if iso == 2:
-                while True:
-                    vec = raw_input(
-                            '\n please enter direction (to be normalized) \n'+\
-                            ' of local magnetic field by components \n'+\
-                            ' in global coordinate system: x y z\n ')
-                    vec = vec.split()
-                    vec = numpy.array(map(float, vec))
-                    vec = vec/numpy.linalg.norm(vec)
-                    if len(vec) == 3:
-                        break
-                    else:
-                        print(' enter 3 float numbers with finger space only.')
-            else:
-                updn = get_usr_input(' enter spin up or down:', ['up', 'dn'])
-                if updn == 'up':
-                    vec = numpy.array([0., 0., -1.])
-                else:
-                    vec = numpy.array([0., 0.,  1.])
-            bm = raw_input('\n please enter the magnitude of the field: \n'+\
-                    ' in unit of eV per Bohr magneton: \n ')
+            vec = unique_magmom_direction_list[imp_unique]
+            print("\n magnetic moment direction is {}".format(vec) +
+                    "\n in global coordinate system.")
+            bm = raw_input(
+                    '\n please enter the magnitude of local B-field:'+\
+                    '\n in unit of eV per Bohr magneton: \n ')
             bm = float(bm)/unit
             bvec_list.append(bm*vec)
         else:
             bvec_list.append(bvec_list[imap_imp[imp] - 1])
-    f.close()
     givext = get_usr_input( \
             '\n Is the external field applied only at initial step (0) \n'+ \
             ' or fixed through all the iterations (1).', ['0', '1'])
     givext = int(givext)
     return bvec_list, givext
+
+
+def get_sym_2darray(a, imp=1):
+    '''get symmetrized 2d array with error reporting.
+    '''
+    with h5py.File('GPARAM.h5', 'r') as f:
+        r_list = numpy.swapaxes(f['/IMPURITY_{}/SP_ROTATIONS'.format(imp)] \
+                [()], 1, 2)
+        a_sym = sym_array(a, r_list)
+        sym_err = numpy.max(numpy.abs(a-a_sym))
+    return a_sym, sym_err
 
 
 def get_vext_list(bvec_list):
@@ -70,13 +73,57 @@ def get_vext_list(bvec_list):
             sy = f[prepath+'/SY'][()].T
             sz = f[prepath+'/SZ'][()].T
             vext = (bvec[0]*sx + bvec[1]*sy + bvec[2]*sz)*2
-            r_list = numpy.swapaxes(f[prepath+'/SP_ROTATIONS'][()], 1, 2)
-            vext_sym = sym_array(vext, r_list)
-            max_sym_err = max(max_sym_err, numpy.max(numpy.abs( \
-                    vext - vext_sym)))
+            # lx = f[prepath+'/LX'][()].T
+            # ly = f[prepath+'/LY'][()].T
+            # lz = f[prepath+'/LZ'][()].T
+            # vext += bvec[0]*lx + bvec[1]*ly + bvec[2]*lz
+            vext_sym, sym_err = get_sym_2darray(vext, imp+1)
+            max_sym_err = max(max_sym_err, sym_err)
             vext_list.append(vext_sym)
+    if max_sym_err > 1.e-5:
+        print(" Warning:")
     print(' maximal symmetrization error of vext = {}'.format(max_sym_err))
     return vext_list
+
+
+def chk_local_one_body(vext_list):
+    db2sab_list = []
+    sx_list = []
+    sy_list = []
+    sz_list = []
+    lx_list = []
+    ly_list = []
+    lz_list = []
+    with h5py.File('GPARAM.h5', 'r') as f:
+        num_imp = f["/num_imp"][0]
+        for imp in range(num_imp):
+            prepath = "/IMPURITY_" + str(imp + 1)
+            db2sab_list.append(f[prepath+"/DB_TO_SAB".format(imp+1)] \
+                    [()].T)
+            sx_list.append(f[prepath+"/SX"][()].T)
+            sy_list.append(f[prepath+"/SY"][()].T)
+            sz_list.append(f[prepath+"/SZ"][()].T)
+            lx_list.append(f[prepath+"/LX"][()].T)
+            ly_list.append(f[prepath+"/LY"][()].T)
+            lz_list.append(f[prepath+"/LZ"][()].T)
+    h1e_list = []
+    with h5py.File("GPARAMBANDS.h5", 'r') as f:
+        for imp in range(num_imp):
+            h1e_list.append(f["/IMPURITY_{}/H1E".format(imp+1)][()].T)
+    # start actually analysis
+    for imp in range(num_imp):
+        h = h1e_list[imp] + vext_list[imp]
+        w, v = numpy.linalg.eigh(h)
+        print(w)
+        dm = v[:,0:1].dot(v[:,0:1].T.conj())
+        print(dm.shape)
+        dm_sym, _ = get_sym_2darray(dm, imp+1)
+        print(numpy.sum(dm_sym*sx_list[imp]))
+        print(numpy.sum(dm_sym*sy_list[imp]))
+        print(numpy.sum(dm_sym*sz_list[imp]))
+        print(numpy.sum(dm_sym*lx_list[imp]))
+        print(numpy.sum(dm_sym*ly_list[imp]))
+        print(numpy.sum(dm_sym*lz_list[imp]))
 
 
 def h5wrt_gmagnet(vext_list, g_ivext, fn='GVEXT.h5'):
@@ -91,7 +138,10 @@ def init_magnet_conf():
     initialize the the magnetic configuration for magnetic calculation.
     '''
     bvec_list, g_ivext = get_b_field_list()
+    if bvec_list is None:
+        return
     vext_list = get_vext_list(bvec_list)
+    chk_local_one_body(vext_list)
     h5wrt_gmagnet(vext_list, g_ivext)
 
 
