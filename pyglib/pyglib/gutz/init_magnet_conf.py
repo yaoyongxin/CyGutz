@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import h5py, numpy
+import h5py, numpy, os
 from pyglib.math.matrix_util import sym_array
 from pyglib.gutz.usrqa import get_usr_input
 from pyglib.basic.units import Ryd_eV
+import pyglib.mbody.double_counting as dc
 
 
 def get_b_field_list():
@@ -53,9 +54,12 @@ def get_sym_2darray(a, imp=1):
     '''get symmetrized 2d array with error reporting.
     '''
     with h5py.File('GPARAM.h5', 'r') as f:
-        r_list = numpy.swapaxes(f['/IMPURITY_{}/SP_ROTATIONS'.format(imp)] \
-                [()], 1, 2)
-        a_sym = sym_array(a, r_list)
+        path = '/IMPURITY_{}/SP_ROTATIONS'.format(imp)
+        if path in f:
+            r_list = numpy.swapaxes(f[path][()], 1, 2)
+            a_sym = sym_array(a, r_list)
+        else:
+            a_sym = a
         sym_err = numpy.max(numpy.abs(a-a_sym))
     return a_sym, sym_err
 
@@ -73,10 +77,10 @@ def get_vext_list(bvec_list):
             sy = f[prepath+'/SY'][()].T
             sz = f[prepath+'/SZ'][()].T
             vext = (bvec[0]*sx + bvec[1]*sy + bvec[2]*sz)*2
-            # lx = f[prepath+'/LX'][()].T
-            # ly = f[prepath+'/LY'][()].T
-            # lz = f[prepath+'/LZ'][()].T
-            # vext += bvec[0]*lx + bvec[1]*ly + bvec[2]*lz
+            lx = f[prepath+'/LX'][()].T
+            ly = f[prepath+'/LY'][()].T
+            lz = f[prepath+'/LZ'][()].T
+            vext += bvec[0]*lx + bvec[1]*ly + bvec[2]*lz
             vext_sym, sym_err = get_sym_2darray(vext, imp+1)
             max_sym_err = max(max_sym_err, sym_err)
             vext_list.append(vext_sym)
@@ -86,7 +90,28 @@ def get_vext_list(bvec_list):
     return vext_list
 
 
+def get_vext_given_1pdm_list(dm_list):
+    '''get the external potential for lda+u calculation
+    given the initial one-particle density matrix.
+    '''
+    with h5py.File("GPARAM.h5", "r") as f:
+        javg_list = f["/dc_j_avg"][()]
+        uavg_list = f["/dc_u_avg"][()]
+        v2e_list = []
+        for i in range(f["/num_imp"][0]):
+            v2e_list.append(f["/IMPURITY_{}/V2E".format(i+1)][()].T)
+
+    vext_list = [-dc.get_vdc_hf(v2e, dm)+ \
+            dc.get_vdc_fll(uavg, javg, numpy.trace(dm))*\
+            numpy.eye(dm.shape[0]) \
+            for v2e, dm, uavg, javg in zip(v2e_list, dm_list, \
+            uavg_list, javg_list)]
+    return vext_list
+
+
 def chk_local_one_body(vext_list):
+    if not os.path.isfile("GPARAMBANDS.h5"):
+        return
     db2sab_list = []
     sx_list = []
     sy_list = []
@@ -109,21 +134,23 @@ def chk_local_one_body(vext_list):
     h1e_list = []
     with h5py.File("GPARAMBANDS.h5", 'r') as f:
         for imp in range(num_imp):
-            h1e_list.append(f["/IMPURITY_{}/H1E".format(imp+1)][()].T)
+            h1e = f["/IMPURITY_{}/H1E".format(imp+1)][()].T
+            db2sab = db2sab_list[imp]
+            h1e = db2sab.T.conj().dot(h1e).dot(db2sab)
+            h1e_list.append(h1e)
     # start actually analysis
+    numpy.set_printoptions(precision=2, suppress=True)
     for imp in range(num_imp):
         h = h1e_list[imp] + vext_list[imp]
         w, v = numpy.linalg.eigh(h)
-        print(w)
         dm = v[:,0:1].dot(v[:,0:1].T.conj())
-        print(dm.shape)
         dm_sym, _ = get_sym_2darray(dm, imp+1)
-        print(numpy.sum(dm_sym*sx_list[imp]))
-        print(numpy.sum(dm_sym*sy_list[imp]))
-        print(numpy.sum(dm_sym*sz_list[imp]))
-        print(numpy.sum(dm_sym*lx_list[imp]))
-        print(numpy.sum(dm_sym*ly_list[imp]))
-        print(numpy.sum(dm_sym*lz_list[imp]))
+        print(" <Sx> = {}".format(numpy.sum(dm_sym*sx_list[imp])))
+        print(" <Sy> = {}".format(numpy.sum(dm_sym*sy_list[imp])))
+        print(" <Sz> = {}".format(numpy.sum(dm_sym*sz_list[imp])))
+        print(" <Lx> = {}".format(numpy.sum(dm_sym*lx_list[imp])))
+        print(" <Ly> = {}".format(numpy.sum(dm_sym*ly_list[imp])))
+        print(" <Lz> = {}".format(numpy.sum(dm_sym*lz_list[imp])))
 
 
 def h5wrt_gmagnet(vext_list, g_ivext, fn='GVEXT.h5'):
@@ -144,6 +171,15 @@ def init_magnet_conf():
     chk_local_one_body(vext_list)
     h5wrt_gmagnet(vext_list, g_ivext)
 
+
+def init_magnet_conf_with_init_dm(dm_list):
+    '''
+    initialize the the magnetic configuration for magnetic calculation
+    based on given initial one-particle density-matrix.
+    '''
+    vext_list = get_vext_given_1pdm_list(dm_list)
+    chk_local_one_body(vext_list)
+    h5wrt_gmagnet(vext_list, g_ivext=0)
 
 
 if __name__ == "__main__":

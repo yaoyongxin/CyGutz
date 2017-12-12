@@ -1,4 +1,5 @@
 Verbosity(0)
+-- real version
 
 -- input file
 fin = io.open("quanty.inp", "r")
