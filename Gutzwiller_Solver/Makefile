@@ -10,7 +10,6 @@ SRC_exe = \
 		SRC_cmplx/GSPCI_SZ_MOTT  \
 		SRC_cmplx/GSPCI_J2JPJN_MOTT  \
 		SRC_cmplx/GSPCI_J2_MOTT_ANALYSIS  
-#		SRC_real/idmrg
 
 all:
 	mkdir -p lib include

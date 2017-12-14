@@ -25,11 +25,6 @@ CFLAGS = -O2
 # Location of HDF5 binaries (with include/ and lib/ underneath)
 HDF5_BASE = /home/ykent/OPT/lib/hdf5-1.8.15-intel/
 
-# for ITensor-DMRG solver
-#CCCOM=g++ -m64 -std=c++11 -fPIC -O3
-#ITENSOR_PREFIX=/home/ykent/OPT/lib/itensor
-#BLAS_LAPACK_INCLUDEFLAGS=-I/opt/intel/mkl/include
-
 # Usually do NOT need modifications below.
 HDF5_LIB = -L$(HDF5_BASE)/lib/ -lhdf5_fortran -lhdf5
 HDF5_INCLUDE = -I$(HDF5_BASE)/include
@@ -42,12 +37,3 @@ WIEN = ${WIENROOT}
 
 # mpi version
 Fmpi_define = -DMPI -Dmpi_mode
-
-# ITensor dmrg
-#ITENSOR_INCLUDEDIR=-I${ITENSOR_PREFIX}
-#ITENSOR_LIBDIR=$(ITENSOR_PREFIX)/lib
-#ITENSOR_LIBNAMES=itensor
-#ITENSOR_LIBFLAGS=$(patsubst %,-l%, $(ITENSOR_LIBNAMES))
-#ITENSOR_LIBFLAGS+= $(BLAS_LAPACK_LIBFLAGS)
-#itensor_includes=-I. $(ITENSOR_INCLUDEDIR) $(BLAS_LAPACK_INCLUDEFLAGS)
-#itensor_libs=-L$(ITENSOR_LIBDIR) $(ITENSOR_LIBFLAGS)

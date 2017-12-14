@@ -94,7 +94,8 @@ class gAtoms(Atoms):
                     '/usrqa/iembeddiag', default=-1)
             self.set_giembeddiag(iembeddiag)
 
-            ferromagnetism = f["/usrqa/ferromagnetism"][()]
+            ferromagnetism = h5auto_read(f, \
+                    "/usrqa/ferromagnetism", default="n")
             if "y" == ferromagnetism:
                 self.fm_direction = \
                         f["/usrqa/unique_magmom_direction_list"][0]
