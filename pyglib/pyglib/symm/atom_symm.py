@@ -427,11 +427,13 @@ def get_U_equiv_repr(representationA, representationB):
     '''
     M = np.zeros(representationA[0].shape)
     for i in range(len(representationA)):
-        M = M + np.dot(representationB[i], np.conj(representationA[i].T))
-    MM = np.dot(M, np.conj(M.T))
+        M = M + representationB[i].dot(representationA[i].T.conj())
+    MM = M.dot(M.T.conj())
     vals, vecs = np.linalg.eigh(MM)
-    MM = np.dot(np.dot(vecs, np.diag(np.sqrt(vals)**(-1))), np.conj(vecs).T)
-    return np.dot(M, MM)
+    MM = vecs.dot(np.diag(np.sqrt(vals)**(-1))).dot(vecs.T.conj())
+    # order is important!
+    utrans = MM.dot(M)
+    return utrans
 
 
 def check_U_equiv_repr(representationA, representationB, U):
@@ -474,6 +476,8 @@ def get_U_Jnew(list_chi_space, list_chi_U, reorder=True):
                     U_Jnew.append(chi_space[j][k])
     # back to Fortran convention
     U_Jnew = np.array(U_Jnew).T
+    print(" U_Jnew unitary error = {}".format(np.max(np.abs(
+            U_Jnew.T.conj().dot(U_Jnew)- np.eye(U_Jnew.shape[0])))))
     return U_Jnew
 
 

@@ -27,6 +27,8 @@ def U_matrix(mode, l, radial_integrals=None, U_int=None, J_hund=None, T=None):
         Ufull_matrix[norb:,norb:,norb:,norb:] = U_matrix
         Ufull_matrix[:norb,:norb,norb:,norb:] = U_matrix
         Ufull_matrix[norb:,norb:,:norb,:norb] = U_matrix
+        print(" u-matrix: nnz in compl_sph_harm = {}".format(
+                np.count_nonzero(np.abs(Ufull_matrix)>1.e-10)))
         Ufull_matrix = unitary_transform_coulomb_matrix(Ufull_matrix, T)
     else: # spin index fast
         Ufull_matrix[::2,::2,::2,::2] = U_matrix  # up, up
@@ -34,6 +36,8 @@ def U_matrix(mode, l, radial_integrals=None, U_int=None, J_hund=None, T=None):
         Ufull_matrix[::2,::2,1::2,1::2] = U_matrix # up, dn
         Ufull_matrix[1::2,1::2,::2,::2] = U_matrix # dn, up
 
+    print(" u-matrix: nnz in final basis = {}".format(
+            np.count_nonzero(np.abs(Ufull_matrix)>1.e-10)))
     return Ufull_matrix, u_avg, j_avg
 
 

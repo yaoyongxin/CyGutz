@@ -4,6 +4,7 @@ import os, h5py, numpy, shutil
 from scipy.linalg import block_diag
 from pyglib.math.matrix_util import \
         get_utrans_orbfast_supdn_to_spin_fast_supdn
+from pyglib.math.matrix_util import unitary_transform_coulomb_matrix
 
 
 def twrite_2d_array_real(a, fname, shreshold=1.e-10):
@@ -104,18 +105,11 @@ def h5gen_embedh_spin_updn(imp=1, lwrt_csh=False, lv2e=False):
     h1e_ = u_sab2sf.T.conj().dot(h1e).dot(u_sab2sf)
 
     if v2e is not None:
-        # tensordot, switch orders?
-        v2e_ = numpy.tensordot(numpy.tensordot(numpy.tensordot( \
-                numpy.tensordot(v2e, \
-                u_sab2sf.T.conj(), axes=([0], [1])), \
-                u_sab2sf, axes=([0], [0])), \
-                u_sab2sf.T.conj(), axes=([0], [1])), \
-                u_sab2sf, axes=([0], [0]))
-
+        v2e_ = unitary_transform_coulomb_matrix(v2e, u_sab2sf)
         # double check
-        #    v2e_ = numpy.einsum('ijkl,pi,jq,rk,ls->pqrs', v2e, \
-        #            u_sab2sf.T.conj(), u_sab2sf, \
-        #            u_sab2sf.T.conj(), u_sab2sf)
+        # v2e_ = numpy.einsum('ijkl,pi,jq,rk,ls->pqrs', v2e, \
+        #         u_sab2sf.T.conj(), u_sab2sf, \
+        #         u_sab2sf.T.conj(), u_sab2sf)
     else:
         v2e_= None
 

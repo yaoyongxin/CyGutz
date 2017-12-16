@@ -24,7 +24,7 @@ def get_random_unitary_matrix(n):
     return v
 
 
-def get_matrices_bk_list(matrices):
+def get_matrices_bk_list(matrices, rtol=1.e-12):
     '''
     Get the block dimensions of a group of matrices.
     '''
@@ -35,10 +35,10 @@ def get_matrices_bk_list(matrices):
         is_bk = True
         if i < l - 1:
             for matrix in matrices:
-                if np.amax(np.abs(matrix[lbase : i + 1, i + 1 :])) > 1.e-7:
+                if np.amax(np.abs(matrix[lbase : i + 1, i + 1 :])) > rtol:
                     is_bk = False
                     break
-                if np.amax(np.abs(matrix[i + 1 :, lbase : i + 1])) > 1.e-7:
+                if np.amax(np.abs(matrix[i + 1 :, lbase : i + 1])) > rtol:
                     is_bk = False
                     break
         if is_bk:
@@ -365,14 +365,14 @@ def get_loewdin_orthnorm(a):
 def unitary_transform_coulomb_matrix(a, u):
     '''Perform a unitary transformation (u) on the Coulomb matrix (a).
     '''
-    a = np.asarray(a)
+    a_ = np.asarray(a).copy()
     m_range = range(a.shape[0])
     for i,j in product(m_range, m_range):
-        a[i,j,:,:] = u.T.conj().dot(a[i,j,:,:].dot(u))
-    a = a.swapaxes(0,2).swapaxes(1,3)
+        a_[i,j,:,:] = u.T.conj().dot(a_[i,j,:,:].dot(u))
+    a_ = a_.swapaxes(0,2).swapaxes(1,3)
     for i,j in product(m_range, m_range):
-        a[i,j,:,:] = u.T.conj().dot(a[i,j,:,:].dot(u))
-    return a
+        a_[i,j,:,:] = u.T.conj().dot(a_[i,j,:,:].dot(u))
+    return a_
 
 
 def get_hamilt_matrix_from_ev(w, v):
