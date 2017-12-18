@@ -678,7 +678,7 @@ subroutine solve_hembed_spci_chk()
     external::av_gspci
 
     nchk=min(10,dmem%nstates-1)
-    call primme_diag_chk(dmem%nstates,nchk,av_gspci)
+    call zprimme_diag_chk(dmem%nstates,nchk,av_gspci)
 
 end subroutine solve_hembed_spci_chk
 

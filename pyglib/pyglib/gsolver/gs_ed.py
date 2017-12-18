@@ -57,8 +57,16 @@ def driver_ed(imp=1, istep=0, mpiexec="mpirun -np 2 "):
     cmd = mpiexec+[os.environ["WIEN_GUTZ_ROOT2"]+"/exe_ed", "-i", str(imp)]
 
     print(" running {}".format(" ".join(cmd)))
-    with open("GED_{}.LOG".format(imp), "w") as f:
-        subprocess.call(cmd, stdout=f)
+    subprocess.call(cmd)
+
+    # get the calculation results in cmp_sph_harm basis with
+    # faster spin index.
+    with h5py.File("GEDOUT_{}.h5".format(imp)) as f:
+        dm = f["/DM"][()].T
+        emol = f["/emol"][0]
+
+    # transform it to the symmetry-adpated basis
+    embedh.h5wrt_dm_sab_cmplx(dm, emol, imp=imp)
 
 
 

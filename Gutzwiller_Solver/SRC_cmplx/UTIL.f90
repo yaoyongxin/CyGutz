@@ -66,13 +66,18 @@ module gutil
             & set_linear_simp, max_interval, lkey_exist, get_eri, &
             & act_state, get_rn_from_embeddm, output_matrices, &
             & chk_eigens_matrix_list, set_binoms, set_fock_state_indices, &
-            & primme_diag, primme_diag_chk, get_coul_exchange, get_hf_pot, &
+            & primme_diag, dprimme_diag_chk, zprimme_diag_chk,&
+            & get_coul_exchange, get_hf_pot, &
             & calc_state_sz, sum_empty_slots_fs,chk_sum_first_empty_slots_fs, &
             & chk_i_in_list, hermev_blk, get_determinant_a, &
             & set_occupied_orbitals, set_skip_orbitals, &
             & calc_fock_state_coef, phi_mat_to_vec, &
             & phi_vec_to_mat
-      
+     
+    interface primme_diag 
+        module procedure dprimme_diag, zprimme_diag
+    end interface primme_diag
+
     interface orbital_spin_trans
         module procedure dspin_blk1_trans, zspin_blk2u_trans, &
                 &dspin_blk2_trans, zspin_blk2_trans
@@ -134,7 +139,7 @@ module gutil
     end interface annxb
       
     interface get_determinant_a
-        module procedure get_determinant_za
+        module procedure dget_determinant_a, zget_determinant_a
     end interface get_determinant_a
 
     interface trace_a
@@ -171,12 +176,18 @@ module gutil
     end interface chk_eigens_matrix_list
 
     interface phi_mat_to_vec
-        module procedure zphi_mat_to_vec,zphi_mat_to_vec2
+        module procedure dphi_mat_to_vec,dphi_mat_to_vec2, &
+                &zphi_mat_to_vec,zphi_mat_to_vec2
     end interface phi_mat_to_vec
 
     interface phi_vec_to_mat
-        module procedure zphi_vec_to_mat,zphi_vec_to_mat2
+        module procedure dphi_vec_to_mat,dphi_vec_to_mat2, &
+                &zphi_vec_to_mat,zphi_vec_to_mat2
     end interface phi_vec_to_mat
+
+    interface calc_fock_state_coef
+        module procedure dcalc_fock_state_coef, zcalc_fock_state_coef
+    end interface calc_fock_state_coef
 
     contains
       
@@ -973,7 +984,30 @@ module gutil
     end subroutine dsyevx_
      
 
-    subroutine primme_diag(v,n,w,av)
+    subroutine dprimme_diag(v,n,w,av)
+    integer,intent(in) :: n
+    real(q),intent(inout) :: v(n)
+    real(q),intent(inout) :: w(2)
+    external :: av
+
+    integer nest
+    integer,parameter::basismax=12,numemax=1,maxmatvecs=3000,printlevel=0
+    real(q),parameter::etol=1.e-8_q
+
+    if(abs(w(1)-1._q)<1.e-12_q)then
+      nest=1
+    else
+      nest=0
+    endif
+
+    call primme(basismax,numemax,maxmatvecs,etol,printlevel,0,0,n, &
+        &nest,w,v,av)
+    return
+
+    end subroutine dprimme_diag
+
+
+    subroutine zprimme_diag(v,n,w,av)
     integer,intent(in) :: n
     complex(q),intent(inout) :: v(n)
     real(q),intent(inout) :: w(2)
@@ -990,13 +1024,41 @@ module gutil
     endif
 
     call primme(basismax,numemax,maxmatvecs,etol,printlevel,0,0,n, &
-        &nest,w(1),v(1),av)
+        &nest,w,v,av)
     return
 
-    end subroutine primme_diag
+    end subroutine zprimme_diag
 
 
-    subroutine primme_diag_chk(n,numemax,av,v)
+    subroutine dprimme_diag_chk(n,numemax,av,v)
+    integer,intent(in) :: n,numemax
+    real(q),optional,intent(out)::v(n*numemax)
+    external :: av
+
+    integer nest
+    integer,parameter::basismax=12,maxmatvecs=3000,printlevel=0
+    real(q),parameter::etol=1.e-8_q
+    real(q) w(numemax)
+    real(q),allocatable::v_(:)
+
+    nest=0
+    if(present(v))then
+        call primme(basismax,numemax,maxmatvecs,etol,printlevel,0,0,n, &
+            &nest,w,v,av)
+    else
+        allocate(v_(n*numemax))
+        call primme(basismax,numemax,maxmatvecs,etol,printlevel,0,0,n, &
+            &nest,w,v_,av)
+        deallocate(v_)
+    endif
+    write(0,'(" eigen-values:")')
+    write(0,*)w
+    return
+
+    end subroutine dprimme_diag_chk
+
+
+    subroutine zprimme_diag_chk(n,numemax,av,v)
     integer,intent(in) :: n,numemax
     complex(q),optional,intent(out)::v(n*numemax)
     external :: av
@@ -1010,18 +1072,18 @@ module gutil
     nest=0
     if(present(v))then
         call primme(basismax,numemax,maxmatvecs,etol,printlevel,0,0,n, &
-            &nest,w(1),v(1),av)
+            &nest,w,v,av)
     else
         allocate(v_(n*numemax))
         call primme(basismax,numemax,maxmatvecs,etol,printlevel,0,0,n, &
-            &nest,w(1),v_(1),av)
+            &nest,w,v_,av)
         deallocate(v_)
     endif
     write(0,'(" eigen-values:")')
     write(0,*)w
     return
 
-    end subroutine primme_diag_chk
+    end subroutine zprimme_diag_chk
 
 
     !*************************************************************************
@@ -2246,7 +2308,7 @@ module gutil
 
     subroutine set_skip_orbitals(u,norb,ia,na,iskip,nskip)
     integer,intent(in)::norb,na,ia(na)
-    complex(q),intent(in)::u(norb,norb)
+    real(q),intent(in)::u(norb,norb)
     integer,intent(out)::nskip,iskip(norb)
 
     integer i,j
@@ -2254,7 +2316,7 @@ module gutil
     nskip=0
     l1: do i=1,norb
         l2: do j=1,na
-            if(abs(u(i,ia(j)))>1.d-10)cycle l1
+            if(u(i,ia(j))>1.d-10)cycle l1
         enddo l2
         nskip=nskip+1
         iskip(nskip)=i
@@ -2264,7 +2326,24 @@ module gutil
     end subroutine set_skip_orbitals
 
 
-    subroutine calc_fock_state_coef(u,n1,ia,ib,n2,coef)
+    subroutine dcalc_fock_state_coef(u,n1,ia,ib,n2,coef)
+    integer,intent(in)::n1,n2,ia(n2),ib(n2)
+    real(q),intent(in)::u(n1,n1)
+    real(q),intent(inout)::coef
+
+    integer i,j
+    real(q) u_(n2,n2)
+
+    do i=1,n2; do j=1,n2
+        u_(i,j)=u(ib(i),ia(j))
+    enddo; enddo
+    coef=coef*dget_determinant_a(u_,n2)
+    return
+
+    end subroutine dcalc_fock_state_coef
+
+
+    subroutine zcalc_fock_state_coef(u,n1,ia,ib,n2,coef)
     integer,intent(in)::n1,n2,ia(n2),ib(n2)
     complex(q),intent(in)::u(n1,n1)
     complex(q),intent(inout)::coef
@@ -2275,10 +2354,10 @@ module gutil
     do i=1,n2; do j=1,n2
         u_(i,j)=u(ib(i),ia(j))
     enddo; enddo
-    coef=coef*get_determinant_za(u_,n2)
+    coef=coef*zget_determinant_a(u_,n2)
     return
 
-    end subroutine calc_fock_state_coef
+    end subroutine zcalc_fock_state_coef
 
 
     subroutine calc_state_sz(bs,norb,sz,m,list)
@@ -2459,7 +2538,30 @@ module gutil
 
 
     !< Using LU factorization to calculate the determinant of matrix a.
-    function get_determinant_za(a,n) result(zd)
+    function dget_determinant_a(a,n) result(zd)
+    integer,intent(in)::n
+    real(q),intent(in)::a(n,n)
+    real(q) zd
+
+    real(q) a_(n,n)
+    integer ipiv(n),info,i
+
+    a_=a
+    call dgetrf(n,n,a_,n,ipiv,info)
+    zd=1._q
+    do i=1,n
+        zd=zd*a_(i,i)
+        if(ipiv(i)>i)then
+            zd=-zd
+        endif
+    enddo
+    return
+
+    end function dget_determinant_a
+
+
+    !< Using LU factorization to calculate the determinant of matrix a.
+    function zget_determinant_a(a,n) result(zd)
     integer,intent(in)::n
     complex(q),intent(in)::a(n,n)
     complex(q) zd
@@ -2478,7 +2580,29 @@ module gutil
     enddo
     return
 
-    end function get_determinant_za
+    end function zget_determinant_a
+
+
+    ! convert a valence block of phi-vector to phi-matrix.
+    subroutine dphi_vec_to_mat(v,a,n,bs_l,nl,norb,ibs,ibs_base)
+    integer,intent(in)::n,nl,norb,ibs_base ! nl<n for mott phase
+    real(q),intent(in)::v(n*nl)
+    integer,intent(in)::bs_l(nl),ibs(0:ishft(1,norb)-1)
+    real(q),intent(out)::a(n,n)
+    
+    integer j,bs,ib,nmax
+
+    a=0 ! \phi_{\Gamma, n}
+    nmax=ishft(1,norb)-1
+    do j=1,nl
+        bs=bs_l(j) 
+        bs=nmax-bs ! post particle-hole transformation
+        ib=ibs(bs)-ibs_base+1 ! get the correct index for phi-matrix
+        a(:,ib)=v(j::nl)
+    enddo
+    return
+
+    end subroutine dphi_vec_to_mat
 
 
     ! convert a valence block of phi-vector to phi-matrix.
@@ -2504,6 +2628,27 @@ module gutil
 
 
     ! convert a valence block of phi-vector to phi-matrix.
+    subroutine dphi_mat_to_vec(v,a,n,bs_l,nl,norb,ibs,ibs_base)
+    integer,intent(in)::n,nl,norb,ibs_base ! nl<n for mott phase
+    real(q),intent(inout)::v(n*nl)
+    integer,intent(in)::bs_l(nl),ibs(0:ishft(1,norb)-1)
+    real(q),intent(in)::a(n,n)
+    
+    integer j,bs,ib,nmax
+
+    nmax=ishft(1,norb)-1
+    do j=1,nl
+        bs=bs_l(j) 
+        bs=nmax-bs ! post particle-hole transformation
+        ib=ibs(bs)-ibs_base+1 ! get the correct index for phi-matrix
+        v(j::nl)=v(j::nl)+a(:,ib)
+    enddo
+    return
+
+    end subroutine dphi_mat_to_vec
+
+
+    ! convert a valence block of phi-vector to phi-matrix.
     subroutine zphi_mat_to_vec(v,a,n,bs_l,nl,norb,ibs,ibs_base)
     integer,intent(in)::n,nl,norb,ibs_base ! nl<n for mott phase
     complex(q),intent(inout)::v(n*nl)
@@ -2522,6 +2667,34 @@ module gutil
     return
 
     end subroutine zphi_mat_to_vec
+
+
+    ! convert a valence block of phi-vector to phi-matrix.
+    subroutine dphi_vec_to_mat2(v,a,n,bs_r,nr,bs_l,nl,norb,ibs,ibs_base)
+    integer,intent(in)::n,nr,nl,norb,ibs_base ! nl<n for mott phase
+    real(q),intent(in)::v(nr*nl)
+    integer,intent(in)::bs_r(nr),bs_l(nl),ibs(0:ishft(1,norb)-1)
+    real(q),intent(out)::a(n,n)
+    
+    integer i,j,bs,ibl,ibr,nmax,iv
+
+    a=0 ! \phi_{\Gamma, n}
+    iv=0
+    nmax=ishft(1,norb)-1
+    do i=1,nr
+        bs=bs_r(i)
+        ibr=ibs(bs)-ibs_base+1 
+        do j=1,nl
+            bs=bs_l(j)
+            bs=nmax-bs ! post particle-hole transformation
+            ibl=ibs(bs)-ibs_base+1 ! get the correct index for phi-matrix
+            iv=iv+1
+            a(ibr,ibl)=v(iv)
+        enddo
+    enddo
+    return
+
+    end subroutine dphi_vec_to_mat2
 
 
     ! convert a valence block of phi-vector to phi-matrix.
@@ -2551,6 +2724,32 @@ module gutil
 
     end subroutine zphi_vec_to_mat2
 
+
+    ! convert a valence block of phi-vector to phi-matrix.
+    subroutine dphi_mat_to_vec2(v,a,n,bs_r,nr,bs_l,nl,norb,ibs,ibs_base)
+    integer,intent(in)::n,nr,nl,norb,ibs_base ! nl<n for mott phase
+    real(q),intent(inout)::v(nr*nl)
+    integer,intent(in)::bs_r(nr),bs_l(nl),ibs(0:ishft(1,norb)-1)
+    real(q),intent(in)::a(n,n)
+    
+    integer i,j,bs,ibl,ibr,nmax,iv
+
+    iv=0
+    nmax=ishft(1,norb)-1
+    do i=1,nr
+        bs=bs_r(i)
+        ibr=ibs(bs)-ibs_base+1 
+        do j=1,nl
+            bs=bs_l(j) 
+            bs=nmax-bs ! post particle-hole transformation
+            ibl=ibs(bs)-ibs_base+1 ! get the correct index for phi-matrix
+            v(iv)=v(iv)+a(ibr,ibl)
+        enddo
+    enddo
+    return
+
+    end subroutine dphi_mat_to_vec2
+   
 
     ! convert a valence block of phi-vector to phi-matrix.
     subroutine zphi_mat_to_vec2(v,a,n,bs_r,nr,bs_l,nl,norb,ibs,ibs_base)

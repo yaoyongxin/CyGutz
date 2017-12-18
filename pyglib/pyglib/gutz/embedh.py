@@ -250,6 +250,8 @@ def h5wrt_dm_sab_cmplx(dm, e_mol, imp=1):
     '''
     # get the comp_sph_harm to sab transformation
     u_sab2sf = get_u_sab2cshupdn(imp=imp)
+
+    # include the transformation for the bath
     u2_sab2sf = block_diag(u_sab2sf, u_sab2sf)
 
     # unitary transformation

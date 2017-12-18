@@ -306,6 +306,10 @@ module gkernel
         call system('gs_ml.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
     elseif(gkmem%iembeddiag==-12)then
         call system('gs_syten.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
+    elseif(gkmem%iembeddiag==-13)then
+        call system('gs_idmrg.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
+    elseif(gkmem%iembeddiag==-15)then
+        call system('gs_ed.py -i '//int_to_str(i))
 #else
     if(gkmem%iembeddiag==-1)then
         call execute_command_line('exe_spci '//int_to_str(i), exitstat=ierr)
@@ -371,6 +375,18 @@ module gkernel
                 &int_to_str(ll), exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running gs_syten.py!")')
+        endif
+    elseif(gkmem%iembeddiag==-13)then
+        call execute_command_line(' gs_idmrg.py -i '//int_to_str(i)//' -l '// &
+                &int_to_str(ll), exitstat=ierr)
+        if(ierr/=0)then
+            write(0,'(" Error in running gs_idmrg.py!")')
+        endif
+    elseif(gkmem%iembeddiag==-15)then
+        call execute_command_line(' gs_ed.py -i '// &
+                &int_to_str(i), exitstat=ierr)
+        if(ierr/=0)then
+            write(0,'(" Error in running gs_ped!")')
         endif
 #endif
     else

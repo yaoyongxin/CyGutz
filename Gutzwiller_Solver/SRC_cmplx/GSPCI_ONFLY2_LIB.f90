@@ -5,9 +5,15 @@ subroutine av1_gspci_j2_npzway(lambda_j2,cm_n,cm_z,v1,v2)
     use sparse
     implicit none
     real(q),intent(in)::lambda_j2
+#ifdef EmbReal
+    real(q),intent(in)::cm_n(dmem%norb,dmem%norb),cm_z(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(*)
+    real(q),intent(inout)::v2(*)
+#else
     complex(q),intent(in)::cm_n(dmem%norb,dmem%norb),cm_z(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(*)
     complex(q),intent(inout)::v2(*)
+#endif
 
     if(abs(lambda_j2)>1.d-10)then
         call av1_gspci_jz2_pjz(lambda_j2,cm_z,v1,v2)
@@ -112,11 +118,20 @@ subroutine expval_gspci_npij(v1,npij)
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(inout)::npij(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(*)
+#else
     complex(q),intent(inout)::npij(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(*)
+#endif
 
     integer ival,i1,i,j,nbase,itmp,isgn1,ibs1,nfs,nfs_l
+#ifdef EmbReal
+    real(q),external::ddot
+#else
     complex(q),external::zdotc
+#endif
 
     nbase=0
     do ival=dmem%nval_bot,dmem%nval_top
@@ -134,8 +149,14 @@ subroutine expval_gspci_npij(v1,npij)
                 if(isgn1==0)cycle
                 ibs1=dmem%ibs(itmp)
                 npij(i,j)=npij(i,j)+ &
-                        &zdotc(nfs_l,v1(nbase+(ibs1-dmem%idx(ival))*nfs_l+1), &
-                        &1,v1(nbase+(i1-dmem%idx(ival))*nfs_l+1),1)*isgn1
+#ifdef EmbReal
+                        &ddot( &
+#else                            
+                        &zdotc( &
+#endif                            
+                        &nfs_l,v1(nbase+(ibs1-dmem%idx(ival))*nfs_l+1), &
+                        &1,v1(nbase+(i1-dmem%idx(ival))*nfs_l+1),1) &
+                        &*isgn1
             enddo; enddo
         enddo
         nbase=nbase+nfs*nfs_l
@@ -143,7 +164,11 @@ subroutine expval_gspci_npij(v1,npij)
 
     ! Complex conjugate part
     do i=1,dmem%norb; do j=1+i,dmem%norb
+#ifdef EmbReal
+        npij(i,j)=npij(j,i)
+#else
         npij(i,j)=conjg(npij(j,i))
+#endif
     enddo; enddo
     return
 
@@ -156,12 +181,22 @@ subroutine expval_gspci_npij2(cm,v1,v2,zes)
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::cm(dmem%norb,dmem%norb)
+    real(q),intent(inout)::zes
+    real(q),intent(in)::v1(*),v2(*)
+#else
     complex(q),intent(in)::cm(dmem%norb,dmem%norb)
     complex(q),intent(inout)::zes
     complex(q),intent(in)::v1(*),v2(*)
+#endif
 
     integer ival,i1,i,j,nbase,itmp,isgn1,ibs1,nfs,nfs_l
+#ifdef EmbReal
+    real(q),external::ddot
+#else
     complex(q),external::zdotc
+#endif
 
     nbase=0
     do ival=dmem%nval_bot,dmem%nval_top
@@ -180,15 +215,25 @@ subroutine expval_gspci_npij2(cm,v1,v2,zes)
                 if(isgn1==0)cycle
                 ibs1=dmem%ibs(itmp)
                 if(abs(cm(i,j))>1.d-10)then
-                    zes=zes+zdotc(nfs_l, &
-                            &v2(nbase+(ibs1-dmem%idx(ival))*nfs_l+1), &
+                    zes=zes+ &
+#ifdef EmbReal
+                            &ddot( &
+#else
+                            &zdotc( &
+#endif
+                            &nfs_l,v2(nbase+(ibs1-dmem%idx(ival))*nfs_l+1), &
                             &1,v1(nbase+(i1-dmem%idx(ival))*nfs_l+1),1) &
                             &*isgn1*cm(i,j)
                 endif
                 if(i==j)cycle
                 if(abs(cm(j,i))>1.d-10)then
-                    zes=zes+zdotc(nfs_l, &
-                            &v2(nbase+(i1-dmem%idx(ival))*nfs_l+1), &
+                    zes=zes+ &
+#ifdef EmbReal
+                            &ddot( &
+#else
+                            &zdotc( &
+#endif
+                            &nfs_l,v2(nbase+(i1-dmem%idx(ival))*nfs_l+1), &
                             &1,v1(nbase+(ibs1-dmem%idx(ival))*nfs_l+1),1) &
                             &*isgn1*cm(j,i)
                 endif
@@ -207,9 +252,15 @@ subroutine av1_gspci_npij(cm,v1,v2)
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::cm(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(*)
+    real(q),intent(inout)::v2(*)
+#else
     complex(q),intent(in)::cm(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(*)
     complex(q),intent(inout)::v2(*)
+#endif
 
     integer ival,i1,i,j,nbase,itmp,isgn1,ibs1,nfs,nfs_l
 
@@ -230,13 +281,21 @@ subroutine av1_gspci_npij(cm,v1,v2)
                 if(isgn1==0)cycle
                 ibs1=dmem%ibs(itmp)
                 if(abs(cm(i,j))>1.d-10)then
+#ifdef EmbReal
+                    call daxpy(nfs_l,cm(i,j)*isgn1, &
+#else
                     call zaxpy(nfs_l,cm(i,j)*isgn1, &
+#endif
                             &v1(nbase+(i1-dmem%idx(ival))*nfs_l+1),1,&
                             &v2(nbase+(ibs1-dmem%idx(ival))*nfs_l+1),1) 
                 endif
                 if(i==j)cycle
                 if(abs(cm(j,i))>1.d-10)then
+#ifdef EmbReal
+                    call daxpy(nfs_l,cm(j,i)*isgn1, &
+#else
                     call zaxpy(nfs_l,cm(j,i)*isgn1, &
+#endif
                             &v1(nbase+(ibs1-dmem%idx(ival))*nfs_l+1),1,&
                             &v2(nbase+(i1-dmem%idx(ival))*nfs_l+1),1) 
                 endif
@@ -255,8 +314,13 @@ subroutine expval_gspci_mij(v1,mij)
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(inout)::mij(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(*)
+#else
     complex(q),intent(inout)::mij(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(*)
+#endif
 
     integer ival,istate,i1,i2,i,j,jstate,nbase,mbase, &
             &itmp,isgn1,isgn2,ibs1,ibs2,nfs1,nfs2,nfs_l1,nfs_l2
@@ -304,7 +368,11 @@ subroutine expval_gspci_mij(v1,mij)
                     if(ibs2<=0)cycle
                     jstate=nbase+(ibs1-dmem%idx(ival-1))*nfs_l1+ &
                             &ibs2-dmem%idx_l(dmem%norb-ival+1)+1
+#ifdef EmbReal
+                    mij(i,j)=mij(i,j)+v1(jstate)*v1(istate)*isgn2
+#else
                     mij(i,j)=mij(i,j)+conjg(v1(jstate))*v1(istate)*isgn2
+#endif
                 enddo
             enddo; enddo
         enddo
@@ -322,13 +390,22 @@ subroutine av1_gspci_mij(v1,v2)
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::v1(*)
+    real(q),intent(inout)::v2(*)
+#else
     complex(q),intent(in)::v1(*)
     complex(q),intent(inout)::v2(*)
+#endif
 
     integer ival,istate,i1,i2,jstate,nbase,nnz,inz,nnz1, &
             &itmp,isgn2,ibs2,nfs1,nfs2,nfs_l1,nfs_l2
     integer,allocatable::isgn1(:),is(:),js(:),ibs1(:),is1(:)
+#ifdef EmbReal
+    real(q),allocatable::dij(:)
+#else
     complex(q),allocatable::dij(:)
+#endif
 
     nnz=count(abs(dmem%daalpha)<1.d-10)
     allocate(isgn1(nnz),is(nnz),is1(nnz),js(nnz),ibs1(nnz),dij(nnz))
@@ -392,7 +469,11 @@ subroutine av1_gspci_mij(v1,v2)
                     if(ibs2<=0)cycle
                     jstate=nbase+(ibs1(inz)-dmem%idx(ival-1))*nfs_l1+ &
                             &ibs2-dmem%idx_l(dmem%norb-ival+1)+1
+#ifdef EmbReal
+                    v2(jstate)=v2(jstate)+dij(inz)*v1(istate)*isgn2
+#else
                     v2(jstate)=v2(jstate)+conjg(dij(inz))*v1(istate)*isgn2
+#endif
                     v2(istate)=v2(istate)+dij(inz)*v1(jstate)*isgn2
                 enddo
             enddo
@@ -418,14 +499,24 @@ subroutine av1_gspci_pdsym(lambda_p,nsym,plist,v1,v2)
     implicit none
     integer,intent(in)::nsym
     real(q),intent(in)::lambda_p
+#ifdef EmbReal
+    real(q),intent(in)::v1(*),plist(dmem%norb,dmem%norb,nsym)
+    real(q),intent(inout)::v2(*)
+#else
     complex(q),intent(in)::v1(*),plist(dmem%norb,dmem%norb,nsym)
     complex(q),intent(inout)::v2(*)
+#endif
 
     integer ival,istate,i1,i2,jstate,nbase,itmp,nfs,nfs_l,ni_skip,nj_skip, &
             &isym,j1,j2,k,ivalp,jbase
     integer ia(dmem%norb),ib(dmem%norb),ib_skip(dmem%norb), &
             &ja(dmem%norb),jb(dmem%norb),jb_skip(dmem%norb)
+    real(q) dtmp(dmem%norb,dmem%norb)
+#ifdef EmbReal
+    real(q) coef1,coef2
+#else
     complex(q) coef1,coef2
+#endif
     real(q) lambda_
 
     lambda_=lambda_p/nsym
@@ -444,7 +535,8 @@ subroutine av1_gspci_pdsym(lambda_p,nsym,plist,v1,v2)
             itmp=dmem%bs(i1)
             call set_occupied_orbitals(itmp,ia,dmem%norb)
             do isym=1,nsym
-                call set_skip_orbitals(plist(:,:,isym),dmem%norb, &
+                dtmp=abs(plist(:,:,isym))
+                call set_skip_orbitals(dtmp,dmem%norb, &
                         &ia(1:ival),ival,ib_skip,ni_skip)
                 lj1: do j1=dmem%idx(ival),dmem%idx(ival+1)-1
                     itmp=dmem%bs(j1)
@@ -463,7 +555,7 @@ subroutine av1_gspci_pdsym(lambda_p,nsym,plist,v1,v2)
                         if(abs(v1(istate))<1.d-16)cycle
                         itmp=dmem%bs_l(i2)
                         call set_occupied_orbitals(itmp,ja,dmem%norb)
-                        call set_skip_orbitals(plist(:,:,isym),dmem%norb, &
+                        call set_skip_orbitals(dtmp,dmem%norb, &
                                 &ja(1:ivalp),ivalp,jb_skip,nj_skip)
                         lj2: do j2=dmem%idx_l(ivalp),dmem%idx_l(ivalp+1)-1
                             itmp=dmem%bs_l(j2)
@@ -495,14 +587,24 @@ subroutine expval_gspci_pdsym(plist,nsym,v1,zes)
     use gutil
     implicit none
     integer,intent(in)::nsym
+#ifdef EmbReal
+    real(q),intent(in)::v1(*),plist(dmem%norb,dmem%norb,nsym)
+    real(q),intent(out)::zes
+#else
     complex(q),intent(in)::v1(*),plist(dmem%norb,dmem%norb,nsym)
     complex(q),intent(out)::zes
+#endif
 
     integer ival,istate,i1,i2,jstate,nbase,itmp,nfs,nfs_l,ni_skip,nj_skip, &
             &isym,j1,j2,k,ivalp,jbase
     integer ia(dmem%norb),ib(dmem%norb),ib_skip(dmem%norb), &
             &ja(dmem%norb),jb(dmem%norb),jb_skip(dmem%norb)
+    real(q) dtmp(dmem%norb,dmem%norb)
+#ifdef EmbReal
+    real(q) coef1,coef2
+#else
     complex(q) coef1,coef2
+#endif
 
     zes=0
     nbase=0
@@ -512,7 +614,11 @@ subroutine expval_gspci_pdsym(plist,nsym,v1,zes)
         nfs_l=dmem%idx_l(ivalp+1)-dmem%idx_l(ivalp)
         if(nfs_l<=0)cycle
         if(ival==0)then
+#ifdef EmbReal
+            zes=zes+v1(nbase+1)*v1(nbase+1)*nsym
+#else
             zes=zes+v1(nbase+1)*conjg(v1(nbase+1))*nsym
+#endif
             nbase=nbase+1
             cycle
         endif
@@ -520,7 +626,8 @@ subroutine expval_gspci_pdsym(plist,nsym,v1,zes)
             itmp=dmem%bs(i1)
             call set_occupied_orbitals(itmp,ia,dmem%norb)
             do isym=1,nsym
-                call set_skip_orbitals(plist(:,:,isym),dmem%norb, &
+                dtmp=abs(plist(:,:,isym))
+                call set_skip_orbitals(dtmp,dmem%norb, &
                         &ia(1:ival),ival,ib_skip,ni_skip)
                 lj1: do j1=dmem%idx(ival),dmem%idx(ival+1)-1
                     itmp=dmem%bs(j1)
@@ -539,7 +646,7 @@ subroutine expval_gspci_pdsym(plist,nsym,v1,zes)
                         if(abs(v1(istate))<1.d-16)cycle
                         itmp=dmem%bs_l(i2)
                         call set_occupied_orbitals(itmp,ja,dmem%norb)
-                        call set_skip_orbitals(plist(:,:,isym),dmem%norb, &
+                        call set_skip_orbitals(dtmp,dmem%norb, &
                                 &ja(1:ivalp),ivalp,jb_skip,nj_skip)
                         lj2: do j2=dmem%idx_l(ivalp),dmem%idx_l(ivalp+1)-1
                             itmp=dmem%bs_l(j2)
@@ -552,7 +659,11 @@ subroutine expval_gspci_pdsym(plist,nsym,v1,zes)
                                     &dmem%norb,ja,jb,ivalp,coef2)
                             if(abs(coef2)<1.d-16)cycle lj2
                             jstate=jbase+j2-dmem%idx_l(ivalp)+1
+#ifdef EmbReal
+                            zes=zes+coef2*v1(istate)*v1(jstate)
+#else
                             zes=zes+coef2*v1(istate)*conjg(v1(jstate))
+#endif
                         enddo lj2
                     enddo
                 enddo lj1
@@ -571,10 +682,18 @@ subroutine chk_expval_gspci_pdsym(plist,nsym,v1)
     use gspci
     implicit none
     integer,intent(in)::nsym
+#ifdef EmbReal
+    real(q),intent(in)::v1(*),plist(dmem%norb,dmem%norb,nsym)
+#else
     complex(q),intent(in)::v1(*),plist(dmem%norb,dmem%norb,nsym)
+#endif
 
     integer i
+#ifdef EmbReal
+    real(q) ::zes
+#else
     complex(q) ::zes
+#endif
 
     do i=1,nsym
         call expval_gspci_pdsym(plist(:,:,i),1,v1,zes)
@@ -591,12 +710,22 @@ subroutine expval_gspci_nvij(v1,nvij)
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::v1(*)
+    real(q),intent(inout)::nvij(dmem%norb,dmem%norb)
+#else
     complex(q),intent(in)::v1(*)
     complex(q),intent(inout)::nvij(dmem%norb,dmem%norb)
+#endif
 
     integer ival,i1,i2,i,j,nbase,itmp,isgn,ibs2,nfs,nfs_l,ifsr,ifsl
+#ifdef EmbReal
+    real(q),allocatable::v2(:),v2c(:)
+    real(q),external::ddot
+#else
     complex(q),allocatable::v2(:),v2c(:)
     complex(q),external::zdotc
+#endif
 
     itmp=maxval(dmem%idx(dmem%nval_bot+1:)- &
             &dmem%idx(dmem%nval_bot:dmem%nval_top-1))
@@ -625,10 +754,22 @@ subroutine expval_gspci_nvij(v1,nvij)
                 ifsl=nbase+ibs2-dmem%idx_l(dmem%norb-ival)+1
                 v2(1:nfs)=v1(ifsr:ifsr+(nfs-1)*nfs_l:nfs_l)
                 if(ibs2==i2)then
-                    nvij(i,j)=nvij(i,j)+zdotc(nfs,v2(1),1,v2(1),1)*isgn
+                    nvij(i,j)=nvij(i,j)+ &
+#ifdef EmbReal
+                            &ddot(nfs,v2(1),1,v2(1),1) &
+#else
+                            &zdotc(nfs,v2(1),1,v2(1),1) &
+#endif
+                            &*isgn
                 else
                     v2c(1:nfs)=v1(ifsl:ifsl+(nfs-1)*nfs_l:nfs_l)
-                    nvij(i,j)=nvij(i,j)+zdotc(nfs,v2c(1),1,v2(1),1)*isgn
+                    nvij(i,j)=nvij(i,j)+ &
+#ifdef EmbReal
+                            &ddot(nfs,v2c(1),1,v2(1),1) &
+#else
+                            &zdotc(nfs,v2c(1),1,v2(1),1) &
+#endif                            
+                            &*isgn
                 endif
             enddo; enddo
         enddo
@@ -638,7 +779,11 @@ subroutine expval_gspci_nvij(v1,nvij)
 
     ! Complex conjugate part
     do i=1,dmem%norb; do j=1+i,dmem%norb
+#ifdef EmbReal
+        nvij(i,j)=nvij(j,i)
+#else
         nvij(i,j)=conjg(nvij(j,i))
+#endif
     enddo; enddo
     return
 
@@ -651,13 +796,24 @@ subroutine expval_gspci_nvij2(cm,v1,v2,zes)
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::cm(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(*),v2(*)
+    real(q),intent(inout)::zes
+#else
     complex(q),intent(in)::cm(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(*),v2(*)
     complex(q),intent(inout)::zes
+#endif
 
     integer ival,i1,i2,i,j,nbase,itmp,isgn,ibs2,nfs,nfs_l,ifsl,ifsr
+#ifdef EmbReal
+    real(q),allocatable::v1p(:),v2p(:)
+    real(q),external::ddot
+#else
     complex(q),allocatable::v1p(:),v2p(:)
     complex(q),external::zdotc
+#endif
 
     itmp=maxval(dmem%idx(dmem%nval_bot+1:)- &
             &dmem%idx(dmem%nval_bot:dmem%nval_top-1))
@@ -688,13 +844,25 @@ subroutine expval_gspci_nvij2(cm,v1,v2,zes)
                 if(abs(cm(i,j))>1.d-10)then
                     v1p(1:nfs)=v1(ifsr:ifsr+(nfs-1)*nfs_l:nfs_l)
                     v2p(1:nfs)=v2(ifsl:ifsl+(nfs-1)*nfs_l:nfs_l)
-                    zes=zes+zdotc(nfs,v2p(1),1,v1p(1),1)*isgn*cm(i,j)
+                    zes=zes+ &
+#ifdef EmbReal
+                            &ddot(nfs,v2p(1),1,v1p(1),1) &
+#else
+                            &zdotc(nfs,v2p(1),1,v1p(1),1) &
+#endif
+                            &*isgn*cm(i,j)
                 endif
                 if(i==j)cycle
                 if(abs(cm(j,i))>1.d-10)then
                     v1p(1:nfs)=v1(ifsl:ifsl+(nfs-1)*nfs_l:nfs_l)
                     v2p(1:nfs)=v2(ifsr:ifsr+(nfs-1)*nfs_l:nfs_l)
-                    zes=zes+zdotc(nfs,v2p(1),1,v1p(1),1)*isgn*cm(j,i)
+                    zes=zes+ &
+#ifdef EmbReal
+                            &ddot(nfs,v2p(1),1,v1p(1),1) &
+#else
+                            &zdotc(nfs,v2p(1),1,v1p(1),1) &
+#endif                            
+                            &*isgn*cm(j,i)
                 endif
             enddo; enddo
         enddo
@@ -712,15 +880,25 @@ subroutine av1_gspci_nvij(cm,v1,v2)
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::cm(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(*)
+    real(q),intent(inout)::v2(*)
+#else
     complex(q),intent(in)::cm(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(*)
     complex(q),intent(inout)::v2(*)
+#endif
 
     integer ival,istate,i1,i2,jstate,nbase,nnz,inz,nnz2, &
             &itmp,isgn,nfs,nfs_l
     integer,allocatable::is(:),js(:),ibs2(:)
     logical,allocatable::ldiag(:)
+#ifdef EmbReal
+    real(q),allocatable::cij(:),cji(:)
+#else
     complex(q),allocatable::cij(:),cji(:)
+#endif
 
     nnz=0
     do i1=1,dmem%norb; do i2=1,i1
@@ -786,8 +964,13 @@ subroutine calc_ucsr_spci()
     use gspci
     use gutil
     implicit none
+#ifdef EmbReal
+    real(dp) z_row(maxval(dmem%idx(dmem%nval_bot+1:dmem%nval_top+1) &
+            &-dmem%idx(dmem%nval_bot:dmem%nval_top)))
+#else
     complex(dp) z_row(maxval(dmem%idx(dmem%nval_bot+1:dmem%nval_top+1) &
             &-dmem%idx(dmem%nval_bot:dmem%nval_top)))
+#endif
     integer nstates,nnz,irun,ival,istate,i,jstate,j,p,q,r,s, &
             &itmp(4),isgn(4)
 
@@ -847,6 +1030,7 @@ subroutine calc_ucsr_spci()
                                 call act_state(itmp(4),s-1,.true.,isgn(4))
                                 if(isgn(4)==0)cycle
                                 jstate=dmem%ibs(itmp(4))
+                                ! lower trianglar part only
                                 if(jstate>i)cycle
                                 jstate=jstate-dmem%idx(ival)+1
                                 z_row(jstate)=z_row(jstate)+isgn(4)* &
@@ -871,6 +1055,7 @@ subroutine calc_ucsr_spci()
             enddo
         enddo
     enddo
+    write(0,'(" dim_ucsr =",i0)')dmem%ucsr%i(nstates+1)
     return
 
 end subroutine calc_ucsr_spci
@@ -880,20 +1065,41 @@ subroutine av1_gspci_dlh(v1,v2)
     use gprec
     use gspci
     use sparse
+    use gtime
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::v1(*)
+    real(q),intent(out)::v2(*)
+#else
     complex(q),intent(in)::v1(*)
     complex(q),intent(out)::v2(*)
+#endif
 
     integer i,j
 
+#ifdef DEBUG
+    call set_time_point(1,3)
+#endif
     ! D_ij
     call av1_gspci_mij(v1,v2)
-
+#ifdef DEBUG
+    call set_time_point(2,3)
+    call print_time_usage('av1_gspci_mij',3,0)
+    call set_time_point(1,3)
+#endif
     ! lambda_c (la2)
     call av1_gspci_nvij(dmem%lambdac,v1,v2)
-
+#ifdef DEBUG
+    call set_time_point(2,3)
+    call print_time_usage('av1_gspci_nvij',3,0)
+    call set_time_point(1,3)
+#endif
     ! h_loc (ucsr)
     call av1_gspci_ucsr(v1,v2)
+#ifdef DEBUG
+    call set_time_point(2,3)
+    call print_time_usage('av1_gspci_ucsr',3,0)
+#endif
     return
 
 end subroutine av1_gspci_dlh
@@ -903,8 +1109,13 @@ subroutine av1_gspci_ucsr(v1,v2)
     use gprec
     use gspci
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::v1(*)
+    real(q),intent(inout)::v2(*)
+#else
     complex(q),intent(in)::v1(*)
     complex(q),intent(inout)::v2(*)
+#endif
 
     integer nbase,ival,nfs,nfs_l,i1,i1_,j1,inz
 
@@ -917,11 +1128,19 @@ subroutine av1_gspci_ucsr(v1,v2)
             i1_=i1-dmem%idx(dmem%nval_bot)+1
             do inz=dmem%ucsr%i(i1_),dmem%ucsr%i(i1_+1)-1
                 j1=dmem%ucsr%j(inz)+dmem%idx(dmem%nval_bot)-1
+#ifdef EmbReal
+                call daxpy(nfs_l,dmem%ucsr%a(inz), &
+#else
                 call zaxpy(nfs_l,dmem%ucsr%a(inz), &
+#endif
                         &v1(nbase+(j1-dmem%idx(ival))*nfs_l+1),1,&
                         &v2(nbase+(i1-dmem%idx(ival))*nfs_l+1),1)
                 if(i1==j1)cycle
+#ifdef EmbReal
+                call daxpy(nfs_l,dmem%ucsr%a(inz), &
+#else
                 call zaxpy(nfs_l,conjg(dmem%ucsr%a(inz)), &
+#endif
                         &v1(nbase+(i1-dmem%idx(ival))*nfs_l+1),1,&
                         &v2(nbase+(j1-dmem%idx(ival))*nfs_l+1),1)
             enddo
@@ -938,7 +1157,11 @@ subroutine calc_dm_spci()
     use gspci
     use sparse
     implicit none
+#ifdef EmbReal
+    real(q) dm(dmem%norb,dmem%norb)
+#else
     complex(q) dm(dmem%norb,dmem%norb)
+#endif
 
     ! c_i^\dagger c_j
     dm=0
@@ -954,7 +1177,11 @@ subroutine calc_dm_spci()
     dm=0
     call expval_gspci_mij(dmem%v,dm)
     dmem%dm(1+dmem%norb:,1:dmem%norb)=dm
+#ifdef EmbReal
+    dmem%dm(1:dmem%norb,1+dmem%norb:)=transpose(dm)
+#else
     dmem%dm(1:dmem%norb,1+dmem%norb:)=transpose(conjg(dm))
+#endif
     return
 
 end subroutine calc_dm_spci
@@ -967,8 +1194,13 @@ subroutine av_gspci(v1,v2,k,primme)
     implicit none
     integer,intent(in)::k
     integer(8),intent(in)::primme
+#ifdef EmbReal
+    real(q),intent(in)::v1(*)
+    real(q),intent(out)::v2(*)
+#else
     complex(q),intent(in)::v1(*)
     complex(q),intent(out)::v2(*)
+#endif
 
     integer n,i
 
@@ -990,12 +1222,22 @@ subroutine av1_gspci_jop(cm,v1,v2)
     use sparse
     use gutil
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::cm(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(dmem%nstates)
+    real(q),intent(inout)::v2(dmem%nstates)
+#else
     complex(q),intent(in)::cm(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(dmem%nstates)
     complex(q),intent(inout)::v2(dmem%nstates)
+#endif
 
     integer i
+#ifdef EmbReal
+    real(q) cm_(dmem%norb,dmem%norb)
+#else
     complex(q) cm_(dmem%norb,dmem%norb)
+#endif
 
     call av1_gspci_npij(cm ,v1,v2)
     cm_=-cm
@@ -1008,21 +1250,28 @@ end subroutine av1_gspci_jop
 
 ! Expectation value.
 ! <v2| \sum_{a,b}{cm_{a,b} (nc_{a,b} + nf_{a,b})} |v1>
-subroutine zv2h_gspci_jop_v1(cm,v1,v2,zes)
+subroutine v2h_gspci_jop_v1(cm,v1,v2,zes)
     use gprec
     use gspci
     use sparse
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::cm(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(dmem%nstates),v2(dmem%nstates)
+    real(q),intent(inout)::zes
+    real(q),external::ddot
+#else
     complex(q),intent(in)::cm(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(dmem%nstates),v2(dmem%nstates)
     complex(q),intent(inout)::zes
     complex(q),external::zdotc
+#endif
 
     call expval_gspci_npij2(cm,v1,v2,zes)
     call expval_gspci_nvij2(cm,v1,v2,zes)
     return
 
-end subroutine zv2h_gspci_jop_v1
+end subroutine v2h_gspci_jop_v1
 
 
 ! The square of one component of angular momentum operator scting on |v1>
@@ -1032,11 +1281,19 @@ subroutine av1_gspci_j2op(cm,v1,v2)
     use gspci
     use sparse
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::cm(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(dmem%nstates)
+    real(q),intent(inout)::v2(dmem%nstates)
+
+    real(q) v1p(dmem%nstates)
+#else
     complex(q),intent(in)::cm(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(dmem%nstates)
     complex(q),intent(inout)::v2(dmem%nstates)
 
     complex(q) v1p(dmem%nstates)
+#endif
 
     v1p=0
     call av1_gspci_jop(cm,v1,v1p)
@@ -1053,12 +1310,21 @@ subroutine av1_gspci_jz2_pjz(lambda_j2,cm_z,v1,v2)
     use sparse
     implicit none
     real(q),intent(in)::lambda_j2
+#ifdef EmbReal
+    real(q),intent(in)::cm_z(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(dmem%nstates)
+    real(q),intent(inout)::v2(dmem%nstates)
+
+    real(q) v1p(dmem%nstates)
+    real(q) cm(dmem%norb,dmem%norb)
+#else
     complex(q),intent(in)::cm_z(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(dmem%nstates)
     complex(q),intent(inout)::v2(dmem%nstates)
 
     complex(q) v1p(dmem%nstates)
     complex(q) cm(dmem%norb,dmem%norb)
+#endif
 
     v1p=0
     cm=cm_z*sqrt(lambda_j2)
@@ -1077,15 +1343,28 @@ subroutine av1_gspci_jnjp(lambda_j2,cm_n,v1,v2)
     use sparse
     implicit none
     real(q),intent(in)::lambda_j2
+#ifdef EmbReal
+    real(q),intent(in)::cm_n(dmem%norb,dmem%norb)
+    real(q),intent(in)::v1(dmem%nstates)
+    real(q),intent(inout)::v2(dmem%nstates)
+
+    real(q) v1p(dmem%nstates)
+    real(q) cm(dmem%norb,dmem%norb)
+#else
     complex(q),intent(in)::cm_n(dmem%norb,dmem%norb)
     complex(q),intent(in)::v1(dmem%nstates)
     complex(q),intent(inout)::v2(dmem%nstates)
 
     complex(q) v1p(dmem%nstates)
     complex(q) cm(dmem%norb,dmem%norb)
+#endif
 
     v1p=0
+#ifdef EmbReal
+    cm=transpose(cm_n)*sqrt(lambda_j2)
+#else
     cm=conjg(transpose(cm_n))*sqrt(lambda_j2)
+#endif
     call av1_gspci_jop(cm,v1,v1p)
     cm=cm_n*sqrt(lambda_j2)
     call av1_gspci_jop(cm,v1p,v2)
@@ -1100,10 +1379,18 @@ subroutine chk_eval_j2_sumway(cm_vec,label)
     use sparse
     implicit none
     character(*),intent(in)::label
+#ifdef EmbReal
+    real(q),intent(in)::cm_vec(dmem%norb,dmem%norb,3)
+#else
     complex(q),intent(in)::cm_vec(dmem%norb,dmem%norb,3)
+#endif
 
     integer i
+#ifdef EmbReal
+    real(q) eval
+#else
     complex(q) eval
+#endif
 
     eval=0
     do i=1,3
@@ -1123,14 +1410,21 @@ subroutine calc_eval_gspci_j2op(cm,v1,zes)
     use gspci
     use sparse
     implicit none
+#ifdef EmbReal
+    real(q),intent(in)::cm(dmem%norb,dmem%norb),v1(dmem%nstates)
+    real(q),intent(inout)::zes
+
+    real(q) v1p(dmem%nstates)
+#else
     complex(q),intent(in)::cm(dmem%norb,dmem%norb),v1(dmem%nstates)
     complex(q),intent(inout)::zes
 
     complex(q) v1p(dmem%nstates)
+#endif
 
     v1p=0
     call av1_gspci_jop(cm,v1,v1p)
-    call zv2h_gspci_jop_v1(cm,v1p,v1,zes)
+    call v2h_gspci_jop_v1(cm,v1p,v1,zes)
     return
 
 end subroutine calc_eval_gspci_j2op
@@ -1147,7 +1441,11 @@ subroutine calc_save_rho_cp_blks(imp)
     integer,intent(in)::imp
 
     integer ival,nstates,i,j
+#ifdef EmbReal
+    real(q),allocatable::rho(:,:)
+#else
     complex(q),allocatable::rho(:,:)
+#endif
     type(dcoo_matrix)::npcoo(dmem%norb,dmem%norb)
 
     call gh5_open_w('EMBED_HAMIL_ANALYSIS_'//trim(int_to_str(imp))//'.h5',f_id)
@@ -1221,10 +1519,18 @@ subroutine calc_reduced_rho_nblk(rho,n,ival)
     use gspci
     implicit none
     integer,intent(in)::n,ival
+#ifdef EmbReal
+    real(q),intent(out)::rho(n,n)
+#else
     complex(q),intent(out)::rho(n,n)
+#endif
     
     integer i,i_,j,j_,nbase,nfs_l
+#ifdef EmbReal
+    real(q),external::ddot
+#else
     complex(q),external::zdotc
+#endif
 
     rho=0
     nfs_l=dmem%idx_l(dmem%norb-ival+1)-dmem%idx_l(dmem%norb-ival)
@@ -1239,10 +1545,20 @@ subroutine calc_reduced_rho_nblk(rho,n,ival)
         i_=i-dmem%idx(ival)+1
         do j=dmem%idx(ival),i
             j_=j-dmem%idx(ival)+1
-            rho(i_,j_)=zdotc(nfs_l,dmem%v(nbase+(j-dmem%idx(ival))*nfs_l+1),1,&
+            rho(i_,j_)= &
+#ifdef EmbReal
+                    &ddot( &
+#else
+                    &zdotc( &
+#endif
+                    &nfs_l,dmem%v(nbase+(j-dmem%idx(ival))*nfs_l+1), &
                     &dmem%v(nbase+(i-dmem%idx(ival))*nfs_l+1),1)
             if(i==j)cycle
+#ifdef EmbReal
+            rho(j_,i_)=rho(i_,j_)
+#else
             rho(j_,i_)=conjg(rho(i_,j_))
+#endif
         enddo
     enddo
     return
@@ -1262,7 +1578,11 @@ subroutine calc_save_phi_matrix_blks(imp)
     integer,intent(in)::imp
 
     integer ival,nfs,nfs_l,nbase
+#ifdef EmbReal
+    real(q),allocatable::phi(:,:)
+#else
     complex(q),allocatable::phi(:,:)
+#endif
 
     call gh5_open_w('EMBED_HAMIL_PHIMAT_'//trim(int_to_str(imp))//'.h5',f_id)
     nbase=0
