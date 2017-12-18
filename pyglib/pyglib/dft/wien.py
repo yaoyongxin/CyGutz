@@ -185,7 +185,7 @@ def batch_init_lapw(args=['-vxc', '5', '-rkmax', '8.5', '-numk', '5000']):
     cwd = os.getcwd()+'/'
     for dname in glob.glob('V*'):
         os.chdir(dname+'/case')
-        subprocess.call(cmd, stdout=f)
+        subprocess.call(cmd, stdout=f, shell=True)
         os.chdir(cwd)
     f.close()
 
@@ -295,7 +295,7 @@ def batch_save_lapw(sdir='lapw', args=['-f']):
     cwd = os.getcwd()+'/'
     for dname in glob.glob('V*'):
         os.chdir(dname+'/case')
-        subprocess.call(cmd)
+        subprocess.call(cmd, shell=True)
         os.chdir(cwd)
 
 

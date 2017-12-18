@@ -302,5 +302,4 @@ def embed_hamil_to_ctext(imp=1):
 
 
 if __name__ == '__main__':
-    h1e, lambdac, daalpha, v2e = h5gen_embedh_spin_updn()
-    wrt_text_rembed(h1e, lambdac, daalpha, v2e)
+    _ = h5gen_embedh_spin_updn(lwrt_csh=True, lv2e=True)

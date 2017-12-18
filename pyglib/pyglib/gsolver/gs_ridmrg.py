@@ -15,7 +15,7 @@ def driver_ridmrg(imp=1, lv2e=False):
     create_idmrg_ctl_file(imp=imp, N=N, Npart=Npart)
     cmd = [os.environ["WIEN_GUTZ_ROOT2"]+"/exe_idmrg", str(imp)]
     with open("GDMRG_{}.LOG".format(imp), "w") as f:
-        subprocess.call(cmd, stdout=f)
+        subprocess.call(cmd, stdout=f, shell=True)
     dm, e_tot = embedh.get_res_idmrg(imp=imp)
     embedh.h5wrt_dm_sab_rc(dm, e_tot, imp=imp)
 

@@ -57,7 +57,8 @@ def driver_ed(imp=1, istep=0, mpiexec="mpirun -np 2 "):
 
     print(" running {}".format(" ".join(cmd)))
     with open("GED_{}.LOG".format(imp), "w") as f:
-        subprocess.call(cmd, stdout=f)
+        subprocess.call(cmd, stdout=f, shell=True)
+
 
 
 if __name__ == "__main__":

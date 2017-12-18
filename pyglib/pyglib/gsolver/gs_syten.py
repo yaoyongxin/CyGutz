@@ -72,7 +72,7 @@ def gen_file_lat(imp, flat, reorder=None):
     if reorder is not None:
         command.extend(['-r', reorder])
     print(' '.join(command))
-    subprocess.call(command)
+    subprocess.call(command, shell=True)
 
 
 def gen_file_rnd_state(imp, norbs, lat):
@@ -82,7 +82,7 @@ def gen_file_rnd_state(imp, norbs, lat):
             'syten-random', '-s', str(norbs), '-l', lat, '-o',
             'rnd_{}.state'.format(imp)]
     print(' '.join(command))
-    subprocess.call(command)
+    subprocess.call(command, shell=True)
 
 
 def run_syten_dmrg(imp, lat, inp_state, out_f, s_config, out_state=None,
@@ -97,7 +97,7 @@ def run_syten_dmrg(imp, lat, inp_state, out_f, s_config, out_state=None,
     if threads_tensor > 1:
         command.extend(['--threads-tensor', str(threads_tensor)])
     print(' '.join(command))
-    subprocess.call(command)
+    subprocess.call(command, shell=True)
 
 
 def run_syten_expectation(imp, lat, state, f_expval):
@@ -112,7 +112,7 @@ def run_syten_mutual_information(imp, state, f_reorder):
     command = ['/usr/bin/time', '-v', '-a', '-o', 'timing_{}'.format(imp),
             'syten-mutualInformation', '-o', state, '-f', f_reorder]
     print(' '.join(command))
-    subprocess.call(command)
+    subprocess.call(command, shell=True)
 
 
 def driver_dmrg(s_config= \
