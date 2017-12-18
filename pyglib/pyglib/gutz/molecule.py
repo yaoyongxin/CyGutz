@@ -1,5 +1,9 @@
 from __future__ import print_function
-from builtins import zip
+try:
+    from builtins import zip
+except:
+    pass
+
 import sys, numpy
 from pymatgen import Molecule
 

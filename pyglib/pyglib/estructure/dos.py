@@ -1,7 +1,11 @@
 import os, h5py, glob, sys
 from math import pi, sqrt
 import numpy as np
-from future_builtins import zip
+try:
+    from builtins import zip
+except:
+    pass
+
 from pyglib.basic import units
 import matplotlib.pyplot as plt
 

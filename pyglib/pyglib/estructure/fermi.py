@@ -1,7 +1,10 @@
 from __future__ import print_function
-from builtins import range
-from future_builtins import zip
 import numpy as np
+
+try:
+    from builtins import range, zip
+except:
+    pass
 
 
 def fermi_dirac(e_fermi, delta, energy):

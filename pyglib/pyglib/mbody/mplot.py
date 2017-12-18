@@ -1,6 +1,10 @@
 from __future__ import print_function
 import matplotlib.pyplot as plt
-from builtins import zip
+try:
+    from builtins import zip
+except:
+    pass
+
 import numpy, h5py
 from pyglib.basic.splot import colors
 

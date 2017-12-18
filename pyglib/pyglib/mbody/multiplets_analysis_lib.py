@@ -4,11 +4,13 @@ from __future__ import print_function
 Tools to analyse the local many-body density matrix (multiplet structure).
 '''
 
-import os
-from builtins import range
+try:
+    from builtins import range
+except:
+    pass
+
 import numpy as np
 from scipy.linalg import logm
-from scipy.sparse import csr_matrix
 import h5py
 
 

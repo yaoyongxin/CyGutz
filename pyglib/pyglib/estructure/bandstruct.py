@@ -1,6 +1,10 @@
 from __future__ import print_function
 import h5py, numpy, sys, glob
-from builtins import range
+try:
+    from builtins import range
+except:
+    pass
+
 from pyglib.estructure.dos import get_bands
 import matplotlib.pyplot as plt
 

@@ -1,5 +1,9 @@
 from __future__ import print_function
-from builtins import range
+try:
+    from builtins import range
+except:
+    pass
+
 import h5py, numpy
 
 

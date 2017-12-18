@@ -1,6 +1,10 @@
 from math import pi, sqrt
 import numpy as np
-from future_builtins import zip
+try:
+    from builtins import zip
+except:
+    pass
+
 from itertools import product,count
 from pyglib.estructure import fermi
 from pyglib.basic import units

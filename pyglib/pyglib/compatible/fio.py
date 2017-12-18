@@ -2,7 +2,11 @@ from __future__ import print_function
 '''
 Help functions for io.
 '''
-from builtins import range
+try:
+    from builtins import range
+except:
+    pass
+
 import numpy as np
 import h5py, glob
 
