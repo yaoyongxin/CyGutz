@@ -19,7 +19,7 @@ def driver_c2rspci_mott_onfly(imp=1):
     embedh.h5wrt_rembed_hamil(h1e, lambdac, daalpha, v2e, imp=imp)
 
     cmd = [os.environ["WIEN_GUTZ_ROOT2"]+"/exe_rspci_mott_onfly", str(imp)]
-    subprocess.call(cmd, shell=True)
+    subprocess.call(cmd)
 
     # get results
     dm, e_mol = embedh.get_res_rspci_mott_onfly(imp=imp)

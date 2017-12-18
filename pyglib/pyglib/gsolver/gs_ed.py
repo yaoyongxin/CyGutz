@@ -1,4 +1,4 @@
-import os, sys, subprocess, h5py, numpy
+import os, sys, subprocess, h5py, numpy, shlex
 from pyglib.gutz import embedh
 from pyglib.mbody.basis import h5add_fock_states
 
@@ -53,11 +53,12 @@ def driver_ed(imp=1, istep=0, mpiexec="mpirun -np 2 "):
     if os.path.isfile("mpi_ed.txt"):
         mpiexec = open("mpi_ed.txt", "r").readline()
 
-    cmd = [mpiexec+os.environ["WIEN_GUTZ_ROOT2"]+"/exe_ed", "-i", str(imp)]
+    mpiexec = shlex.split(mpiexec)
+    cmd = mpiexec+[os.environ["WIEN_GUTZ_ROOT2"]+"/exe_ed", "-i", str(imp)]
 
     print(" running {}".format(" ".join(cmd)))
     with open("GED_{}.LOG".format(imp), "w") as f:
-        subprocess.call(cmd, stdout=f, shell=True)
+        subprocess.call(cmd, stdout=f)
 
 
 

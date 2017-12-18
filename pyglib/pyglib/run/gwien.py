@@ -605,7 +605,7 @@ def batch_gsave(sdir='ldag', args=['-f']):
     cwd = os.getcwd()+'/'
     for dname in glob.glob('V*'):
         os.chdir(dname+'/case')
-        subprocess.call(cmd, shell=True)
+        subprocess.call(cmd)
         os.chdir(cwd)
 
 
