@@ -18,7 +18,7 @@ install:
 	# Copy pygtool to ~/WIEN_GUTZ/bin2/
 	cp -r pygtool/* ${GUTZ_ROOT2}
 	# Install pyglib
-	pip install -e ./pyglib
+	pip install -e ./pyglib --user
 	# Installation finished gracefully! Enjoy!
 
 gtool:
