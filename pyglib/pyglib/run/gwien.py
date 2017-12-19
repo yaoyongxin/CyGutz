@@ -1,5 +1,8 @@
 from __future__ import print_function
-from builtins import range, zip
+try:
+    from builtins import range, zip
+except:
+    pass
 
 import os, sys, glob, h5py, socket, shutil, time, re, \
         subprocess
