@@ -1,7 +1,7 @@
 # (mpi) fortran compiler
-PF90 = mpiifort -openmp
-F90 = ifort -openmp
-F77 = ifort -openmp
+PF90 = mpiifort 
+F90 = ifort 
+F77 = ifort 
 
 # Compiler options
 FFLAGS =  -O2 -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback

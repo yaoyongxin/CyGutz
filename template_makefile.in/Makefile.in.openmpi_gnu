@@ -1,7 +1,7 @@
 # (mpi) fortran compiler
-PF90 = mpif90 -fopenmp 
-F90 = gfortran -fopenmp 
-F77 = gfortran -fopenmp 
+PF90 = mpif90 
+F90 = gfortran 
+F77 = gfortran 
 
 # Compiler options
 FFLAGS =  -O2 -w -fbacktrace -ffree-line-length-0

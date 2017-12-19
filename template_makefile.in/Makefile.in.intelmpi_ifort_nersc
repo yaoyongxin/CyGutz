@@ -1,7 +1,7 @@
 # (mpi) fortran compiler
-PF90 = ftn -qopenmp
-F90 = ftn -qopenmp
-F77 = ftn -qopenmp
+PF90 = ftn 
+F90 = ftn 
+F77 = ftn 
 
 # Compiler options
 FFLAGS =  -O2 -mp1 -w -prec_div -pc80 -pad -ip -DINTEL_VML -traceback
