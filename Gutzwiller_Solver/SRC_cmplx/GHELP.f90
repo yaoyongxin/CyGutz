@@ -96,10 +96,14 @@ subroutine set_gmpi()
         call gh5_read(gp%kvec,gp%nvec,3,'/KVEC',f_id)
         call gh5_close(f_id)
         if(gp%ipar==1)then
+#ifdef _OPENMP
             call omp_set_num_threads(gp%nprocs)
+#endif
             write(gp%io,'(" omp_num_threads=",i2)')gp%nprocs
         else
+#ifdef _OPENMP
             call omp_set_num_threads(1)
+#endif
         endif
     endif
 
