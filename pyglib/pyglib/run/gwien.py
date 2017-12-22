@@ -10,6 +10,7 @@ import numpy as np
 from collections import deque
 from subprocess import Popen, PIPE
 from pyglib.io.fio import file_exists
+import pyglib.run.environ as env
 
 
 def get_file_info(fname, unit, idmf, case, scratch, so, para, cmplx, _band,
@@ -135,7 +136,7 @@ def gonestep(fday, exec_name, mpi):
     cmd = ['/usr/bin/time']
     if mpi != '':
         cmd.extend(mpi)
-    cmd.append('./{}'.format(exec_name))
+    cmd.append('{}'.format(exec_name))
     if 'gwien' in exec_name:
         cmd.append('{}.def'.format(exec_name))
 
@@ -433,6 +434,9 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
             idmf='2', cmplx=cmplx, _band=_band)
 
+    # save SLURM_ related environment variables
+    slurm_envs = env.get_env_dict(key="SLURM_")
+
     if nmaxiter > 0:
         if os.path.isfile('{}.clmsum_old'.format(w_case)):
             shutil.copy2('{}.clmsum_old'.format(w_case),
@@ -448,6 +452,10 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
 
         fday.write('   start at {} with {} \n    1/{} to go.\n'.format(
                 time.asctime(), startp, nmaxiter))
+
+        # unset slurm environment variables for wien2k type run
+        env.unset_environ(slurm_envs)
+
         if startp in 'lapw0':
             onestep(fday, w_case, 'lapw0', w_root, para)
         if startp in 'lapw0 lapw1':
@@ -460,6 +468,10 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
 
     # Major charge density loop
     for icycle in range(nmaxiter):
+
+        #set slurm environment variables for mpi run
+        env.set_environ(slurm_envs)
+
         if icycle > 0 or (icycle == 0 and startp in \
                 'lapw0 lapw1 lapwso gwien1'):
             gonestep(fday, 'gwien1', mpi)
@@ -484,6 +496,9 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         gonestep(fday, 'gwien2', mpi)
         if endp == 'gwien2':
             sys.exit(0)
+
+        # unset slurm environment variables for wien2k type run
+        env.unset_environ(slurm_envs)
 
         onestep(fday, w_case, 'lcore', w_root, '')
         scf(w_case)
