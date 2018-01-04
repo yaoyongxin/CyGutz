@@ -19,6 +19,8 @@ install:
 	cp -r pygtool/* ${GUTZ_ROOT2}
 	# Install pyglib
 	pip install -e ./pyglib --user
+	# Install simplified version of pymatgen
+	pip install -e ./pyextern/pymatgen --user
 	# Installation finished gracefully! Enjoy!
 
 gtool:

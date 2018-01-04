@@ -4,6 +4,7 @@
 *.o
 *.obj
 *.pyc
+*egg-info
 
 # Precompiled Headers
 *.gch
