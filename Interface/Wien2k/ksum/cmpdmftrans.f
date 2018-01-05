@@ -89,7 +89,9 @@ SUBROUTINE CmpDMFTRANS(DMFTU, alml, ri_mat, projector, cfX, Rspin, L, iorb1, cix
                     enddo
                     cc = cc + alml(L,lms1,num1+nemin-1,irf1,is1)*ri_mat(L,L,irf1,1,is1,is1)*(idt)**m1
                  enddo
-                 cc = cc * sqrt(abs(sm1/sm2))
+                 if(abs(sm2)>1.d-8)then
+                     cc = cc * sqrt(abs(sm1/sm2))
+                 endif
                  if (idt.gt.0) then
                     URx(num1,ind1) = cc
                  else
