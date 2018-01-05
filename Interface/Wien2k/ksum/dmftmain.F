@@ -406,16 +406,17 @@ PROGRAM DMFTMAIN
   endif
 
   ! If SO-coupling and symmetrization over all k-points
-  if (so) then
-     CALL SYM(THETA,FI)
-  else
-     do i=1,3
-        do j=1,3
-           iz(i,j,1)=0
-           if (i.eq.j) iz(i,j,1)=1
-        end do
-     end do
-  endif
+  ! corrected!
+  ! if (so) then
+  !    CALL SYM(THETA,FI)
+  ! else
+  !    do i=1,3
+  !       do j=1,3
+  !          iz(i,j,1)=0
+  !          if (i.eq.j) iz(i,j,1)=1
+  !       end do
+  !    end do
+  ! endif
 
   !*****  finds nmat and nume in energy file *****
   ! 59 -> case.energydn
