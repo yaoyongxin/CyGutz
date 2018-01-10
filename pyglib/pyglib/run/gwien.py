@@ -453,27 +453,26 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         fday.write('   start at {} with {} \n    1/{} to go.\n'.format(
                 time.asctime(), startp, nmaxiter))
 
+    # Major charge density loop
+    for icycle in range(nmaxiter):
+
         # unset slurm environment variables for wien2k type run
         env.unset_environ(slurm_envs)
 
-        if startp in 'lapw0':
+        if icycle > 0 or (startp in 'lapw0'):
             onestep(fday, w_case, 'lapw0', w_root, para)
-        if startp in 'lapw0 lapw1':
+        if icycle > 0 or (startp in 'lapw0 lapw1'):
             onestep(fday, w_case, 'lapw1', w_root, para, band)
-        if startp in 'lapw0 lapw1 lapwso' and p_so:
+        if (icycle > 0 or (startp in 'lapw0 lapw1 lapwso')) and p_so:
             onestep(fday, w_case, 'lapwso', w_root, para, band)
 
-    if para != '':
-        processes_convert(p_so)
-
-    # Major charge density loop
-    for icycle in range(nmaxiter):
+        if icycle==0 and para != '':
+            processes_convert(p_so)
 
         #set slurm environment variables for mpi run
         env.set_environ(slurm_envs)
 
-        if icycle > 0 or (icycle == 0 and startp in \
-                'lapw0 lapw1 lapwso gwien1'):
+        if icycle > 0 or (startp in 'lapw0 lapw1 lapwso gwien1'):
             gonestep(fday, 'gwien1', mpi)
             if openmp:
                 create_gomp_file()
@@ -482,8 +481,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         if endp == 'gwien1':
             sys.exit(0)
 
-        if icycle > 0 or (icycle == 0 and startp in \
-                'lapw0 lapw1 lapwso gwien1 CyGutz'):
+        if icycle > 0 or (startp in 'lapw0 lapw1 lapwso gwien1 CyGutz'):
             gonestep(fday, cygutz, _mpi)
         if band == '-band':
             sys.exit(0)
@@ -514,12 +512,6 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
                 dvdc, drho, cc, dene, ec, gerr, icycle))
         if drho < cc and dene < ec and dvdc < vc:
             sys.exit(0)
-
-
-        onestep(fday, w_case, 'lapw0', w_root, para)
-        onestep(fday, w_case, 'lapw1', w_root, para, band)
-        if p_so:
-            onestep(fday, w_case, 'lapwso', w_root, para, band)
 
 
 def batch_init_ga(dir_template='./template'):
