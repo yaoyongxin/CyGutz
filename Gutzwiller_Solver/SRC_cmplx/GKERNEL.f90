@@ -284,43 +284,30 @@ module gkernel
     de=trace_a(wh%co(i)%la2,na2)
 #ifdef flowversion
     if(gkmem%iembeddiag==-1)then
-        call system('exe_spci '//int_to_str(i))
-    elseif(gkmem%iembeddiag==-2)then
         call system('exe_spci_mott '//int_to_str(i))
+    elseif(gkmem%iembeddiag==-2)then
+        call system('exe_spci_sjz_mott -sz -i '//int_to_str(i))
     elseif(gkmem%iembeddiag==-3)then
         call system('exe_spci_s2_mott -i '//int_to_str(i))
     elseif(gkmem%iembeddiag==-4)then
-        call system('exe_spci_j2_mott_gap_trunc -i '//int_to_str(i))
-    elseif(gkmem%iembeddiag==-5)then
-        call system('exe_spci_j2_mott_gap_trunc -i '//int_to_str(i)//&
-                &' -l 0.0 -e 1')
-    elseif(gkmem%iembeddiag==-6)then
-        call system('exe_spci_j2_mott_gap_trunc -i '//int_to_str(i))
-    elseif(gkmem%iembeddiag==21)then
+        call system('exe_spci_sjz_mott -i '//int_to_str(i))
+    elseif(gkmem%iembeddiag==-21)then
         call system('exe_spci_sz_mott '//int_to_str(i))
-    elseif(gkmem%iembeddiag==-31)then
-        call system('exe_spci_s2_dsym_mott -i '//int_to_str(i))
-    elseif(gkmem%iembeddiag==-10)then
-        call system('exe_spci_bathtrunc '//int_to_str(i))
     elseif(gkmem%iembeddiag==-11)then
         call system('gs_ml.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
     elseif(gkmem%iembeddiag==-12)then
         call system('gs_syten.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
-    elseif(gkmem%iembeddiag==-13)then
-        call system('gs_idmrg.py -i '//int_to_str(i)//' -l '//int_to_str(ll))
-    elseif(gkmem%iembeddiag==-15)then
-        call system('gs_ed.py -i '//int_to_str(i))
 #else
     if(gkmem%iembeddiag==-1)then
-        call execute_command_line('exe_spci '//int_to_str(i), exitstat=ierr)
-        if(ierr/=0)then
-            write(0,'(" Error in running exe_spci!")')
-        endif
-    elseif(gkmem%iembeddiag==-2)then
-        call execute_command_line('exe_spci_mott '//int_to_str(i),  &
-                &exitstat=ierr)
+        call execute_command_line('exe_spci_mott '//int_to_str(i), exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running exe_spci_mott!")')
+        endif
+    elseif(gkmem%iembeddiag==-2)then
+        call execute_command_line('exe_spci_sjz_mott -sz -i '//int_to_str(i),&
+                &exitstat=ierr)
+        if(ierr/=0)then
+            write(0,'(" Error in running exe_spci_sjz_mott!")')
         endif
     elseif(gkmem%iembeddiag==-3)then
         call execute_command_line('exe_spci_s2_mott -i '//int_to_str(i),  &
@@ -329,40 +316,16 @@ module gkernel
             write(0,'(" Error in running exe_spci_s2_mott!")')
         endif
     elseif(gkmem%iembeddiag==-4)then
-        call execute_command_line('exe_spci_j2_mott_gap_trunc -i '// &
+        call execute_command_line('exe_spci_sjz_mott -i '// &
                 &int_to_str(i),exitstat=ierr)
         if(ierr/=0)then
-            write(0,'(" Error in running exe_spci_j2_mott_gap_trunc-4!")')
-        endif
-    elseif(gkmem%iembeddiag==-5)then
-        call execute_command_line('exe_spci_j2_mott_gap_trunc -i '// &
-                &int_to_str(i)//' -l 0.0 -e 1',exitstat=ierr)
-        if(ierr/=0)then
-            write(0,'(" Error in running exe_spci_j2_mott_gap_trunc-5!")')
-        endif
-    elseif(gkmem%iembeddiag==-6)then
-        call execute_command_line('exe_spci_j2_mott_gap_trunc -i '// &
-                &int_to_str(i),exitstat=ierr)
-        if(ierr/=0)then
-            write(0,'(" Error in running exe_spci_j2_mott_gap_trunc-6!")')
+            write(0,'(" Error in running exe_spci_sjz_mott!")')
         endif
     elseif(gkmem%iembeddiag==-21)then
         call execute_command_line('exe_spci_sz_mott '//int_to_str(i),  &
                 &exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running exe_spci_sz_mott!")')
-        endif
-    elseif(gkmem%iembeddiag==-31)then
-        call execute_command_line('exe_spci_s2_dsym_mott -i '//int_to_str(i),  &
-                &exitstat=ierr)
-        if(ierr/=0)then
-            write(0,'(" Error in running exe_spci_s2_dsym_mott!")')
-        endif
-    elseif(gkmem%iembeddiag==-10)then
-        call execute_command_line('exe_spci_bathtrunc '//int_to_str(i),  &
-                &exitstat=ierr)
-        if(ierr/=0)then
-            write(0,'(" Error in running exe_spci_bathtrunc!")')
         endif
     elseif(gkmem%iembeddiag==-11)then
         call execute_command_line(' gs_ml.py -i '//int_to_str(i)//' -l '// &
@@ -375,18 +338,6 @@ module gkernel
                 &int_to_str(ll), exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running gs_syten.py!")')
-        endif
-    elseif(gkmem%iembeddiag==-13)then
-        call execute_command_line(' gs_idmrg.py -i '//int_to_str(i)//' -l '// &
-                &int_to_str(ll), exitstat=ierr)
-        if(ierr/=0)then
-            write(0,'(" Error in running gs_idmrg.py!")')
-        endif
-    elseif(gkmem%iembeddiag==-15)then
-        call execute_command_line(' gs_ed.py -i '// &
-                &int_to_str(i), exitstat=ierr)
-        if(ierr/=0)then
-            write(0,'(" Error in running gs_ped!")')
         endif
 #endif
     else

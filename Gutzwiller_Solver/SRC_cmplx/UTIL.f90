@@ -429,10 +429,11 @@ module gutil
     end subroutine set_binoms
 
 
-    subroutine set_fock_state_indices(norb,binom,idx,bs,ibs,bs_sz)
+    subroutine set_fock_state_indices(norb,binom,idx,bs,ibs,bs_sz,sz_orb)
     integer,intent(in)::norb,binom(:,0:)
     integer,pointer,intent(inout)::idx(:),bs(:),ibs(:)
     real(q),pointer,optional,intent(inout)::bs_sz(:)
+    real(q),pointer,optional,intent(in)::sz_orb(:)
 
     integer i,nbs,num1
 
@@ -449,7 +450,11 @@ module gutil
         num1=popcnt(i)+1
         bs(idx(num1))=i
         if(present(bs_sz))then
-            call calc_state_sz(i,norb,bs_sz(idx(num1)),0)
+            if(.not.present(sz_orb))then
+                call calc_state_sz(i,norb,bs_sz(idx(num1)),0)
+            else
+                call calc_state_sz2(i,norb,bs_sz(idx(num1)),sz_orb)
+            endif
         endif
         idx(num1)=idx(num1)+1
     enddo
@@ -2390,6 +2395,24 @@ module gutil
     return
 
     end subroutine calc_state_sz
+
+
+    subroutine calc_state_sz2(bs,norb,sz,sz_orb)
+    integer,intent(in)::bs,norb
+    real(q),intent(in)::sz_orb(:)
+    real(q),intent(out)::sz
+
+    integer i
+
+    sz=0
+    do i=1,norb
+        if(btest(bs,i-1))then 
+            sz=sz+sz_orb(i)
+        endif
+    enddo
+    return
+
+    end subroutine calc_state_sz2
 
 
     subroutine sum_empty_slots_fs(bs,m,ilist,sume)

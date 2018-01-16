@@ -64,17 +64,21 @@ module gspci
 
     type gspci_mem
         integer::norb,norb2,nstates=0,nval_bot,nval_top,norb_mott=0, &
-                &nelect_mott=0,imp
+                &nelect_mott=0,imp, &
+                &sjz=1 ! sjz=0: use sz; sjz=1: use jz.
         type(dcoo_matrix),pointer::mcoo(:,:),nvcoo(:,:),npcoo(:,:)
         integer,pointer::bs(:),ibs(:),idx(:),bs_l(:),ibs_l(:),idx_l(:), &
                 &iorb_mott(:)=>null(),m_struct(:,:), &
                 &mem_binom(:,:)
+        type(ivector),allocatable::i_phi(:)
+        real(q),pointer::bs_sz(:)=>null(),bs_sz_l(:)=>null(), &
+                &sz_orb(:)=>null()
         complex(q),pointer::h1e(:,:),daalpha(:,:),lambdac(:,:), &
                 &v2e(:,:,:,:),dm(:,:),v(:), &
-                &svec(:,:,:),lvec(:,:,:),jvec(:,:,:)
+                &svec(:,:,:)=>null(),lvec(:,:,:)=>null(), &
+                &jvec(:,:,:)=>null(),jn(:,:)=>null()
         type(zcsr_matrix)::ucsr
-        type(dcsr_matrix)::s2op
-        real(q)::lambda_j2=.2_q,lambda_dsym=.2_q,etot
+        real(q)::lambda_j2=.0_q,etot
     end type gspci_mem
 
     type(gspci_mem)::dmem
@@ -85,15 +89,15 @@ module gspci
 
 
     subroutine gspci_gh5exe()
-    integer ierr,nv,idx,iembdv
+    integer j,ierr,nv,idx
     character*32 str
     real(q) etot,de
     complex(q) zes
     logical lexist
     character(255) cmd
 
+
     call get_command(cmd)
-    
     idx=index(cmd,'-i ')
     if(idx>0)then
         read(cmd(idx+2:),*)dmem%imp
@@ -102,31 +106,14 @@ module gspci
         dmem%imp=1
     endif
     write(0,'(" solving impurity ", i2)')dmem%imp
-
-    idx=index(cmd,'-l ')
+    idx=index(cmd,'-sz ')
     if(idx>0)then
-        read(cmd(idx+2:),*)dmem%lambda_j2
-    endif
-    write(0,'(" lambda_s2 = ", f0.4)')dmem%lambda_j2
-
-    idx=index(cmd,'-s ')
-    if(idx>0)then
-        read(cmd(idx+2:),*)dmem%lambda_dsym
-    endif
-    write(0,'(" lambda_dsym = ", f0.4)')dmem%lambda_dsym
-
-    idx=index(cmd,'-e ')
-    if(idx>0)then
-        read(cmd(idx+2:),*)iembdv
+        dmem%sjz=0
+        write(0,'(" with Sz contraints. ")')
     else
-        iembdv=0
+        write(0,'(" with Jz contraints. ")')
     endif
-    if(iembdv>0)then
-        write(0,'(" existing eigen-vector serves as the starting point.")')
-    else
-        write(0,'(" random vector serves as the starting point.")')
-    endif
-
+   
     call gh5_init()
     call gh5_open_r('EMBED_HAMIL_'//trim(int_to_str(dmem%imp))//'.h5',f_id)
     call gh5_read(dmem%norb,'/na2',f_id)
@@ -152,12 +139,29 @@ module gspci
     endif
     call gh5_close(f_id)
 
+    ! get jz or sz for the spin-orbitals
+    call gh5_open_r('GPARAM.h5',f_id)
+    allocate(dmem%svec(dmem%norb,dmem%norb,1))
+    call gh5_read(dmem%svec(:,:,1),dmem%norb,dmem%norb,'/IMPURITY_'// &
+            &trim(int_to_str(dmem%imp))//'/SZ',f_id)
+    allocate(dmem%lvec(dmem%norb,dmem%norb,1))
+    call gh5_read(dmem%lvec(:,:,1),dmem%norb,dmem%norb,'/IMPURITY_'// &
+            &trim(int_to_str(dmem%imp))//'/LZ',f_id)
+    call gh5_close(f_id)
+
+    allocate(dmem%sz_orb(dmem%norb))
+    do j=1,dmem%norb
+        dmem%sz_orb(j)=dmem%svec(j,j,1)
+        if(dmem%sjz==1)then
+            dmem%sz_orb(j)=dmem%sz_orb(j)+dmem%lvec(j,j,1)
+        endif
+    enddo
+
     call init_gspci_mem()
 
     ! Check previous solution vector
     inquire(file='EMBED_HAMIL_RES_'//trim(int_to_str(dmem%imp))//'.h5', &
             &exist=lexist)
-    lexist=lexist.and.(iembdv>0)
     if(lexist)then
         call gh5_open_r('EMBED_HAMIL_RES_'//trim(int_to_str(dmem%imp)) &
                 &//'.h5',f_id)
@@ -165,6 +169,9 @@ module gspci
         if(nv==dmem%nstates)then
             allocate(dmem%v(nv))
             call gh5_read(dmem%v,nv,'/evec',f_id)
+        else
+            write(0,'(" existing solution vec does not match in dimension,")')
+            write(0,'(" choose random vector to initialize!")')
         endif
         call gh5_close(f_id)
     endif
@@ -172,19 +179,10 @@ module gspci
     call solve_hembed_spci_drive()
     call calc_dm_spci()
 
-    call set_time_point(1,2)
-    call chk_eval_s2(.true.) 
-    call set_time_point(2,2)
-    call print_time_usage('chk_eval_s2',2,0)
-
-    call set_time_point(1,2)
-    call chk_eval_dsym(.true.)
-    call set_time_point(2,2)
-    call print_time_usage('chk_eval_dsym',2,0)
-
     de=trace_a(dmem%lambdac,dmem%norb) 
     dmem%etot=dmem%etot-de
 
+    ! s-vec, l-vec operator coefficient matrices.
     call gh5_open_w('EMBED_HAMIL_RES_'//trim(int_to_str(dmem%imp)) &
             &//'.h5',f_id)
     call gh5_write(dmem%etot,'/emol',f_id)
@@ -203,11 +201,10 @@ module gspci
     allocate(dmem%mem_binom(dmem%norb,0:dmem%norb))
     call set_binoms(dmem%norb,dmem%mem_binom)
     call set_fock_state_indices(dmem%norb,dmem%mem_binom,dmem%idx,dmem%bs, &
-            &dmem%ibs)
+            &dmem%ibs,dmem%bs_sz,dmem%sz_orb)
     call set_full_fock_states_l_spci()
     call set_mncoo_spci()
     call calc_ucsr_spci()
-    call set_s2_spci()
     return
 
     end subroutine init_gspci_mem
@@ -218,8 +215,6 @@ module gspci
     complex(q),intent(out)::a(n,n)
 
     call setup_hdns_spci_dlh(a,n)
-    call add_hdns_spci_s2(a,n)
-    write(0, '("discrete-symmetry projector not added!")')
     return
 
     end subroutine setup_hdns_spci
@@ -230,8 +225,6 @@ module gspci
     complex(q),intent(out)::v2(*)
 
     call av1_gspci_dlh(v1,v2)
-    call av1_gspci_s2(v1,v2)
-    call av1_gspci_dsym(v1,v2)
     return
 
     end subroutine av1_gspci   

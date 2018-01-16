@@ -420,7 +420,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     else:
         _mpi = mpi
 
-    p_list = ['gwien1', 'gwien2', 'exe_spci', 'exe_spci_s2_mott']
+    p_list = ['gwien1', 'gwien2']
     p_list.append(cygutz)
     for pa in pa_list:
         if pa not in p_list:

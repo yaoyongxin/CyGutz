@@ -21,7 +21,6 @@ if __name__ == "__main__":
     for f in glob.glob('*.h5') + ['Ce.kgen']:
         shutil.copy(f, tempd)
     os.chdir(tempd)
-    shutil.copy(os.environ['WIEN_GUTZ_ROOT2']+'/exe_spci', './')
     cmd = [os.environ['WIEN_GUTZ_ROOT2']+'/CyGutz']
     subprocess.call(cmd)
     unittest.main()
