@@ -100,8 +100,7 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
         print("\n Please select method for U-interaction double counting.\n" +
                 " LDC = 12: Recommended for LDA+G-RISB calculations.\n" +
                 "           Fully-localized-limit (FLL) double counting. \n" +
-                "           (updating Vdc at each charge iteration, \n" +
-                "           initial n0 to be provided.) \n" +
+                "           (updating Vdc at each charge iteration.) \n" +
                 "        2: Fix double counting potential \n" +
                 "           (keep same Vdc/n0 at each charge iteration,\n" +
                 "           n0 to be provided.) \n" +
@@ -157,12 +156,17 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
             ipos += 1
             stmp = sys.argv[ipos]
             unique_j_list = [float(s) for s in stmp.split('-')]
+        if ldc == 2:
+            ipos += 1
+            stmp = sys.argv[ipos]
+            unique_nf_list = [float(s) for s in stmp.split('-')]
     else:
         unique_df_list = []
         unique_corr_symbol_list = []
         unique_u_list = []
         unique_j_list = []
         unique_magmom_direction_list = []
+        unique_nf_list = []
         for i, s in enumerate(material.symbols):
             if s in material.symbols[:i]:
                 continue
@@ -195,6 +199,19 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
                 unique_u_list.append(UJ[0])
                 unique_j_list.append(UJ[1])
 
+            if ldc == 2:
+                while True:
+                    answer = raw_input(
+                            '\n Please provide the fixed number of' +
+                            '\n localized {}-electrons for Vdc: '.format(df))
+                    try:
+                        nf = float(answer)
+                        break
+                    except:
+                        continue
+                print(answer, file=usr_input)
+                unique_nf_list.append(nf)
+
             if 'y' == spin_polarization == spin_orbit_coup:
                 if 'y' == ferromagnetism:
                     vec = ferro_magmom_direction
@@ -209,6 +226,8 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
     if lhub > 0:
         f['/usrqa/unique_u_list_ev'] = unique_u_list
         f['/usrqa/unique_j_list_ev'] = unique_j_list
+    if ldc == 2:
+        f['/usrqa/unique_nf_list'] = unique_nf_list
     if 'y' == spin_polarization:
         f['/usrqa/unique_magmom_direction_list'] = \
                 unique_magmom_direction_list
