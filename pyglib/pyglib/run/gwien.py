@@ -202,6 +202,7 @@ def diff(fday, case, mix_dc, avg_dc):
         d_etot = 1.0
 
     with h5py.File("GPARAM.h5", 'a') as f:
+        ldc = f["/dc_mode"][0]
         if os.path.isfile("GDC_NELF_OUT.h5"):
             with h5py.File("GDC_NELF_OUT.h5", 'r') as fp:
                 nelf_list_inp = fp["/dc_nelf_list_inp"][()]
@@ -213,10 +214,11 @@ def diff(fday, case, mix_dc, avg_dc):
                 val = np.sum(nelf_list_mix)/len(nelf_list_mix)
                 nelf_list_mix = [val for x in nelf_list_inp]
                 dcv_err = np.sum(nelf_diff_list)/len(nelf_list_mix)
-            if '/dc_nelf_list' in f:
-                f["/dc_nelf_list"][()] = nelf_list_mix
-            else:
-                f["/dc_nelf_list"] = nelf_list_mix
+            if ldc == 12:
+                if '/dc_nelf_list' in f:
+                    f["/dc_nelf_list"][()] = nelf_list_mix
+                else:
+                    f["/dc_nelf_list"] = nelf_list_mix
         else:
             dcv_err = 0.
 
