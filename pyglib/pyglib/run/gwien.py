@@ -203,24 +203,25 @@ def diff(fday, case, mix_dc, avg_dc):
 
     with h5py.File("GPARAM.h5", 'a') as f:
         ldc = f["/dc_mode"][0]
+        dcv_err = 0.
         if os.path.isfile("GDC_NELF_OUT.h5"):
             with h5py.File("GDC_NELF_OUT.h5", 'r') as fp:
                 nelf_list_inp = fp["/dc_nelf_list_inp"][()]
                 nelf_list_out = fp["/dc_nelf_list_out"][()]
             nelf_diff_list = nelf_list_out - nelf_list_inp
-            dcv_err = np.max(np.abs(nelf_diff_list))
             nelf_list_mix = nelf_list_inp + mix_dc*nelf_diff_list
             if avg_dc:
                 val = np.sum(nelf_list_mix)/len(nelf_list_mix)
                 nelf_list_mix = [val for x in nelf_list_inp]
-                dcv_err = np.sum(nelf_diff_list)/len(nelf_list_mix)
             if ldc == 12:
+                if avg_dc:
+                    dcv_err = np.sum(nelf_diff_list)/len(nelf_list_mix)
+                else:
+                    dcv_err = np.max(np.abs(nelf_diff_list))
                 if '/dc_nelf_list' in f:
                     f["/dc_nelf_list"][()] = nelf_list_mix
                 else:
                     f["/dc_nelf_list"] = nelf_list_mix
-        else:
-            dcv_err = 0.
 
     fday.write(':ENERGY convergence: {}\n'.format(d_etot))
     fday.write(':CHARGE convergence: {}\n'.format(d_rho))
