@@ -9,7 +9,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   USE case,    ONLY: cf, maxsize, nl, cix, ll, iatom, maxdim, natom, ncix, isort, crotloc, ifirst
   USE sym2,    ONLY: tmat, phase, idet
   USE com,     ONLY: MINWAV, MAXWAV, iso, iso2, emin, emax, EF, WEIGH, &
-                    &elecn,BND_NE,EFMOD,DELTA
+                    &elecn,BND_NE,EFMOD,DELTA,gfile
   USE abc,     ONLY: KX, KY, KZ, BKX, BKY, BKZ, E, A, ALM, ALML
   USE kpts,    ONLY: mweight,tweight,numkpt,MSX,MSY,MSZ,MKNAME
   USE w_atpar, ONLY: w_alo, w_nlo, w_nlov, w_nlon, w_ilo, w_loor, w_lapw, &
@@ -41,7 +41,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   COMMON /ATSPDT/  P(0:LMAX2,2,nrf), DP(0:LMAX2,2,nrf)             ! changed by atpar
   REAL*8        :: P, DP
   !------- allocatable local varaibles
-  COMPLEX(8),ALLOCATABLE :: DMFTU(:,:,:),dmftu2(:,:),h1e_list(:,:,:),h1e_2(:,:)
+  COMPLEX(8),ALLOCATABLE :: DMFTU(:,:,:),dmftu2(:,:),h1e_list(:,:,:)
   real*8,     allocatable :: a_real(:)
   integer,    allocatable :: nbandsk(:), nemink(:)
   integer,    allocatable :: cixdim(:), iSx(:,:), nindo(:), csort(:), cix_orb(:)
@@ -62,7 +62,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   integer     :: lcase1, l1, N1, nidn, ndands, idt, num1, num2, num, iscf, maxdim2
   integer     :: m1, lms1, ind1, is2, m2, lms2, ind2, irf1, irf2
   integer     :: nomega, icix, LATEQ, JC
-  integer     :: i, ii, ii2, jj, j, iom, icase, lcase, is, is1, itape, jtape, jatom, i3, lda, ldb, ldc, irf, JR, INDEX
+  integer     :: i, ii, jj, j, iom, icase, lcase, is, is1, itape, jtape, jatom, i3, lda, ldb, ldc, irf, JR, INDEX
   integer     :: iorb, L, nind, ip, iq, it, ioccur, ic, ikp, iikp, ivector, &
                & iks,nkp,N, NE, NEMIN, NEMAX, nbands, isym, M, IND_YL, &
                & ibb, LATOM,nindot
@@ -74,7 +74,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   CHARACTER*200 :: FNAME
   complex*16  :: IMAG, gtc
   real*8, PARAMETER       :: Ry2eV = 13.60569193D0
-  CHARACTER*12 STR,str2
+  CHARACTER STR*12,str2*12,str_gfile*1
   !------------------------------------------------------------------
   DATA IMAG/(0.0D0,1.0D0)/
   !------------------------------------------------------------------     
@@ -111,6 +111,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   CALL GetSpinRotation(Rspin,rotij,crotloc,norbitals,natom,natm,iso,lmax2,iatom,nl,cix,ll,iorbital)
 
   IF(myrank.EQ.master) CALL GUTZ4_WRT(CFX,MAXDIM2,NORBITALS,NINDO)
+  write(str_gfile, '(I1)')gfile
 
   nindot=sum(NINDO)
   !-------------------------------------------------------------------------------------!
@@ -126,7 +127,6 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   end do
   
   call w_allocate(maxucase) !------ contains all variables which depend on atom / which are changed by atpar -----------!
-
 
   DO jatom=1,nat    !------  over all atoms (all sorts) even if we do not require qtl for them ------------------!
      iucase = csort(jatom) !--- this particular atom is requested in the input under index iucase --!
@@ -228,7 +228,11 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
         WRITE(STR,*)myrank
      endif
 
-     call gh5_open_w('BAREHAM_'//TRIM(ADJUSTL(STR))//'.h5',f_id)
+     if(gfile==2)then
+         call gh5_open_rw('BAREHAM_'//TRIM(ADJUSTL(STR))//'.h5',f_id)
+     else
+         call gh5_open_w('BAREHAM_'//TRIM(ADJUSTL(STR))//'.h5',f_id)
+     endif
 
      DO iks=1,nkp   !------ Over all irreducible k-points ------!
         Tcompute=.TRUE.
@@ -245,7 +249,9 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
         endif
 
         WRITE(STR,*)ikp
-        call gh5_create_group('/IKP_'//TRIM(ADJUSTL(STR)), f_id)
+        if(gfile==1)then
+            call gh5_create_group('/IKP_'//TRIM(ADJUSTL(STR)), f_id)
+        endif
 
      !------- reading from vector for both spins -----------!
         DO is=1,iso    !------ over up/dn ---------------------!
@@ -285,7 +291,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
            ENDIF
         ENDDO  ! is
         call gh5_write(E(1:NE),NE,'/IKP_'//TRIM(ADJUSTL(STR))// &
-                &'/ek0',f_id)
+                &'/ek0_spin'//str_gfile,f_id)
         if (.not.Tcompute) CYCLE  
         ! This k-points was read, but will not be computed on this processor
         !---  Finished reading eigenvectors and eigenvalues for both spins -----!
@@ -429,8 +435,10 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
            ENDDO  ! over atom-cases
 
            WRITE(STR2,*)isym
-           call gh5_create_group('/IKP_'//TRIM(ADJUSTL(STR))//&
-                    &'/ISYM_'//TRIM(ADJUSTL(STR2)), f_id)
+           if(gfile==1)then
+               call gh5_create_group('/IKP_'//TRIM(ADJUSTL(STR))//&
+                        &'/ISYM_'//TRIM(ADJUSTL(STR2)), f_id)
+           endif
            l1=0
            DO I=1,NORBITALS; DO II=1,NINDO(I)
              l1=l1+1
@@ -440,12 +448,13 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
            call zappend_complementary_space(dmftu2,nbands,nindot)
            if(isym==sym_ie)then
                 call gh5_write(dmftu2,nbands,nbands,'/IKP_'// &
-                        &TRIM(ADJUSTL(STR))//'/T_PSIK0_TO_HK0_BASIS',f_id)
+                        &TRIM(ADJUSTL(STR))// &
+                        &'/T_PSIK0_TO_HK0_BASIS_SPIN'//str_gfile,f_id)
            endif
            call zget_hamilt_from_ev(dmftu2,e(nemin:nemax),nbands)
            call gh5_write(dmftu2,nbands,nbands,'/IKP_'// &
-                &TRIM(ADJUSTL(STR))//'/ISYM_'//TRIM(ADJUSTL(STR2))// &
-                &'/HK0',f_id)
+                   &TRIM(ADJUSTL(STR))//'/ISYM_'//TRIM(ADJUSTL(STR2))// &
+                   &'/HK0_SPIN'//str_gfile,f_id)
            ! Calculate local one-body part of H
            l1=0
            do i=1,norbitals
@@ -477,24 +486,17 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   call zsum_master_mpi(h1e_list,maxdim2*maxdim2*norbitals)
 #endif
 
-  allocate(h1e_2(maxdim2*2/iso,maxdim2*2/iso))
-  h1e_2=0
   if(myrank.eq.master)then
       do i=1,norbitals
         ii=nindo(i)
-        ii2=ii*2/iso
         WRITE(STR,*)i
-        if(iso==2)then
-            h1e_2=h1e_list(:,:,i)
-        else
-            h1e_2(1:ii,1:ii)=h1e_list(1:ii,1:ii,i)
-            h1e_2(1+ii:,1+ii:)=h1e_list(1:ii,1:ii,i)
-        endif
-        call gh5_write(h1e_2(1:ii2,1:ii2),ii2,ii2,&
-                &'/IMPURITY_'//TRIM(ADJUSTL(STR))//'/H1E',log_file_id)
+        call gh5_write(h1e_list(1:ii,1:ii,i),ii,ii,&
+                &'/IMPURITY_'//TRIM(ADJUSTL(STR))// &
+                &'/H1E_SPIN'//str_gfile, &
+                &log_file_id)
       enddo
   endif
-  deallocate(h1e_2,h1e_list)
+  deallocate(h1e_list)
 
   DEALLOCATE( Rspin )
 

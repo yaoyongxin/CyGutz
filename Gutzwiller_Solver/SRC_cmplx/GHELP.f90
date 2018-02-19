@@ -155,7 +155,7 @@ subroutine gh5_wrt_kswt()
     implicit none
 
     real(8) vnorm1,e_gamma_dc
-    integer ivec,ikp,ikpl,iks,nkp,nbands
+    integer ivec,ikp,ikpl,iks,nkp,nbands,isp
     integer nemin,nemax
     complex(8),pointer :: p_kswt(:,:)
       
@@ -171,21 +171,30 @@ subroutine gh5_wrt_kswt()
         call gh5_write(bnd%eband,'/e_band',f_id)
         do iks=1,gp%kvec(ivec,2)
             ikp=gp%kvec(ivec,3)+iks
-                if(gp%ipar==1)then
-                    ikpl=ikp
-                else
-                    ikpl=ikpl+1
+            if(gp%ipar==1)then
+                ikpl=ikp
+            else
+                ikpl=ikpl+1
+            endif
+            do isp=1,bnd%ispin_in
+                nbands=bnd%ne(3,ikp,isp)-bnd%ne(2,ikp,isp)+1
+                p_kswt(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,sym%ie, &
+                        &ikpl,isp)
+                p_kswt=p_kswt/vnorm1 ! to be consistent with dmft2
+                if(isp==1)then
+                    call gh5_create_group('/IKP_'//trim(int_to_str(ikp)), &
+                            & f_id)
                 endif
-            nbands=bnd%ne(3,ikp)-bnd%ne(2,ikp)+1
-            p_kswt(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,sym%ie,ikpl)
-            p_kswt=p_kswt/vnorm1 ! to be consistent with dmft2
-            call gh5_create_group('/IKP_'//trim(int_to_str(ikp)), f_id)
-            call gh5_write(bnd%ne(2,ikp), &
-                        &'/IKP_'//trim(int_to_str(ikp))//'/nemin',f_id)
-            call gh5_write(bnd%ne(3,ikp), &
-                        &'/IKP_'//trim(int_to_str(ikp))//'/nemax',f_id)
-            call gh5_write(p_kswt,nbands,nbands, &
-                    &'/IKP_'//trim(int_to_str(ikp))//'/KSWT',f_id)
+                call gh5_write(bnd%ne(2,ikp,isp), &
+                        &'/IKP_'//trim(int_to_str(ikp))// &
+                        &'/nemin_spin'//trim(int_to_str(isp)),f_id)
+                call gh5_write(bnd%ne(3,ikp,isp), &
+                        &'/IKP_'//trim(int_to_str(ikp))// &
+                        &'/nemax_spin'//trim(int_to_str(isp)),f_id)
+                call gh5_write(p_kswt,nbands,nbands, &
+                        &'/IKP_'//trim(int_to_str(ikp))// &
+                        &'/KSWT_SPIN'//trim(int_to_str(ikp)),f_id)
+            enddo
         enddo
         call gh5_close(f_id)
     enddo

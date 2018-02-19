@@ -84,8 +84,8 @@ SUBROUTINE GTFNAM(DEFFN,ERRFN)
   INTEGER            I
 ! extract the command-line argument
 
-  DEFFN = argv(1)                                                                                                                            
-  
+  DEFFN = argv(1)
+
 ! generate a name for the error-message file
   DO I = LEN(DEFFN), 1, -1
      IF (DEFFN(I:I) .EQ. '.') THEN

@@ -40,35 +40,34 @@ PROGRAM DMFTMAIN
   DIMENSION  S(3)
   DATA SO /.false./, Qcomplex /.false./, IMAG/(0.0D0,1.0D0)/, Ry2eV/13.60569193D0/
   DATA strlen/200/
-  !------------------------------------------------------------------     
-  ! URS.tmp  | 29 | remove
-  ! URS.dmat | 12 | remove
+
 
   CALL start_MPI()
-  
   CALL GTFNAM(DEFFN,ERRFN)
-
   if (myrank.EQ.master) CALL ERRFLG(ERRFN,'Error in DMFT')
   
   nspin1=1
-  OPEN (1,FILE=DEFFN,STATUS='OLD',ERR=910,IOSTAT=ios) ! opens dmft0.def file
+  OPEN (1,FILE=DEFFN,STATUS='OLD',ERR=910,IOSTAT=ios) ! opens gwien1.def file
 
   vector_para = .False.  
   iso=1
   iso2=1
-  ! The following few lines read dmft1.def file containing all filename definitions
-  !
+  ! The following few lines read gwien1.def file 
+  ! containing all filename definitions
   DO 
      READ (1,*,END=20,ERR=960) IUNIT,FNAME,STATUS,FORM,IRECL  ! can jump to 20
-     !print *, 'Opening file', FNAME
-     if(iunit.eq.6 .AND. (myrank.EQ.master .OR. fastFilesystem) ) CALL FilenameMPI(FNAME)    ! Each processor will have different information file 
+     if(iunit.eq.6 .AND. (myrank.EQ.master .OR. fastFilesystem)) &
+            &CALL FilenameMPI(FNAME)    
+     ! Each processor will have different information file 
 
      lngth = Len_Trim(FNAME)
      if ( FNAME(lngth-1:lngth).EQ.'_x' ) then
         FNAME = FNAME(:lngth-2)
         vector_para = .True.
      else
-        if ( iunit.lt.180  .or. myrank.eq.master .or. (iunit.eq.6.and.fastFilesystem)) then            ! output files (iunit>=100) should be open on master node only
+        if ( iunit.lt.180  .or. myrank.eq.master .or. &
+            &(iunit.eq.6.and.fastFilesystem)) then            
+        ! output files (iunit>=100) should be open on master node only.
            OPEN (IUNIT,FILE=FNAME,STATUS=STATUS,FORM=FORM,ERR=920)
         endif
      endif
@@ -81,7 +80,7 @@ PROGRAM DMFTMAIN
         do i=strlen,5,-1
            if(fname(i:i).ne.' ') then
               if(fname(i-2:i).eq.'pup') nspin1=2
-              if(fname(i-2:i).eq.'pdn') nspin1=2  ! added 10.07.08 PN
+              if(fname(i-2:i).eq.'pdn') nspin1=2 
            endif
         enddo
      endif
@@ -117,7 +116,7 @@ PROGRAM DMFTMAIN
   ENDDO ! 10
 20 CONTINUE
   CLOSE (1)
-  ! finished dmft0.def
+  ! finished gwien1.def
 
   !.....READING STRUCT 
   ! It reads case.struct file and saves data into module named "param". These variables are available in dmftmain.f.
@@ -482,12 +481,18 @@ PROGRAM DMFTMAIN
   call gh5_init()
   sym_ie=get_sym_ie(iord,iz,tau)
   IF(MYRANK.eq.MASTER)THEN
-      call gh5_open_w('GPARAMBANDS.h5', log_file_id)
-      call gh5_write(iso,'/iso/',log_file_id)
-      call gh5_write(iso2,'/ispin',log_file_id)
-      call gh5_write(nume,'/nbmax',log_file_id)
-      call gh5_write(iord,'/symnop',log_file_id)
-      call gh5_write(sym_ie,'/symie',log_file_id)
+      if(gfile==2)then
+          call gh5_open_rw('GPARAMBANDS.h5', log_file_id)
+      else
+          call gh5_open_w('GPARAMBANDS.h5', log_file_id)
+      endif
+      if(gfile==1)then
+          call gh5_write(iso,'/iso/',log_file_id)
+          call gh5_write(iso2,'/ispin',log_file_id)
+          call gh5_write(nume,'/nbmax',log_file_id)
+          call gh5_write(iord,'/symnop',log_file_id)
+          call gh5_write(sym_ie,'/symie',log_file_id)
+      endif
   ENDIF
 
 #ifdef MPI

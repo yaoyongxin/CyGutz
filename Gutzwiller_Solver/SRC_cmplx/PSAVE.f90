@@ -138,7 +138,7 @@ module psave
 
 
     subroutine postsave_gbands()
-    integer ivec,isp,ikp,ikpl,kbase,iks,nbtot,isym,nbands
+    integer ivec,isp,ispp,ikp,ikpl,kbase,iks,nbtot,isym,nbands
     complex(q),pointer::p_vk(:,:)
     
     ikpl=0
@@ -148,6 +148,7 @@ module psave
         call gh5_write(gp%kvec(ivec,3)+1,"/IKP_START",f_id)
         call gh5_write(gp%kvec(ivec,3)+gp%kvec(ivec,2),"/IKP_END",f_id)
         do isp=1,wh%nspin
+            ispp=min(isp,bnd%ispin_in)
             ikpl=kbase
             call gh5_create_group("/ISPIN_"//trim(int_to_str(isp)),f_id)
             do iks=1,gp%kvec(ivec,2)
@@ -159,12 +160,12 @@ module psave
                 endif
                 call gh5_create_group("/ISPIN_"//trim(int_to_str(isp))// &
                         &"/IKP_"//trim(int_to_str(ikp)),f_id)
-                nbtot=bnd%ne(1,ikp)
+                nbtot=bnd%ne(1,ikp,ispp)
                 call gh5_write(bnd%ek(:,ikp,isp),nbtot,"/ISPIN_"// &
                         &trim(int_to_str(isp))// &
                         &"/IKP_"//trim(int_to_str(ikp))// &
                         &"/ek",f_id)
-                nbands=bnd%ne(3,ikp)-bnd%ne(2,ikp)+1
+                nbands=bnd%ne(3,ikp,ispp)-bnd%ne(2,ikp,ispp)+1
                 do isym=1,sym%nop
                     call gh5_create_group("/ISPIN_"//trim(int_to_str(isp))//&
                             &"/IKP_"//trim(int_to_str(ikp))// &

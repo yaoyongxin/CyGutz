@@ -1,5 +1,6 @@
 !*****************************************************************************
 ! set bnd_ne: correlated band interval
+! here we prefer to use the e_fermi for each spin-channel.
 !*****************************************************************************
 subroutine gutz_set_ef_lda(nume,nkpt,projector)
     use com, only: emin,emax,ef,iso,iso2,bnd_ne,bnd_ek
@@ -15,7 +16,7 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     integer nume,nkpt,projector
       
     integer k,ikp,n,nen,i,ii,ios,num,nemin,nemax
-    integer ivector,itape,is
+    integer ivector,itape,is,iso_
     real(8) ss,t,z,e1
     logical linef
     character*10 kname
@@ -26,15 +27,17 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     allocate(bnd_ek(nume,nkpt)); bnd_ek=0
     allocate(bnd_ne(3,nkpt)); bnd_ne=0
       
+    ! Use only one spin-channel
+    iso_ = 1
     do ivector=1,nvector
         if (vector_para) then
-            do is=1,iso    !------ over up/dn ---------------------!
+            do is=1,iso_    !------ over up/dn ---------------------!
                 fname = fvectors(ivector, is+2)
                 itape=61-is
                 open(itape,file=fname,status='old',form='formatted')
             enddo
         endif
-        do is=1,iso
+        do is=1,iso_
             itape = 61-is
             do i=1,nat
                 read(itape,*); read(itape,*)
@@ -56,7 +59,7 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
                 enddo
             enddo
         end do
-        do is=1,iso    !------ over up/dn ---------------------!
+        do is=1,iso_    !------ over up/dn ---------------------!
             itape=61-is
             if (vector_para) then
                 close(itape)
@@ -111,8 +114,24 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     return
       
 end subroutine gutz_set_ef_lda
-  
-!*****************************************************************************
+
+
+subroutine set_gfile(deffn)
+    use com,only: gfile
+    implicit none
+    character*(*)deffn
+
+    integer idx
+
+    idx = index(deffn,".def")
+    if(deffn(idx-2:idx-1)=="dn")then
+        gfile=2
+    endif
+    return
+    
+end subroutine set_gfile
+
+
 subroutine gutz_fermi(iso,jspin)
     ! nelec is the number of electrons in this compound
     ! ef is the fermi-energy to be calculated
@@ -123,19 +142,16 @@ subroutine gutz_fermi(iso,jspin)
     implicit none
     integer iso,jspin
       
-    integer ik,ib,isp,nspin,nvmax
+    integer ik,ib,isp,nvmax
     real(8) e1
       
     call init_bandm(nume)
       
-    nspin=max(1,jspin/iso)
-    do isp=1,nspin
-        do ik=1,nkpt
-            do ib=1,bnd_ne(1,ik)
-                e1=bnd_ek(ib,ik)
-                if(e1.gt.ebmax(ib)) ebmax(ib)=e1
-                if(e1.lt.ebmin(ib)) ebmin(ib)=e1
-            enddo
+    do ik=1,nkpt
+        do ib=1,bnd_ne(1,ik)
+            e1=bnd_ek(ib,ik)
+            if(e1.gt.ebmax(ib)) ebmax(ib)=e1
+            if(e1.lt.ebmin(ib)) ebmin(ib)=e1
         enddo
     enddo
       
@@ -183,7 +199,6 @@ subroutine gutz_fermi_tetra(nbmax,iso,jspin)
     if(abs(ef).ge.100.d0) icor=0
     !     cordeg is a switch to correct occupancy of degenerate states
     cordeg=-1.d-6
-    nspin=max(1,jspin/iso)
     if(ef.gt.0.d0)  cordeg=-ef
     if(ef-100.d0.gt.0.d0) cordeg=-ef+100.d0
     if(ef.lt.0.d0)        cordeg=ef
@@ -202,7 +217,7 @@ subroutine gutz_fermi_tetra(nbmax,iso,jspin)
     do ik=1,nkpt
         eb(1:bnd_ne(1,ik),ik,1)=bnd_ek(1:bnd_ne(1,ik),ik)
     enddo
-    if(nspin==1)eb(:,:,2)=eb(:,:,1)
+    eb(:,:,2)=eb(:,:,1)
     !.....more dimens.representation,if delta e less then test1
     elecn=elecn-1.d-10
     !para begin
@@ -402,6 +417,7 @@ end function get_sym_ie
 !*****************************************************************************
 subroutine gutz4_wrt(cfx,maxdim2,norbitals,nindo)
     use ghdf5_base
+    use com,only: gfile
     implicit none
     integer maxdim2,norbitals,nindo(norbitals)
     complex(8) cfx(maxdim2,maxdim2,norbitals,norbitals)
@@ -409,7 +425,8 @@ subroutine gutz4_wrt(cfx,maxdim2,norbitals,nindo)
     integer i1,i2,nindo_
     complex(8) c2n(maxdim2,maxdim2)
     character str*7
-     
+    
+    if(gfile==2)return
     do i1=1,norbitals
         do i2=1,norbitals
             if(i1.eq.i2)cycle
@@ -420,14 +437,16 @@ subroutine gutz4_wrt(cfx,maxdim2,norbitals,nindo)
         write(str,'(I7)')i1
         call gh5_create_group("/IMPURITY_"//trim(adjustl(str)),log_file_id)
     enddo
-      
+     
     do i1=1,norbitals
         write(str,'(I7)')i1
         nindo_=nindo(i1)
         c2n=0
-        c2n(1:nindo_,1:nindo_)=transpose(conjg(cfx(1:nindo_,1:nindo_,i1,i1)))
-        call gh5_write(c2n(1:nindo_,1:nindo_),nindo_,nindo_,"/IMPURITY_"// &
-                &trim(adjustl(str))//"/T_SPHERICALHARMONICS_TO_LOCALBASIS1", &
+        c2n(1:nindo_,1:nindo_)=transpose(conjg( &
+                &cfx(1:nindo_,1:nindo_,i1,i1)))
+        call gh5_write(c2n(1:nindo_,1:nindo_),nindo_,nindo_,"/IMPURITY_"//&
+                &trim(adjustl(str))//&
+                &"/T_SPHERICALHARMONICS_TO_LOCALBASIS1", &
                 &log_file_id)
     enddo
     return
@@ -437,22 +456,20 @@ end subroutine gutz4_wrt
 !*****************************************************************************
 subroutine gutz5_wrt(nkp,wt,nelet,ne,kx,ky,kz,kname,efmod,delta)
     use ghdf5_base
+    use com,only: gfile
     implicit none
     integer nkp
     real(8) wt(nkp),nelet,delta
     integer :: ne(3,nkp)
     real(8) :: kx(nkp),ky(nkp),kz(nkp)
     character*10::kname(nkp)
-    character*5::efmod
+    character::efmod*5,str1*1
     common /gener/ br1(3,3), br2(3,3)
     real(8) :: br1, br2
       
     integer i,ismear
-    character::file_name*512
+    character::file_name*512,str*1
       
-    call gh5_write(nkp,'/kptdim',log_file_id)
-    call gh5_write(wt,nkp,'/kptwt',log_file_id)
-
     if(efmod=='GAUSS')then
         ismear=0
     elseif(efmod=='TETRA')then
@@ -462,20 +479,24 @@ subroutine gutz5_wrt(nkp,wt,nelet,ne,kx,ky,kz,kname,efmod,delta)
     else
         write(0,'(" efmod=",a6)')efmod; stop ' error: unsupported efmod!'
     endif
-
-    call gh5_write(ismear,'/ismear',log_file_id)
-    call gh5_write(delta,'/delta',log_file_id)
-    call gh5_write(nelet,'/nelectron',log_file_id)
-    call gh5_write(ne,3,nkp,'/NE_LIST',log_file_id)
-
-    inquire(unit=14,name=file_name)
-    file_name=file_name(index(file_name,'/',.true.)+1:)
-    call gh5_write(file_name,512,'/kptfname',log_file_id)
-    call gh5_write(kname,10,nkp,'/kptname',log_file_id)
-    call gh5_write(kx,nkp,'/kptx',log_file_id)
-    call gh5_write(ky,nkp,'/kpty',log_file_id)
-    call gh5_write(kz,nkp,'/kptz',log_file_id)
-    call gh5_write(br2,3,3,'/recip_prim_vec',log_file_id)
+    
+    if(gfile==1)then
+        call gh5_write(nkp,'/kptdim',log_file_id)
+        call gh5_write(wt,nkp,'/kptwt',log_file_id)
+        call gh5_write(ismear,'/ismear',log_file_id)
+        call gh5_write(delta,'/delta',log_file_id)
+        call gh5_write(nelet,'/nelectron',log_file_id)
+        inquire(unit=14,name=file_name)
+        file_name=file_name(index(file_name,'/',.true.)+1:)
+        call gh5_write(file_name,512,'/kptfname',log_file_id)
+        call gh5_write(kname,10,nkp,'/kptname',log_file_id)
+        call gh5_write(kx,nkp,'/kptx',log_file_id)
+        call gh5_write(ky,nkp,'/kpty',log_file_id)
+        call gh5_write(kz,nkp,'/kptz',log_file_id)
+        call gh5_write(br2,3,3,'/recip_prim_vec',log_file_id)
+    endif
+    write(str1,'(i1)')gfile
+    call gh5_write(ne,3,nkp,'/NE_LIST_SPIN'//str,log_file_id)
     return
       
 end subroutine gutz5_wrt
@@ -483,13 +504,14 @@ end subroutine gutz5_wrt
 !*****************************************************************************
 subroutine gmpi_wrt()
     use com_mpi
+    use com, only: gfile
     use ghdf5_base
     implicit none
       
     integer i
     character*7 str1
     
-    if(nprocs==1)return
+    if(nprocs==1.or.gfile==2)return
     write(str1,'(i7)')myrank
     call gh5_open_w('GMPI_'//trim(adjustl(str1))//'.h5', f_id)
     call gh5_write(myrank,'/myrank',f_id)
@@ -508,11 +530,15 @@ end subroutine gmpi_wrt
   
 !*****************************************************************************
 subroutine gutz_read_fermi(ef,iu)
-    integer iu
+    use com, only: gfile
+    implicit none
+    integer iu,i
     real(8) ef
       
     open(iu,file='EFLDA.INP',status='old')
-    read(iu,*)ef
+    do i=1,gfile
+        read(iu,*)ef
+    enddo
     close(iu)
     return
       
@@ -520,10 +546,16 @@ end subroutine gutz_read_fermi
   
 !*****************************************************************************
 subroutine gutz_wrt_fermi(ef,iu)
+    use com, only: gfile
+    implicit none
     integer iu
     real(8) ef
-      
-    open(iu,file='EFLDA.OUT',status='replace')
+    
+    if(gfile==1)then
+        open(iu,file='EFLDA.OUT',status='replace')
+    else
+        open(iu,file='EFLDA.OUT',status='old',access="append")
+    endif
     write(iu,*)ef,' ! ef_lda'
     close(iu)
     return
@@ -533,6 +565,7 @@ end subroutine gutz_wrt_fermi
 
 ! Assume m>=n
 subroutine zlowdin_orthogonalization(a,m,n)
+    implicit none
     integer,intent(in)::m,n
     complex(8),intent(inout)::a(m,n)
 
@@ -557,6 +590,7 @@ end subroutine zlowdin_orthogonalization
 
 ! Assume m>n
 subroutine zappend_complementary_space(a,m,n)
+    implicit none
     integer,intent(in)::m,n
     complex(8),intent(inout)::a(m,m)
 
@@ -584,6 +618,7 @@ end subroutine zappend_complementary_space
 
 
 subroutine zget_hamilt_from_ev(v,w,m)
+    implicit none
     integer,intent(in) :: m
     complex(8) v(m,m)
     real(8) w(m)

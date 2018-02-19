@@ -466,6 +466,39 @@ module warehouse
     end subroutine eval_sl_vec_all
 
 
+    subroutine gh5_read_wh_h1e(ispin_in)
+    integer,intent(in)::ispin_in
+
+    integer i,naso,na22,ibase
+    complex(q),allocatable::h1e(:,:)
+
+    do i=1,wh%num_imp
+        naso=wh%naso_imp(i)
+        if(i>1)then
+            if(wh%naso_imp(i-1)/=naso)then
+                deallocate(h1e)
+                allocate(h1e(naso,naso))
+            endif
+        else
+            allocate(h1e(naso,naso))
+        endif
+        call gh5_read(h1e,naso,naso,'/IMPURITY_'//trim(int_to_str(i))//"/H1E",&
+                &f_id)
+        wh%co(i)%h1e(1:naso,1:naso)=h1e
+        if(wh%iso==1)then
+            if(ispin_in==2)then
+                call gh5_read(h1e,naso,naso,'/IMPURITY_' &
+                        &//trim(int_to_str(i))//"/H1E_SPIN2",f_id)
+            endif
+            wh%co(i)%h1e(1+naso:,1+naso:)=h1e
+        endif
+    enddo
+    deallocate(h1e)
+    return
+      
+    end subroutine gh5_read_wh_h1e
+
+
     subroutine gh5_read_wh_matrix_list(apath, dim_imp, a)
     character(*),intent(in)::apath
     integer,intent(in)::dim_imp(*)

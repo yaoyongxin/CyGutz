@@ -149,6 +149,7 @@ MODULE com
   REAL*8              :: emin,emax,ef,elecn,delta
   REAL*8              :: delef,ts2
   CHARACTER*5         :: efmod
+  integer             :: gfile=1 ! interface file index.
   INTEGER,POINTER :: BND_NE(:,:)
   REAL(8),POINTER :: BND_EK(:,:)
  CONTAINS

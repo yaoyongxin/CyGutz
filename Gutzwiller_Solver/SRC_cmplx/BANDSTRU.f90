@@ -68,14 +68,14 @@ module bandstru
         integer n_frozen
         real(q) ehybrd,eband,ets2,edl
         !< ne(3). 1: total number of bands, 2-3: correlated bands interval
-        integer,pointer :: ne(:,:)        
+        integer,pointer :: ne(:,:,:)
         real(q),pointer :: ek(:,:,:) ! kohn-sham / gutz eigen values
 
         complex(q),pointer :: r(:,:,:),la1(:,:,:),nc_phy(:,:,:),nks(:,:,:), &
                 &d0(:,:,:),nrl(:,:,:) ! for onsite local 1pdm
 
         complex(q),pointer :: vk (:,:,:,:) !< eigen-vector
-        complex(q),pointer :: hk0(:,:,:) !< lda bare dispersion
+        complex(q),pointer :: hk0(:,:,:,:) !< lda bare dispersion
         integer nmax ! nmax: miximal number of bands
         integer nmaxin !< maximal number of bands inside the enrgy window.
         real(q),pointer :: ferwe(:,:,:),ferwer(:,:,:) 
@@ -108,7 +108,7 @@ module bandstru
     subroutine set_bnd_info(io)
     integer,intent(in)::io
 
-    integer iso
+    integer iso,isp
     logical lexist
 
     bnd%nelet_frozen=sum(wh%fz(:)%nelect)
@@ -119,15 +119,25 @@ module bandstru
     call gh5_read(bnd%ispin_in,'/ispin',f_id)
     call gh5_read(kpt%dim,'/kptdim',f_id)
     call gh5_read(bnd%nmax,'/nbmax',f_id)
-    allocate(bnd%ne(3,kpt%dim))
+    if(io>0)then
+        write(io,'(" ispin_in=",i2," iso=",i2, &
+                &" ispin=",i2," ispo=",i2)')bnd%ispin_in, &
+                &wh%iso,wh%ispin,wh%ispo
+    endif
+    ! modify ispin_in for iso=2
+    bnd%ispin_in=max(1, bnd%ispin_in/iso)
+    allocate(bnd%ne(3,kpt%dim,bnd%ispin_in))
     call h5lexists_f(f_id,'/NE_LIST',lexist,gh5_err)
     if(lexist)then
         ! upper-case name: fortran convention
-        call gh5_read(bnd%ne,3,kpt%dim,'/NE_LIST',f_id)
+        do isp=1,bnd%ispin_in
+            call gh5_read(bnd%ne(:,:,isp),3,kpt%dim,'/NE_LIST_SPIN'//&
+                    &trim(int_to_str(isp)),f_id)
+        enddo
     else
-        bnd%ne(1,:)=bnd%nmax
-        bnd%ne(2,:)=1
-        bnd%ne(3,:)=bnd%nmax
+        bnd%ne(1,:,:)=bnd%nmax
+        bnd%ne(2,:,:)=1
+        bnd%ne(3,:,:)=bnd%nmax
     endif
     call h5lexists_f(f_id,'/ensemble',lexist,gh5_err)
     if(lexist)then
@@ -145,11 +155,11 @@ module bandstru
     endif
     call gh5_read(sym%nop,'/symnop',f_id)
     call gh5_read(sym%ie,'/symie',f_id)
-    call gh5_read_wh_matrix_list('/H1E',wh%na2_imp,wh%h1e)
-    call rotate_h1e_list()
-    call calc_herm_matrices_pp(wh%h1e,'h1e',wh%hm,.false.,io,-1)
+    call gh5_read_wh_h1e(bnd%ispin_in)
     call gh5_close(f_id)
 
+    call rotate_h1e_list()
+    call calc_herm_matrices_pp(wh%h1e,'h1e',wh%hm,.false.,io,-1)
     kpt%twt=sum(kpt%wt)
     kpt%wt=kpt%wt/kpt%twt
 
@@ -158,22 +168,22 @@ module bandstru
         stop ' error in set_bnd_info: wh%iso /= bnd%iso!'
     endif
 
-    bnd%nmaxin=maxval(bnd%ne(3,:)-bnd%ne(2,:)+1)
+    bnd%nmaxin=maxval(bnd%ne(3,:,:)-bnd%ne(2,:,:)+1)
     if(io>0)then
-        write(io,'(" min/max(bnd%ne(1,:))=",2i8)')minval(bnd%ne(1,:)), &
-                &maxval(bnd%ne(1,:))
-        write(io,'(" min/max(bnd%ne(2,:))=",2i8)')minval(bnd%ne(2,:)), &
-                &maxval(bnd%ne(2,:))
-        write(io,'(" min/max(bnd%ne(3,:))=",2i8)')minval(bnd%ne(3,:)), &
-                &maxval(bnd%ne(3,:))
+        write(io,'(" min/max(bnd%ne(1,:,:))=",2i8)')minval(bnd%ne(1,:,:)), &
+                &maxval(bnd%ne(1,:,:))
+        write(io,'(" min/max(bnd%ne(2,:,:))=",2i8)')minval(bnd%ne(2,:,:)), &
+                &maxval(bnd%ne(2,:,:))
+        write(io,'(" min/max(bnd%ne(3,:,:))=",2i8)')minval(bnd%ne(3,:,:)), &
+                &maxval(bnd%ne(3,:,:))
     endif
 
-    bnd%nelec=sum((bnd%ne(2,:)-1)*kpt%wt)*wh%rspo
+    bnd%nelec=0
+    do isp=1,bnd%ispin_in
+        bnd%nelec=bnd%nelec+sum((bnd%ne(2,:,isp)-1)*kpt%wt)*wh%rspo
+    enddo
     bnd%nelel=bnd%nelet-bnd%nelec
     if(io>0)then
-        write(io,'(" ispin_in=",i2," iso=",i2, &
-                &" ispin=",i2," ispo=",i2)')bnd%ispin_in, &
-                &wh%iso,wh%ispin,wh%ispo
         write(io,'(" bnd%nmax=",i4)')bnd%nmax
         write(io,'(" valence electrons: total=",f8.1)')bnd%nelet
         write(io,'("                    correlated block=",f8.1)')bnd%nelel
@@ -203,7 +213,7 @@ module bandstru
     allocate(bnd%ferwe (bnd%nmax,kpt%dim,wh%nspin))
     allocate(bnd%ferwer(bnd%nmax,kpt%dim,wh%nspin))
     allocate(bnd%ek(bnd%nmax,kpt%dim,wh%nspin))
-    allocate(bnd%hk0(bnd%nmaxin**2,sym%nop,kpt%diml))
+    allocate(bnd%hk0(bnd%nmaxin**2,sym%nop,kpt%diml,bnd%ispin_in))
     allocate(bnd%vk (bnd%nmaxin**2,sym%nop,kpt%diml, &
             &wh%nspin))
     allocate(bnd%r  (wh%nasotot,wh%nasotot,wh%nspin))
@@ -221,7 +231,7 @@ module bandstru
     
 
     subroutine read_bare_hamiltonian()
-    integer ivec,ikp,ikpl,iks,nbtot,isym,nbands
+    integer ivec,ikp,ikpl,iks,nbtot,isym,nbands,isp
     complex(q),pointer::p_hk0(:,:)
       
     ikpl=0
@@ -234,18 +244,25 @@ module bandstru
             else
                 ikpl=ikpl+1
             endif
-            nbtot=bnd%ne(1,ikp)
-            call gh5_read(bnd%ek(1:nbtot,ikp,1),nbtot,'/IKP_'// &
-                    &trim(int_to_str(ikp))//'/ek0',f_id)
-            if(wh%nspin==2)then
+            do isp=1,bnd%ispin_in
+                nbtot=bnd%ne(1,ikp,isp)
+                call gh5_read(bnd%ek(1:nbtot,ikp,isp),nbtot,'/IKP_'// &
+                        &trim(int_to_str(ikp))//'/ek0_spin'//&
+                        &trim(int_to_str(isp)),f_id)
+            enddo
+            if(wh%iso==1.and.bnd%ispin_in==1.and.wh%nspin==2)then
                 bnd%ek(1:nbtot,ikp,2)=bnd%ek(1:nbtot,ikp,1)
             endif
-            nbands=bnd%ne(3,ikp)-bnd%ne(2,ikp)+1
-            do isym=1,sym%nop
-                p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,isym,ikpl)
-                call gh5_read(p_hk0,nbands,nbands, &
-                        &'/IKP_'//trim(int_to_str(ikp))// &
-                        &'/ISYM_'//trim(int_to_str(isym))//'/HK0',f_id)
+            do isp=1,bnd%ispin_in
+                nbands=bnd%ne(3,ikp,isp)-bnd%ne(2,ikp,isp)+1
+                do isym=1,sym%nop
+                    p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,isym, &
+                            &ikpl,isp)
+                    call gh5_read(p_hk0,nbands,nbands, &
+                            &'/IKP_'//trim(int_to_str(ikp))// &
+                            &'/ISYM_'//trim(int_to_str(isym))//&
+                            &'/HK0'//trim(int_to_str(isp)),f_id)
+                enddo
             enddo
         enddo
         call gh5_close(f_id)
@@ -258,7 +275,7 @@ module bandstru
 
     ! rotate bare hamiltonian to symmetry-adapted basis.
     subroutine rotate_bare_hamiltonian()
-    integer ivec,ikp,ikpl,iks,isym,nbands,i,nbase,naso
+    integer ivec,ikp,ikpl,iks,isym,nbands,i,isp,nbase,naso
     complex(q),pointer::p_hk0(:,:),p_trans(:,:)
     complex(q),target::utrans(wh%nasomax**2)
 
@@ -277,39 +294,42 @@ module bandstru
             else
                 ikpl=ikpl+1
             endif
-            nbands=bnd%ne(3,ikp)-bnd%ne(2,ikp)+1
-            do isym=1,sym%nop
-                p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,isym,ikpl)
-                nbase=0
-                do i=1,wh%num_imp
-                    naso=wh%co(i)%dimso
-                    if(wh%iso==1)then
-                        p_trans(1:naso,1:naso) => utrans(1:naso**2)
-                        p_trans=wh%co(i)%db2sab(1:naso,1::2)
-                    else
-                        p_trans => wh%co(i)%db2sab
-                    endif
-                    call anmxbmm('n',p_hk0(:,nbase+1:nbase+naso), &
-                            &p_trans,nbands,naso)
-                    nbase=nbase+naso
+            do isp=1,bnd%ispin_in
+                nbands=bnd%ne(3,ikp,isp)-bnd%ne(2,ikp,isp)+1
+                do isym=1,sym%nop
+                    p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2, &
+                            &isym,ikpl,isp)
+                    nbase=0
+                    do i=1,wh%num_imp
+                        naso=wh%co(i)%dimso
+                        if(wh%iso==1)then
+                            p_trans(1:naso,1:naso) => utrans(1:naso**2)
+                            p_trans=wh%co(i)%db2sab(1:naso,1::2)
+                        else
+                            p_trans => wh%co(i)%db2sab
+                        endif
+                        call anmxbmm('n',p_hk0(:,nbase+1:nbase+naso), &
+                                &p_trans,nbands,naso)
+                        nbase=nbase+naso
+                    enddo
+                    p_hk0=transpose(p_hk0)
+                    nbase=0
+                    do i=1,wh%num_imp
+                        naso=wh%co(i)%dimso
+                        if(wh%iso==1)then
+                            p_trans(1:naso,1:naso) => utrans(1:naso**2)
+                            p_trans=wh%co(i)%db2sab(1:naso,1::2)
+                        else
+                            p_trans => wh%co(i)%db2sab
+                        endif
+                        p_trans=conjg(p_trans)
+                        call anmxbmm('n',p_hk0(:,nbase+1:nbase+naso), &
+                                &p_trans,nbands,naso)
+                        p_trans=conjg(p_trans)
+                        nbase=nbase+naso
+                    enddo
+                    p_hk0=transpose(p_hk0)
                 enddo
-                p_hk0=transpose(p_hk0)
-                nbase=0
-                do i=1,wh%num_imp
-                    naso=wh%co(i)%dimso
-                    if(wh%iso==1)then
-                        p_trans(1:naso,1:naso) => utrans(1:naso**2)
-                        p_trans=wh%co(i)%db2sab(1:naso,1::2)
-                    else
-                        p_trans => wh%co(i)%db2sab
-                    endif
-                    p_trans=conjg(p_trans)
-                    call anmxbmm('n',p_hk0(:,nbase+1:nbase+naso), &
-                            &p_trans,nbands,naso)
-                    p_trans=conjg(p_trans)
-                    nbase=nbase+naso
-                enddo
-                p_hk0=transpose(p_hk0)
             enddo
         enddo
     enddo
@@ -349,7 +369,7 @@ module bandstru
 
 
     subroutine rm_h1e_from_bare_hamiltonian()
-    integer i,ivec,isym,ikp,iks,ikpl
+    integer i,ivec,isym,ikp,iks,ikpl,isp
     integer naso,nbase,nasot,nbands
     complex(q) h1e(wh%nasotot,wh%nasotot)
     complex(q),pointer::p_hk0(:,:)
@@ -378,10 +398,13 @@ module bandstru
             else
                 ikpl=ikpl+1
             endif
-            nbands=bnd%ne(3,ikp)-bnd%ne(2,ikp)+1
-            do isym=1,sym%nop
-                p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,isym,ikpl)
-                p_hk0(1:nasot,1:nasot)=p_hk0(1:nasot,1:nasot)-h1e
+            do isp=1,bnd%ispin_in
+                nbands=bnd%ne(3,ikp,isp)-bnd%ne(2,ikp,isp)+1
+                do isym=1,sym%nop
+                    p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2, &
+                            &isym,ikpl,isp)
+                    p_hk0(1:nasot,1:nasot)=p_hk0(1:nasot,1:nasot)-h1e
+                enddo
             enddo
         enddo
     enddo
@@ -394,14 +417,17 @@ module bandstru
     !< calc band energy
     !*************************************************************************
     subroutine calc_ebnd()
-    integer ik
+    integer ik,isp,ispp
       
     bnd%eband=bnd%ets2
     bnd%edl=0
     do ik=1,kpt%dim
-        bnd%edl=bnd%edl+sum(bnd%ek(1:bnd%ne(2,ik)-1,ik,:)* &
-                &bnd%ferwe(1:bnd%ne(2,ik)-1,ik,:))
-        bnd%eband=bnd%eband+sum(bnd%ek(:,ik,:)*bnd%ferwe(:,ik,:))
+        do isp=1,wh%nspin
+            ispp=min(isp,bnd%ispin_in)
+            bnd%edl=bnd%edl+sum(bnd%ek(1:bnd%ne(2,ik,ispp)-1,ik,isp)* &
+                    &bnd%ferwe(1:bnd%ne(2,ik,ispp)-1,ik,isp))
+            bnd%eband=bnd%eband+sum(bnd%ek(:,ik,isp)*bnd%ferwe(:,ik,isp))
+        enddo
     enddo
     return
       
@@ -536,7 +562,7 @@ module bandstru
 
 
     subroutine calc_da0()
-    integer isym,ivec,iks,ikp,ikpl,isp,nbands,nemin,nemax
+    integer isym,ivec,iks,ikp,ikpl,isp,ispp,nbands,nemin,nemax
     real(q) wtk
     complex(q),pointer :: p_vk(:,:),p_hk0(:,:)
     real(q),pointer :: ferwe(:)
@@ -552,13 +578,15 @@ module bandstru
             else
                 ikpl=ikpl+1
             endif
-            nemin=bnd%ne(2,ikp)
-            nemax=bnd%ne(3,ikp)
-            nbands=nemax-nemin+1
             do isp=1,wh%nspin
+                ispp=min(isp,bnd%ispin_in)
+                nemin=bnd%ne(2,ikp,ispp)
+                nemax=bnd%ne(3,ikp,ispp)
+                nbands=nemax-nemin+1
                 ferwe=>bnd%ferwe(nemin:nemax,ikp,isp)
                 do isym=1,sym%nop
-                    p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,isym,ikpl)
+                    p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2, &
+                            &isym,ikpl,ispp)
                     p_vk(1:nbands,1:nbands)=>bnd%vk(1:nbands**2,isym,ikpl,isp)
                     call add_da_1k(p_hk0,p_vk,ferwe,nbands,wtk,isp)
                 enddo                    
@@ -581,7 +609,8 @@ module bandstru
 
 
     subroutine calc_nks()
-    integer ikpl,ivec,iks,ikp,isym,isp,nbands,nbase,n1,n2,i,naso,nemin,nemax
+    integer ikpl,ivec,iks,ikp,isym,isp,ispp,nbands,nbase,&
+            &n1,n2,i,naso,nemin,nemax
     real(q) wtk
     real(q),pointer :: p_ferwe(:)
     complex(q),pointer :: p_vk(:,:),p_vk_sub(:,:),p_nks(:,:)
@@ -601,10 +630,11 @@ module bandstru
             else
                 ikpl=ikpl+1
             endif
-            nemin=bnd%ne(2,ikp)
-            nemax=bnd%ne(3,ikp)
-            nbands=nemax-nemin+1
             do isp=1,wh%nspin
+                ispp=min(isp,bnd%ispin_in)
+                nemin=bnd%ne(2,ikp,ispp)
+                nemax=bnd%ne(3,ikp,ispp)
+                nbands=nemax-nemin+1
                 p_ferwe=>bnd%ferwe(nemin:nemax,ikp,isp)
                 do isym=1,sym%nop
                     p_vk(1:nbands,1:nbands)=>bnd%vk(1:nbands**2,isym,ikpl,isp)
@@ -703,7 +733,7 @@ module bandstru
     subroutine calc_band_all(io)
     integer,intent(in)::io
 
-    integer isym,ivec,iks,ikp,ikpl,nbands,isp
+    integer isym,ivec,iks,ikp,ikpl,nbands,isp,ispp
     complex(q),pointer :: hk(:,:)
     real(q),pointer :: ek_list(:,:,:)
     complex(q) :: r(wh%nasotot,wh%nasotot),la1(wh%nasotot,wh%nasotot)
@@ -720,7 +750,7 @@ module bandstru
     ikpl=0
     !$omp parallel do &
     !$omp &firstprivate(ikpl) &
-    !$omp &private(ivec,isym,isp,iks,ikp,nbands,hk,r,la1) &
+    !$omp &private(ivec,isym,isp,ispp,iks,ikp,nbands,hk,r,la1) &
     !$omp &schedule(static,1)
     do ivec=1,gp%nvec
         do iks=1,gp%kvec(ivec,2)
@@ -730,22 +760,23 @@ module bandstru
             else
                 ikpl=ikpl+1
             endif
-            nbands=bnd%ne(3,ikp)-bnd%ne(2,ikp)+1
             do isym=1,sym%nop
-                nbands=bnd%ne(3,ikp)-bnd%ne(2,ikp)+1
                 do isp=1,wh%nspin
+                    ispp=min(isp,bnd%ispin_in)
+                    nbands=bnd%ne(3,ikp,ispp)-bnd%ne(2,ikp,ispp)+1
                     hk(1:nbands,1:nbands)=>bnd%vk(1:nbands**2,isym,ikpl,isp)
                     r=bnd%r(:,:,isp)
                     la1=bnd%la1(:,:,isp)
                     bnd%vk(1:nbands**2,isym,ikpl,isp)=&
-                            &bnd%hk0(1:nbands**2,isym,ikpl)
+                            &bnd%hk0(1:nbands**2,isym,ikpl,ispp)
                     if(isym==1)then
                         ! save the energies outside of the energy window.
 #ifdef mpi_mode
                         ek_list(:,ikp,isp)=bnd%ek(:,ikp,isp)
 #endif
                         call calc_band_1k(hk,r,la1,nbands,wh%nasotot, &
-                                &ek_list(bnd%ne(2,ikp):bnd%ne(3,ikp),ikp,isp))
+                                &ek_list(bnd%ne(2,ikp,ispp): &
+                                &bnd%ne(3,ikp,ispp),ikp,isp))
                     else
                         call calc_band_1k(hk,r,la1,nbands,wh%nasotot)   
                     endif
@@ -794,7 +825,7 @@ module bandstru
     subroutine calc_kswt(io)
     integer,intent(in)::io
 
-    integer ivec,iks,ikp,ikpl,nbands,isp,i,naso,nbase
+    integer ivec,iks,ikp,ikpl,nbands,isp,i,ispp,nsp,naso,nbase
     real(q) sumwt(2),maxoffdiag,fac_irspo
     complex(q),pointer :: p_vk(:,:),p_kswt(:,:),p_uk(:,:),p_utrans(:,:)
     complex(q),allocatable,target::uk(:)
@@ -810,7 +841,7 @@ module bandstru
 
     !$omp parallel do &
     !$omp &firstprivate(ikpl) &
-    !$omp &private(ivec,isp,iks,ikp,i,nbands,nbase, &
+    !$omp &private(ivec,isp,ispp,iks,ikp,i,nbands,nbase,nsp, &
     !$omp         &p_kswt,p_ferwe,p_vk,uk,p_uk,utrans,p_utrans, &
     !$omp         &naso,f_id) &
     !$omp &schedule(static,1) &
@@ -825,47 +856,57 @@ module bandstru
             else
                 ikpl=ikpl+1
             endif
-            nbands=bnd%ne(3,ikp)-bnd%ne(2,ikp)+1
+            do ispp=1,bnd%ispin_in
+                if(bnd%ispin_in==1)then
+                    nsp=wh%nspin
+                else
+                    nsp=ispp
+                endif
+                nbands=bnd%ne(3,ikp,ispp)-bnd%ne(2,ikp,ispp)+1
+                ! do not need hk0 anymore, store kswt instead.
+                p_kswt(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,sym%ie, &
+                        &ikpl,ispp)
+                p_kswt=0
+                p_uk(1:nbands,1:nbands)=>uk(1:nbands**2)
+                call gh5_read(p_uk,nbands,nbands, &
+                        &'/IKP_'//trim(int_to_str(ikp))// &
+                        &'/T_PSIK0_TO_HK0_BASIS_SPIN'//&
+                        &trim(int_to_str(ispp)),f_id)
 
-            ! do not need hk0 anymore, store kswt instead.
-            p_kswt(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,sym%ie,ikpl)
-            p_kswt=0
-            p_uk(1:nbands,1:nbands)=>uk(1:nbands**2)
-            call gh5_read(p_uk,nbands,nbands, &
-                    &'/IKP_'//trim(int_to_str(ikp))// &
-                    &'/T_PSIK0_TO_HK0_BASIS',f_id)
+                ! add default-basis to symmetry adapted basis transformation.
+                if(associated(wh%db2sab))then
+                    nbase=0
+                    do i=1,wh%num_imp
+                        naso=wh%co(i)%dimso
+                        if(wh%iso==1)then
+                            p_utrans(1:naso,1:naso) => utrans(1:naso**2)
+                            p_utrans=wh%co(i)%db2sab(1:naso,1::2)
+                        else
+                            p_utrans => wh%co(i)%db2sab
+                        endif
+                        call anmxbmm('n',p_uk(:,nbase+1:nbase+naso), &
+                                &p_utrans,nbands,naso)
+                        nbase=nbase+naso
+                    enddo
+                endif
 
-            ! add default-basis to symmetry adapted basis transformation.
-            if(associated(wh%db2sab))then
-                nbase=0
-                do i=1,wh%num_imp
-                    naso=wh%co(i)%dimso
-                    if(wh%iso==1)then
-                        p_utrans(1:naso,1:naso) => utrans(1:naso**2)
-                        p_utrans=wh%co(i)%db2sab(1:naso,1::2)
-                    else
-                        p_utrans => wh%co(i)%db2sab
-                    endif
-                    call anmxbmm('n',p_uk(:,nbase+1:nbase+naso), &
-                            &p_utrans,nbands,naso)
-                    nbase=nbase+naso
+                do isp=ispp,nsp
+                    p_ferwe=>bnd%ferwe(bnd%ne(2,ikp,ispp): &
+                            &bnd%ne(3,ikp,ispp),ikp,isp)
+                    p_vk(1:nbands,1:nbands)=>bnd%vk(1:nbands**2,sym%ie,&
+                            &ikpl,isp)
+                    call calc_kswt_1k(p_kswt,p_vk,p_uk,p_ferwe,nbands, &
+                            &fac_irspo,kpt%wt(ikp),isp)
+                    sumwt(1)=sumwt(1)+sum(p_ferwe)
+                enddo ! isp
+                p_kswt=p_kswt*wh%rspo
+
+                do i=1,nbands
+                    sumwt(2)=sumwt(2)+real(p_kswt(i,i),q)
+                    if(i==nbands)exit
+                    maxoffdiag=max(maxoffdiag, &
+                            &maxval(abs(p_kswt(i+1:,i)))/kpt%wt(ikp))
                 enddo
-            endif
-
-            do isp=1,wh%nspin
-                p_ferwe=>bnd%ferwe(bnd%ne(2,ikp):bnd%ne(3,ikp),ikp,isp)
-                p_vk(1:nbands,1:nbands)=>bnd%vk(1:nbands**2,sym%ie,ikpl,isp)
-                call calc_kswt_1k(p_kswt,p_vk,p_uk,p_ferwe,nbands, &
-                        &fac_irspo,kpt%wt(ikp),isp)
-                sumwt(1)=sumwt(1)+sum(p_ferwe)
-            enddo ! isp
-            p_kswt=p_kswt*wh%rspo
-
-            do i=1,nbands
-                sumwt(2)=sumwt(2)+real(p_kswt(i,i),q)
-                if(i==nbands)exit
-                maxoffdiag=max(maxoffdiag, &
-                        &maxval(abs(p_kswt(i+1:,i)))/kpt%wt(ikp))
             enddo
         enddo ! iks
         call gh5_close(f_id)
@@ -960,14 +1001,16 @@ module bandstru
     subroutine calc_corr_ebwidth(io)
     integer,intent(in)::io
       
-    integer ik
+    integer ik,isp
     real(q) emin,emax
       
     if(io<0)return
     emin=100._q; emax=-100._q
     do ik=1,kpt%dim
-        emin=min(emin,bnd%ek(bnd%ne(2,ik),ik,1))
-        emax=max(emax,bnd%ek(bnd%ne(3,ik),ik,1))
+        do isp=1,bnd%ispin_in
+            emin=min(emin,bnd%ek(bnd%ne(2,ik,isp),ik,isp))
+            emax=max(emax,bnd%ek(bnd%ne(3,ik,isp),ik,isp))
+        enddo
     enddo
     write(io,'(" correlated block: emin/emix=",2f10.4)')emin,emax
     bnd%ebmin=emin; bnd%ebmax=emax
@@ -1026,20 +1069,21 @@ module bandstru
     real(q),allocatable::eb(:,:,:),e_(:,:),weight_(:)
     integer,allocatable::nehelp(:,:)
     real(q)elecn,ef
-    integer nkpt,nemax,nspin,jspin,iso,nbmax
-    integer ik,isp,n1,n2
+    integer nkpt,nemax,jspin,iso,nbmax
+    integer ik,isp,ispp,n1,n2
       
-    nkpt=kpt%dim; nemax=bnd%nmax; nspin=wh%nspin; iso=wh%iso
-    allocate(nehelp(nkpt,2))
-    nehelp(:,1)=bnd%ne(1,:); nehelp(:,2)=nehelp(:,1)
-    allocate(eb(nemax,nkpt,2))
+    nkpt=kpt%dim; nemax=bnd%nmax; iso=wh%iso
+    allocate(nehelp(nkpt,2),eb(nemax,nkpt,2))
     eb=3._q
-    do ik=1,nkpt
-        eb(1:bnd%ne(1,ik),ik,1:nspin)=bnd%ek(1:bnd%ne(1,ik),ik,1:nspin)
+    do isp=1,2
+        ispp=min(isp,bnd%ispin_in)
+        nehelp(:,isp)=bnd%ne(1,:,ispp)
+        ispp=min(isp,wh%nspin)
+        do ik=1,nkpt
+            eb(1:nehelp(ik,isp),ik,isp)=bnd%ek(1:nehelp(ik,isp),ik,ispp)
+        enddo
+
     enddo
-    if(nspin==1)then
-        eb(:,:,2) = eb(:,:,1)
-    endif
     elecn=bnd%nelet-1.d-10-bnd%nelet_frozen
     jspin=wh%ispin
     allocate(e_(nemax*jspin,nkpt)); e_=0
@@ -1052,7 +1096,7 @@ module bandstru
     call dos(nemax*jspin,nkpt,e_,weight_,elecn/2.d0*iso*jspin,ef,iw,nw)
     call eweigh(ef,weight_,nemax,nkpt,jspin,nehelp,eb,nbmax)
     close(iu_kgen)
-    do isp=1,nspin
+    do isp=1,wh%nspin
         do ik=1,nkpt
             n1=(ik-1)*nemax*jspin+(isp-1)*nemax+1
             n2=(ik-1)*nemax*jspin+ isp   *nemax
@@ -1067,13 +1111,14 @@ module bandstru
       
     !*************************************************************************
     subroutine bnd_modify_frozen()
-    integer ik,i,isp,ntop
+    integer ik,i,isp,ispp,ntop
       
     if(bnd%n_frozen==0)return
     do ik=1,kpt%dim
-        ntop=bnd%ne(3,ik)
-        do i=ntop-bnd%n_frozen*wh%iso/2+1,ntop
-            do isp=1,wh%nspin
+        do isp=1,wh%nspin
+            ispp=min(isp,bnd%ispin_in)
+            ntop=bnd%ne(3,ik,ispp)
+            do i=ntop-bnd%n_frozen*wh%iso/2+1,ntop
                 if(abs(bnd%ek(i,ik,isp)-30._q)>1.e-6_q)then
                     write(0,'(" fetal error in bnd_modify_frozen (!=30): &
                             &fixed band level = ",2f12.4)')bnd%ek(i,ik,isp)
@@ -1094,13 +1139,14 @@ module bandstru
     implicit none
     real(q) mu
       
-    integer isp,ikp,ib
+    integer isp,ispp,ikp,ib
     real(q) dt
       
     bnd%ferwe=0
     do isp=1,wh%nspin
+        ispp=min(isp,bnd%ispin_in)
         do ikp=1,kpt%dim
-            do ib=1,bnd%ne(1,ikp)
+            do ib=1,bnd%ne(1,ikp,ispp)
                 dt=(bnd%ek(ib,ikp,isp)-mu)/kpt%delta
                 select case(kpt%ismear)
                 case(-1)
@@ -1158,13 +1204,14 @@ subroutine calc_correction_gauss()
     use gconstant
     use bandstru
     implicit none
-    integer ikp,isp,ib
+    integer ikp,isp,ispp,ib
     real(q) eta,de
       
     eta=0
     do isp=1,wh%nspin
+        ispp=min(isp,bnd%ispin_in)
         do ikp=1,kpt%dim
-            do ib=1,bnd%ne(1,ikp)
+            do ib=1,bnd%ne(1,ikp,ispp)
                 de=(bnd%ek(ib,ikp,isp)-bnd%ef)/kpt%delta
                 de=de*de
                 if(de<15._q)eta=eta+0.5*kpt%delta*exp(-de)*kpt%wt(ikp)*wh%rspo
@@ -1183,13 +1230,14 @@ subroutine calc_entropy_fermi()
     use gconstant
     use bandstru
     implicit none
-    integer ikp,isp,ib
+    integer ikp,isp,ispp,ib
     real(q) entr,focc,f1,f2,eint
       
     entr=0
     do isp=1,wh%nspin
+        ispp=min(isp,bnd%ispin_in)
         do ikp=1,kpt%dim
-            do ib=1,bnd%ne(1,ikp)
+            do ib=1,bnd%ne(1,ikp,ispp)
                 focc=bnd%ferwe(ib,ikp,isp)/wh%rspo/kpt%wt(ikp)
                 f1=focc; f2=1._q-focc
                 if(f1>0._q.and.f2>0._q)then

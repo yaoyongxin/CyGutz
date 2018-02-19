@@ -82,19 +82,24 @@ def fcreate_def_gwien(case, scratch='.', so='', para='', idmf='1', cmplx='',
         _band='', updn='', dnup='dn'):
     '''create gwien1/2.def file.
     '''
-    fdef = open('gwien{}.def'.format(idmf), 'w')
+    fdef = open('gwien{}{}.def'.format(idmf,updn), 'w')
     if idmf == '1':
         fname_list = ['in2', 'inso', 'indmfl', 'outputdmf', \
                 'in1c', 'vectorupdn', 'vectordnup', 'klist', \
                 'kgen', 'vspupdn', 'vspdnup', 'struct', \
                 'rotlm', 'energydnup', 'energyupdn']
-        unit_list = [3, 4, 5, 6, 7, 9, 10, 13, 14, 18, 19, 20, 22, 59, 60]
-    else:
-        fname_list = ['in1c', 'inso', 'in2', 'outputdmf', 'indmfl',
-                'clmval', 'vectorupdn', 'vectordnup', 'recprlist',
-                'kgen', 'vspupdn', 'struct', 'scf2', 'rotlm', 'energysodum',
+        unit_list = [3, 4, 5, 6, \
+                7, 9, 10, 13, \
+                14, 18, 19, 20, \
+                22, 59, 60]
+    elif idmf == '2':
+        fname_list = ['in1c', 'inso', 'in2', 'outputdmf', 'indmfl', \
+                'clmval', 'vectorupdn', 'vectordnup', 'recprlist', 'kgen', \
+                'vspupdn', 'struct', 'scf2', 'rotlm', 'energysodum', \
                 'energyupdn', 'energydnup', 'norm']
-        unit_list = [3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 18, 20, 21, 22, 29,
+        unit_list = [3, 4, 5, 6, 7, \
+                8, 9, 10, 13, 14, \
+                18, 20, 21, 22, 29, \
                 30, 31, 12]
 
     for fname, unit in zip(fname_list, unit_list):
@@ -104,15 +109,18 @@ def fcreate_def_gwien(case, scratch='.', so='', para='', idmf='1', cmplx='',
     fdef.close()
 
 
-def onestep(fday, case, exec_name, w_root, para, band=None):
-    '''wien2k steps
+def onestep(fday, case, exec_name, w_root, para="", band=None, updn=None):
+    '''wien2k steps.
     '''
     time_start = time.strftime("%H:%M:%S")
-    cmd = ['{}/x'.format(w_root), para, '-f', case, exec_name]
+    cmd = ['{}/x'.format(w_root), exec_name, para, '-f', case]
     if band == '-band':
         cmd.append(band)
         if not os.path.isfile('EFLDA.INP'):
             shutil.copy2('EFLDA.OUT', 'EFLDA.INP')
+    if updn in ["-up", "-dn"]:
+        cmd.append(updn)
+
     print(' '.join(x for x in cmd))
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
@@ -125,7 +133,7 @@ def onestep(fday, case, exec_name, w_root, para, band=None):
             sys.exit(1)
 
 
-def gonestep(fday, exec_name, mpi):
+def gonestep(fday, exec_name, mpi, updn=""):
     '''gwien1, CyGutz and gwien2 steps.
     '''
     time_start = time.strftime("%H:%M:%S")
@@ -138,7 +146,7 @@ def gonestep(fday, exec_name, mpi):
         cmd.extend(mpi)
     cmd.append('{}'.format(exec_name))
     if 'gwien' in exec_name:
-        cmd.append('{}.def'.format(exec_name))
+        cmd.append('{}{}.def'.format(exec_name, updn))
 
     print(' '.join(x for x in cmd))
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
@@ -303,7 +311,7 @@ def create_gomp_file():
 
 def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         startp='lapw0', endp='', band='', openmp=False, cygutz='CyGutz',
-        pa_list=[], recycle_rl=True, avg_dc=True):
+        pa_list=[], recycle_rl=True, avg_dc=True, spinpol=False):
     '''Driver for Wien2k + Gutzwiller-Slave-boson job.
     '''
     if '-s' in sys.argv:
@@ -329,6 +337,8 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         recycle_rl = False
     if '-navg_dc' in sys.argv:
         avg_dc = False
+    if "-sp" in sys.argv:
+        spinpol = True
     if band == '-band':
         _band = '_band'
         nmaxiter = 1
@@ -363,6 +373,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         openmp   False    -omp             use openMP instead of openMPI
         rl       True     -nrl             start from previous GA solutions
         avg_dc   True     -navg_dc         average dc among atoms or not
+        spinpol  False    -sp              spin-symmetry breaking at DFT level
         '''
         print(help)
         sys.exit(0)
@@ -432,10 +443,22 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         shutil.copy2(g_root+'/'+p, '.')
 
     # create gwien1/2.def files
-    fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
-            idmf='1', cmplx=cmplx, _band=_band)
-    fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
-            idmf='2', cmplx=cmplx, _band=_band)
+    if spinpol:
+        fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
+                idmf='1', cmplx=cmplx, _band=_band, updn="up", dnup='dn')
+        if so != "so":
+            fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
+                    idmf='1', cmplx=cmplx, _band=_band, updn="dn", dnup='up')
+
+        fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
+                idmf='2', cmplx=cmplx, _band=_band, updn="up", dnup='dn')
+        fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
+                idmf='2', cmplx=cmplx, _band=_band, updn="dn", dnup='up')
+    else:
+        fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
+                idmf='1', cmplx=cmplx, _band=_band)
+        fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
+                idmf='2', cmplx=cmplx, _band=_band)
 
     # save SLURM_ related environment variables
     slurm_envs = env.get_env_dict(key="SLURM_")
@@ -463,11 +486,21 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         env.unset_environ(slurm_envs)
 
         if icycle > 0 or (startp in 'lapw0'):
-            onestep(fday, w_case, 'lapw0', w_root, para)
+            onestep(fday, w_case, 'lapw0', w_root, para=para)
         if icycle > 0 or (startp in 'lapw0 lapw1'):
-            onestep(fday, w_case, 'lapw1', w_root, para, band)
+            if spinpol:
+                onestep(fday, w_case, 'lapw1', w_root, para=para, band=band, \
+                        updn="-up")
+                onestep(fday, w_case, 'lapw1', w_root, para=para, band=band, \
+                        updn="-dn")
+            else:
+                onestep(fday, w_case, 'lapw1', w_root, para=para, band=band)
         if (icycle > 0 or (startp in 'lapw0 lapw1 lapwso')) and p_so:
-            onestep(fday, w_case, 'lapwso', w_root, para, band)
+            if spinpol:
+                onestep(fday, w_case, 'lapwso', w_root, para=para, band=band, \
+                        updn="-up")
+            else:
+                onestep(fday, w_case, 'lapwso', w_root, para=para, band=band)
 
         if icycle==0 and para != '':
             processes_convert(p_so)
@@ -476,7 +509,11 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         env.set_environ(slurm_envs)
 
         if icycle > 0 or (startp in 'lapw0 lapw1 lapwso gwien1'):
-            gonestep(fday, 'gwien1', mpi)
+            if spinpol:
+                gonestep(fday, 'gwien1', mpi, updn="up")
+                gonestep(fday, 'gwien1', mpi, updn="dn")
+            else:
+                gonestep(fday, 'gwien1', mpi)
             if openmp:
                 create_gomp_file()
             elif os.path.isfile("GOMP.h5"):
@@ -494,16 +531,21 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         if recycle_rl:
             shutil.copy2('WH_RL_OUT.h5', 'WH_RL_INP.h5')
 
-        gonestep(fday, 'gwien2', mpi)
+        if spinpol:
+            gonestep(fday, 'gwien2', mpi, updn="up")
+            gonestep(fday, 'gwien2', mpi, updn="dn")
+        else:
+            gonestep(fday, 'gwien2', mpi)
+
         if endp == 'gwien2':
             sys.exit(0)
 
         # unset slurm environment variables for wien2k type run
         env.unset_environ(slurm_envs)
 
-        onestep(fday, w_case, 'lcore', w_root, '')
+        onestep(fday, w_case, 'lcore', w_root, para='')
         scf(w_case)
-        onestep(fday, w_case, 'mixer', w_root, '')
+        onestep(fday, w_case, 'mixer', w_root, para='')
         scfm(w_case)
         drho, dene, dvdc = diff(fday, w_case, mix_dc, avg_dc)
 

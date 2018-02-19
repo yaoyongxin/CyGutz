@@ -3,7 +3,8 @@ module ghdf5_base
     implicit none
     private
     public :: gh5_init, gh5_end, gh5_write, gh5_read, gh5_create_group, &
-            & gh5_open_w, gh5_open_r, gh5_close,log_file_id,f_id,gh5_err
+            & gh5_open_w, gh5_open_r, gh5_open_rw, gh5_close, &
+            &log_file_id,f_id,gh5_err
       
     integer(hid_t) :: log_file_id=-1,f_id=-1
     integer(hid_t) :: group_id, dset_id, dspace_id
@@ -68,6 +69,18 @@ module ghdf5_base
       
     end subroutine gh5_open_w
     
+
+    subroutine gh5_open_rw(gh5_file, f_id)
+    character(*),intent(in) :: gh5_file
+    integer(hid_t),intent(out) :: f_id
+
+    if(.not.lgh5_init)call gh5_init()
+    !< create a new file using default properties.
+    call h5fcreate_f(gh5_file, h5f_acc_rdwr_f, f_id, gh5_err)
+    return
+
+    end subroutine gh5_open_rw
+
 
     subroutine gh5_open_r(gh5_file, f_id)
     character(*),intent(in) :: gh5_file
