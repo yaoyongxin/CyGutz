@@ -6,7 +6,7 @@ include ../../../Makefile.in
 
 obj = GPREC.o GTIME.o GPARAM.o GCONSTANT.o GMPI.o \
 	  GHDF5_BASE.o GPRIMME.o \
-	  UTIL.o SPARSE.o CORRORB.o WAREHOUSE.o MAGNETISM.o \
+	  UTIL.o SPARSE.o CORRORB.o WAREHOUSE.o \
 	  BANDSTRU.o DCSTD.o fermi.o  \
 	  GHELP.o GBROYDEN.o GKERNEL.o PSAVE.o \
 	  GHYBRD.o minpack_lib.o

@@ -139,7 +139,11 @@ subroutine output_energies(io)
 
     call output_energies_wh(io)
     call output_energies_dc(io)
-    write(io,'(" total band energy = ",f0.7)')bnd%eband
+    if(wh%nspin==2)then
+        write(io,'(" spin-up band energy = ",f0.7)')bnd%eband(1)
+        write(io,'(" spin-dn band energy = ",f0.7)')bnd%eband(2)
+    endif
+    write(io,'(" total band energy = ",f0.7)')sum(bnd%eband)
     return
 
 end subroutine output_energies
@@ -154,21 +158,27 @@ subroutine gh5_wrt_kswt()
     use gmpi
     implicit none
 
-    real(8) vnorm1,e_gamma_dc
+    real(8) e_gamma_dc,eband
     integer ivec,ikp,ikpl,iks,nkp,nbands,isp
     integer nemin,nemax
     complex(8),pointer :: p_kswt(:,:)
       
-    vnorm1=1.d0
-    if(wh%iso.eq.2.and.bnd%ispin_in.eq.1)vnorm1=.5d0
     e_gamma_dc=sum(wh%eu2)+sum(wh%et1)-wh%edcla1-sum(dc%e)
 
     ikpl=0
     do ivec=1,gp%nvec
         call gh5_open_w(file_name(gp%kvec(ivec,1),'KSWT'), f_id)
-        call gh5_write(bnd%ef,'/e_fermi',f_id)
-        call gh5_write(e_gamma_dc,'/e_gamma_dc',f_id)
-        call gh5_write(bnd%eband,'/e_band',f_id)
+        if(ivec==1)then
+            call gh5_write(bnd%ef,'/e_fermi',f_id)
+            call gh5_write(e_gamma_dc,'/e_gamma_dc',f_id)
+            if(bnd%ispin_in==1)then
+                eband=sum(bnd%eband)
+                call gh5_write(eband,'/e_band',f_id)
+            else
+                call gh5_write(bnd%eband(1),'/e_band_spin1',f_id)
+                call gh5_write(bnd%eband(2),'/e_band_spin2',f_id)
+            endif
+        endif
         do iks=1,gp%kvec(ivec,2)
             ikp=gp%kvec(ivec,3)+iks
             if(gp%ipar==1)then
@@ -180,10 +190,12 @@ subroutine gh5_wrt_kswt()
                 nbands=bnd%ne(3,ikp,isp)-bnd%ne(2,ikp,isp)+1
                 p_kswt(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,sym%ie, &
                         &ikpl,isp)
-                p_kswt=p_kswt/vnorm1 ! to be consistent with dmft2
                 if(isp==1)then
                     call gh5_create_group('/IKP_'//trim(int_to_str(ikp)), &
                             & f_id)
+                    call gh5_write(kpt%wt(ikp), &
+                            &'/IKP_'//trim(int_to_str(ikp))// &
+                            &"/wt",f_id)
                 endif
                 call gh5_write(bnd%ne(2,ikp,isp), &
                         &'/IKP_'//trim(int_to_str(ikp))// &
@@ -193,7 +205,7 @@ subroutine gh5_wrt_kswt()
                         &'/nemax_spin'//trim(int_to_str(isp)),f_id)
                 call gh5_write(p_kswt,nbands,nbands, &
                         &'/IKP_'//trim(int_to_str(ikp))// &
-                        &'/KSWT_SPIN'//trim(int_to_str(ikp)),f_id)
+                        &'/KSWT_SPIN'//trim(int_to_str(isp)),f_id)
             enddo
         enddo
         call gh5_close(f_id)

@@ -3,9 +3,9 @@ module ghdf5_base
     implicit none
     private
     public :: gh5_init, gh5_end, gh5_write, gh5_read, gh5_create_group, &
-            & gh5_open_w, gh5_open_r, gh5_close,log_file_id,f_id,gh5_err
+            & gh5_open_w, gh5_open_r, gh5_close, f_id, gh5_err
       
-    integer(hid_t) :: log_file_id=-1,f_id=-1
+    integer(hid_t) :: f_id=-1
     integer(hid_t) :: group_id, dset_id, dspace_id
     integer(hid_t) :: dcomplex_id, string_id
     integer(hsize_t) :: gh5_dims(7), gh5_size, gh5_offset
@@ -98,6 +98,7 @@ module ghdf5_base
     call h5tclose_f(string_id, gh5_err)
     !< close fortran interface.
     call h5close_f(gh5_err)
+    lgh5_init=.false.
     return
       
     end subroutine gh5_end

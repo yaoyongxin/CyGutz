@@ -25,10 +25,6 @@ module w_atpar
   REAL*8 , ALLOCATABLE :: w_R(:,:)
 
   REAL*8 , ALLOCATABLE :: w_xwt1(:,:)
-  REAL*8 , ALLOCATABLE :: w_xwt1l(:,:)
-  REAL*8 , ALLOCATABLE :: w_xwt1h(:,:)
-  REAL*8 , ALLOCATABLE :: w_xwteh(:,:)
-  REAL*8 , ALLOCATABLE :: w_xwtel(:,:)
 
   REAL*8 , ALLOCATABLE :: w_a1lo(:,:,:,:)
   REAL*8 , ALLOCATABLE :: w_b1lo(:,:,:,:)
@@ -79,10 +75,6 @@ module w_atpar
     ALLOCATE( w_R(1:nrad,1:nat) )
     
     ALLOCATE( w_xwt1(0:21,1:nat) )
-    ALLOCATE( w_xwt1l(0:3,1:nat) )
-    ALLOCATE( w_xwt1h(0:3,1:nat) )
-    ALLOCATE( w_xwteh(0:3,1:nat) )
-    ALLOCATE( w_xwtel(0:3,1:nat) )
     
     ALLOCATE( w_a1lo(1:nrad,1:nloat,0:lomax,1:nat) )
     ALLOCATE( w_b1lo(1:nrad,1:nloat,0:lomax,1:nat) )
@@ -123,10 +115,6 @@ module w_atpar
     DEALLOCATE( w_R )
 
     DEALLOCATE( w_xwt1 )
-    DEALLOCATE( w_xwt1l )
-    DEALLOCATE( w_xwt1h )
-    DEALLOCATE( w_xwteh )
-    DEALLOCATE( w_xwtel )
 
     DEALLOCATE( w_a1lo )
     DEALLOCATE( w_b1lo )

@@ -76,7 +76,7 @@ module ghdf5_base
 
     if(.not.lgh5_init)call gh5_init()
     !< create a new file using default properties.
-    call h5fcreate_f(gh5_file, h5f_acc_rdwr_f, f_id, gh5_err)
+    call h5fopen_f(gh5_file, h5f_acc_rdwr_f, f_id, gh5_err)
     return
 
     end subroutine gh5_open_rw

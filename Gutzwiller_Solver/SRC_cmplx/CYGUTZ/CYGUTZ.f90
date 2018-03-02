@@ -97,7 +97,11 @@ program cygutz
     ! correlated block energy window.
     call calc_corr_ebwidth(gp%io)
 
-    ! check the bare band dispersions.
+    ! bare band (based on eigen-values) fermi energy
+    call gutz_fermi(gp%io)
+
+    ! check the bare band dispersion consistency between 
+    ! hamiltonain and eigen-values.
     call calc_band_all(gp%io)
     call gutz_fermi(gp%io)
     call calc_nks()

@@ -66,7 +66,7 @@ module bandstru
         !< iso=2 => soc
         integer ispin_in
         integer n_frozen
-        real(q) ehybrd,eband,ets2,edl
+        real(q) ehybrd,eband(2),ets2(2),edl
         !< ne(3). 1: total number of bands, 2-3: correlated bands interval
         integer,pointer :: ne(:,:,:)
         real(q),pointer :: ek(:,:,:) ! kohn-sham / gutz eigen values
@@ -127,7 +127,8 @@ module bandstru
     ! modify ispin_in for iso=2
     bnd%ispin_in=max(1, bnd%ispin_in/iso)
     allocate(bnd%ne(3,kpt%dim,bnd%ispin_in))
-    call h5lexists_f(f_id,'/NE_LIST',lexist,gh5_err)
+    call h5lexists_f(f_id,'/NE_LIST_SPIN1', &
+            &lexist,gh5_err)
     if(lexist)then
         ! upper-case name: fortran convention
         do isp=1,bnd%ispin_in
@@ -186,7 +187,7 @@ module bandstru
     if(io>0)then
         write(io,'(" bnd%nmax=",i4)')bnd%nmax
         write(io,'(" valence electrons: total=",f8.1)')bnd%nelet
-        write(io,'("                    correlated block=",f8.1)')bnd%nelel
+        write(io,'("         correlated block=",f8.1)')bnd%nelel
     endif
     call set_kpt_icor(io)
     return
@@ -261,7 +262,7 @@ module bandstru
                     call gh5_read(p_hk0,nbands,nbands, &
                             &'/IKP_'//trim(int_to_str(ikp))// &
                             &'/ISYM_'//trim(int_to_str(isym))//&
-                            &'/HK0'//trim(int_to_str(isp)),f_id)
+                            &'/HK0_SPIN'//trim(int_to_str(isp)),f_id)
                 enddo
             enddo
         enddo
@@ -370,21 +371,19 @@ module bandstru
 
     subroutine rm_h1e_from_bare_hamiltonian()
     integer i,ivec,isym,ikp,iks,ikpl,isp
-    integer naso,nbase,nasot,nbands
-    complex(q) h1e(wh%nasotot,wh%nasotot)
+    integer naso,nstep,nbase,nasot,nbands
+    complex(q) h1e(wh%nasotot,wh%nasotot,bnd%ispin_in)
     complex(q),pointer::p_hk0(:,:)
 
     h1e=0
     nbase=1
     do i=1,wh%num_imp
         naso=wh%co(i)%dimso
-        if(wh%iso==1)then
-            h1e(nbase:nbase+naso-1,nbase:nbase+naso-1)= &
-                    &wh%co(i)%h1e(1::2,1::2)
-        else
-            h1e(nbase:nbase+naso-1,nbase:nbase+naso-1)= &
-                    &wh%co(i)%h1e
-        endif
+        nstep=wh%co(i)%dim2/naso
+        do isp=1,bnd%ispin_in
+            h1e(nbase:nbase+naso-1,nbase:nbase+naso-1,isp)= &
+                    &wh%co(i)%h1e(isp::nstep,isp::nstep)
+        enddo
         nbase=nbase+naso
     enddo
     nasot=wh%nasotot
@@ -403,7 +402,7 @@ module bandstru
                 do isym=1,sym%nop
                     p_hk0(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2, &
                             &isym,ikpl,isp)
-                    p_hk0(1:nasot,1:nasot)=p_hk0(1:nasot,1:nasot)-h1e
+                    p_hk0(1:nasot,1:nasot)=p_hk0(1:nasot,1:nasot)-h1e(:,:,isp)
                 enddo
             enddo
         enddo
@@ -426,7 +425,8 @@ module bandstru
             ispp=min(isp,bnd%ispin_in)
             bnd%edl=bnd%edl+sum(bnd%ek(1:bnd%ne(2,ik,ispp)-1,ik,isp)* &
                     &bnd%ferwe(1:bnd%ne(2,ik,ispp)-1,ik,isp))
-            bnd%eband=bnd%eband+sum(bnd%ek(:,ik,isp)*bnd%ferwe(:,ik,isp))
+            bnd%eband(isp)=bnd%eband(isp)+ &
+                    &sum(bnd%ek(:,ik,isp)*bnd%ferwe(:,ik,isp))
         enddo
     enddo
     return
@@ -1082,7 +1082,6 @@ module bandstru
         do ik=1,nkpt
             eb(1:nehelp(ik,isp),ik,isp)=bnd%ek(1:nehelp(ik,isp),ik,ispp)
         enddo
-
     enddo
     elecn=bnd%nelet-1.d-10-bnd%nelet_frozen
     jspin=wh%ispin
@@ -1091,6 +1090,7 @@ module bandstru
     if(jspin==2)then
         e_(1+nemax:,:) = eb(:,:,2)
     endif
+
     allocate(weight_(nemax*jspin*nkpt)); weight_=0
     open(iu_kgen,file=kpt%file_name,status='old')
     call dos(nemax*jspin,nkpt,e_,weight_,elecn/2.d0*iso*jspin,ef,iw,nw)
@@ -1207,8 +1207,9 @@ subroutine calc_correction_gauss()
     integer ikp,isp,ispp,ib
     real(q) eta,de
       
-    eta=0
+    bnd%ets2=0
     do isp=1,wh%nspin
+        eta=0
         ispp=min(isp,bnd%ispin_in)
         do ikp=1,kpt%dim
             do ib=1,bnd%ne(1,ikp,ispp)
@@ -1217,9 +1218,9 @@ subroutine calc_correction_gauss()
                 if(de<15._q)eta=eta+0.5*kpt%delta*exp(-de)*kpt%wt(ikp)*wh%rspo
             enddo
         enddo
+        eta=-eta*2._q/sqrt(pi)
+        bnd%ets2(isp)=eta/2._q
     enddo
-    eta=-eta*2._q/sqrt(pi)
-    bnd%ets2=eta/2._q
     return
       
 end subroutine calc_correction_gauss
@@ -1233,8 +1234,9 @@ subroutine calc_entropy_fermi()
     integer ikp,isp,ispp,ib
     real(q) entr,focc,f1,f2,eint
       
-    entr=0
+    bnd%ets2=0
     do isp=1,wh%nspin
+        entr=0
         ispp=min(isp,bnd%ispin_in)
         do ikp=1,kpt%dim
             do ib=1,bnd%ne(1,ikp,ispp)
@@ -1246,8 +1248,8 @@ subroutine calc_entropy_fermi()
                 endif
             enddo
         enddo
+        bnd%ets2(isp)=kpt%delta*entr
     enddo
-    bnd%ets2=kpt%delta*entr
     return
       
 end subroutine calc_entropy_fermi

@@ -98,7 +98,7 @@ module psave
 
     ! h1e
     call gh5_open_r('GPARAMBANDS.h5',f_id)
-    call gh5_read_wh_matrix_list('/H1E',wh%na2_imp,wh%h1e)
+    call gh5_read_wh_h1e(bnd%ispin_in)
     call gh5_close(f_id)
     call rotate_h1e_list()
 

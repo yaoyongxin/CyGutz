@@ -1,9 +1,8 @@
 !*****************************************************************************
 ! set bnd_ne: correlated band interval
-! here we prefer to use the e_fermi for each spin-channel.
 !*****************************************************************************
 subroutine gutz_set_ef_lda(nume,nkpt,projector)
-    use com, only: emin,emax,ef,iso,iso2,bnd_ne,bnd_ek
+    use com, only: emin,emax,ef,iso,ispin_pol,isospin,bnd_ne,bnd_ek
     use struct, only: nat
     use com_mpi,only: nvector,vector_para,fvectors,vectors, &
 
@@ -16,28 +15,28 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     integer nume,nkpt,projector
       
     integer k,ikp,n,nen,i,ii,ios,num,nemin,nemax
-    integer ivector,itape,is,iso_
+    integer ivector,itape,is
     real(8) ss,t,z,e1
     logical linef
     character*10 kname
     character*200   fname
     real(8),parameter :: rytoev=13.60569193_8
     integer,parameter :: iu=90
-      
-    allocate(bnd_ek(nume,nkpt)); bnd_ek=0
-    allocate(bnd_ne(3,nkpt)); bnd_ne=0
+
+    allocate(bnd_ek(nume,nkpt,isospin))
+    bnd_ek=3.d0 ! Rydberg
+    allocate(bnd_ne(3,nkpt,isospin)); bnd_ne=0
       
     ! Use only one spin-channel
-    iso_ = 1
     do ivector=1,nvector
         if (vector_para) then
-            do is=1,iso_    !------ over up/dn ---------------------!
+            do is=1,isospin    !------ over up/dn ---------------------!
                 fname = fvectors(ivector, is+2)
                 itape=61-is
                 open(itape,file=fname,status='old',form='formatted')
             enddo
         endif
-        do is=1,iso_
+        do is=1,isospin
             itape = 61-is
             do i=1,nat
                 read(itape,*); read(itape,*)
@@ -52,14 +51,14 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
                 else
                     ikp=k
                 endif
-                bnd_ne(1,ikp)=nen ! global
+                bnd_ne(1,ikp,is)=nen ! global
                 do ii=1,nen
                     read(itape,*) num,e1
-                    bnd_ek(ii,ikp)=e1
+                    bnd_ek(ii,ikp,is)=e1
                 enddo
             enddo
         end do
-        do is=1,iso_    !------ over up/dn ---------------------!
+        do is=1,isospin    !------ over up/dn ---------------------!
             itape=61-is
             if (vector_para) then
                 close(itape)
@@ -69,8 +68,8 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
         end do
     end do
 #ifdef MPI
-    call dsum_all_mpi(bnd_ek,nume*nkpt)
-    call isum_all_mpi(bnd_ne,3*nkpt)
+    call dsum_all_mpi(bnd_ek,nume*nkpt*isospin)
+    call isum_all_mpi(bnd_ne,3*nkpt*isospin)
 #endif
     inquire(file='EFLDA.INP',exist=linef)
     if(linef)then
@@ -78,8 +77,7 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
         if (myrank.eq.master) &
                 &write(6,'(" fermi level read in from EFLDA.INP")')
     else
-        call gutz_fermi(iso,iso2)
-        ef=ef-0.5d0 ! undo shift
+        call gutz_fermi(iso,isospin)
         call gutz_wrt_fermi(ef,iu)
     endif
     if (myrank.eq.master) write(6,'(" fermi-lda=",f8.3," ryd,", &
@@ -92,20 +90,24 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
         write(6,'(" absolute emax=",f8.3," ryd.",f8.3, &
                 &" ev.")')emax,emax*rytoev
     endif
-      
-    do k=1,nkpt
-        nemin=1; nemax=0
-        do ii=1,bnd_ne(1,k)
-            if(bnd_ek(ii,k).lt.emin) nemin=nemin+1
-            if(bnd_ek(ii,k).lt.emax) nemax=nemax+1
-        enddo ! ii
-        bnd_ne(2,k)=nemin; bnd_ne(3,k)=nemax
-    enddo ! k
-    if(projector>0)then  ! keep same number of bands over k
-        nemin=minval(bnd_ne(2,:)); bnd_ne(2,:)=nemin
-        nemax=maxval(bnd_ne(3,:))
+     
+    do is=1,isospin
         do k=1,nkpt
-            bnd_ne(3,k)=min(nemax,bnd_ne(1,k))
+            nemin=1; nemax=0
+            do ii=1,bnd_ne(1,k,is)
+                if(bnd_ek(ii,k,is).lt.emin) nemin=nemin+1
+                if(bnd_ek(ii,k,is).lt.emax) nemax=nemax+1
+            enddo ! ii
+            bnd_ne(2,k,is)=nemin; bnd_ne(3,k,is)=nemax
+        enddo ! k
+    enddo
+    if(projector>0)then  ! keep same number of bands over k
+        do is=1,isospin
+            nemin=minval(bnd_ne(2,:,is)); bnd_ne(2,:,is)=nemin
+            nemax=maxval(bnd_ne(3,:,is))
+            do k=1,nkpt
+                bnd_ne(3,k,is)=min(nemax,bnd_ne(1,k,is))
+            enddo
         enddo
     else
         projector=-projector
@@ -132,172 +134,120 @@ subroutine set_gfile(deffn)
 end subroutine set_gfile
 
 
-subroutine gutz_fermi(iso,jspin)
+subroutine gutz_fermi(iso,isospin)
     ! nelec is the number of electrons in this compound
     ! ef is the fermi-energy to be calculated
     use param,   only: nume,nkpt
     use com_mpi, only: myrank,master
-    use com,only : ts2,efmod,weigh,ef,delta,bnd_ne,bnd_ek
+    use com,only : efmod,ef,delta,bnd_ne,bnd_ek
     use bandm
     implicit none
-    integer iso,jspin
+    integer iso,isospin
       
-    integer ik,ib,isp,nvmax
+    integer ik,ib,isp
     real(8) e1
       
     call init_bandm(nume)
-      
-    do ik=1,nkpt
-        do ib=1,bnd_ne(1,ik)
-            e1=bnd_ek(ib,ik)
-            if(e1.gt.ebmax(ib)) ebmax(ib)=e1
-            if(e1.lt.ebmin(ib)) ebmin(ib)=e1
+     
+    do isp=1,isospin
+        do ik=1,nkpt
+            do ib=1,bnd_ne(1,ik,isp)
+                e1=bnd_ek(ib,ik,isp)
+                if(e1.gt.ebmax(ib)) ebmax(ib)=e1
+                if(e1.lt.ebmin(ib)) ebmin(ib)=e1
+            enddo
         enddo
     enddo
-      
+
     if(efmod.eq.'GAUSS'.or.efmod.eq.'TEMPS') then 
         ! just to get the energy window
         !         ef=ef-int(ef)
         !         if(ef.gt.0.1d0) ef=0.002d0
         ef=delta
         if (myrank.eq.master) &
-                &write(6,'(" gauss-smearing with",f10.5,4h ry )') ef
-        call gutz_fermig(iso,jspin)
-        ef=ef+0.5d0
+                &write(6,'(" gauss-smearing with ef = ",f10.5,4h ry )') ef
+        call gutz_fermig(iso,isospin)
     elseif(efmod.eq.'TETRA') then
         !     tetraeder method of bloechl (for ef.lt.100  corr is used!!)
-        call gutz_fermi_tetra(nvmax,iso,jspin)
-        ts2=0.d0
+        call gutz_fermi_tetra(iso,isospin)
+        if (myrank.eq.master) &
+                &write(6,'(" tetrahedron with ef = ",f10.5,4h ry )') ef
     else
         write(0,'(" efmod=",a5)')efmod
         stop 'not implimented yet!'
     end if
-      
     return
       
 end subroutine gutz_fermi
   
 !*****************************************************************************
-subroutine gutz_fermi_tetra(nbmax,iso,jspin)
+subroutine gutz_fermi_tetra(iso,isospin)
     ! nelec is the number of electrons in this compound
     ! ef is the fermi-energy to be calculated
     use com_mpi, only: myrank,master
     use param,only: nkpt,nume
-    use com,only : weigh,ef,elecn,bnd_ne,bnd_ek
+    use com,only : ef,elecn,bnd_ne,bnd_ek
       
     implicit real*8 (a-h,o-z)
     parameter (nw=250000)
     integer          :: iw(nw)
-    real*8           :: eb(nume,nkpt,2)
-    real(8),allocatable :: e_(:,:),weight_(:)
-    integer          nehelp(nkpt,2)
-    common /correct/ cordeg,icor
-    !*************************************************************************
-    !clas0
-    !     icor switches non-linear correction  on/off
-    icor=1
-    if(abs(ef).ge.100.d0) icor=0
-    !     cordeg is a switch to correct occupancy of degenerate states
-    cordeg=-1.d-6
-    if(ef.gt.0.d0)  cordeg=-ef
-    if(ef-100.d0.gt.0.d0) cordeg=-ef+100.d0
-    if(ef.lt.0.d0)        cordeg=ef
-    if(ef.lt.-100.d0)     cordeg=ef+100.d0
-    if(abs(cordeg).gt.0.01d0)  cordeg=-1.d-6
+    real(8),allocatable :: weight_(:),e_(:,:)
       
-    if (myrank.eq.master) write(6,'(" bz-integration with tetra-program. &
-            &  icor=:",i2  )') icor
-    if(cordeg.lt.0.d0 .and. (myrank.eq.master) ) &
-            &write(6,'(" equal occupancy of degenerate states, &
-            &tol=:",e8.1)') -cordeg
-      
-    nemax=maxval(bnd_ne(1,:))
-    nehelp(:,1)=bnd_ne(1,:); nehelp(:,2)=nehelp(:,1)
-    eb=3.d0
-    do ik=1,nkpt
-        eb(1:bnd_ne(1,ik),ik,1)=bnd_ek(1:bnd_ne(1,ik),ik)
-    enddo
-    eb(:,:,2)=eb(:,:,1)
-    !.....more dimens.representation,if delta e less then test1
+    nemax=maxval(bnd_ne(1,:,:))
     elecn=elecn-1.d-10
     !para begin
     ! ensure to mimick the proper vector file
     ! if running on multiple processors
     if (myrank.eq.master) write(6,*)'call eord...'
-    allocate(e_(nemax*jspin,nkpt)); e_=0
-    call eord(e_,eb,nemax,nkpt,jspin)
+    allocate(e_(nemax*isospin,nkpt)); e_=0
+    call eord(e_,bnd_ek,nemax,nkpt,isospin)
     if (myrank.eq.master) write(6,*)'call dos...'
-    allocate(weight_(nemax*jspin*nkpt)); weight_=0
-    call dos(nemax*jspin,nkpt,e_,weight_,elecn/2.d0*iso*jspin,d,ef,iw,nw)
+    allocate(weight_(nemax*isospin*nkpt)); weight_=0
+    call dos(nemax*isospin,nkpt,e_,weight_,elecn/2.d0*iso*isospin,d,ef,iw,nw)
     if (myrank.eq.master) write(6,*)'call eweigh...'
-    call eweigh(ef,weight_,nemax,nkpt,jspin,nehelp,eb,nbmax)
     elecn=elecn+1.d-10
-      
-    isum=0
-    do ik=1,nkpt
-        do isp=1,jspin
-            do ib=1,nemax
-                isum=isum+1
-                weigh(ik+(isp-1)*nkpt,ib)=weight_(isum)*2/jspin/iso
-            enddo
-        enddo
-    enddo
-      
     deallocate(e_,weight_)
     return
       
 end subroutine gutz_fermi_tetra
   
 !*****************************************************************************
-subroutine gutz_fermig(iso,jspin)
+subroutine gutz_fermig(iso,isospin)
     use com_mpi, only: myrank,master
     use param,only: nkpt,nume
     use kpts,only: weight=>mweight
-    use com,only : weigh,ef,ts2,elecn,bnd_ek,bnd_ne
+    use com,only : ef,elecn,bnd_ek
       
     implicit real*8 (a-h,o-z)
     real*8 ztot,del1
-    integer i, j, k,nspin, nbtop
-    integer,pointer :: ne(:)
-    real(8),allocatable :: e(:,:,:),we(:,:,:)
+    integer i,j,k,isp
+    real(8),allocatable :: we(:,:,:)
       
-    ztot=elecn; nspin=max(1,jspin/iso)
-    del1=ef; k=nkpt
-    ne=>bnd_ne(1,:)
-    allocate(e(nume,k,nspin)); e=4.d0
-    do i=1,k
-        e(1:ne(i),i,1)=bnd_ek(1:ne(i),i)
-    enddo
-    allocate(we(nume,k,nspin)); we=0
-    call fermi_gs(ztot,del1,iso,jspin,nspin,e,we,nume,weight,nkpt, &
-            &3.9d0,1.d-4,ef,ts2,nbtop)
-    if (myrank.eq.master) write(6,154) ts2
-    do j=1,nspin
-        do i=1,k
-            weigh((j-1)*nkpt+i,1:ne(i))=we(1:ne(i),i,j)
-        enddo
-    enddo
-    deallocate(e,we); nullify(ne)
+    ztot=elecn
+    del1=ef
+    allocate(we(nume,nkpt,isospin)); we=0
+    call fermi_gs(ztot,del1,iso,isospin,bnd_ek,we,nume,weight,nkpt, &
+            &3.9d0,1.d-4,ef)
+    deallocate(we)
     return
     154   format(/,9x,'bandenergy correction:',f10.6)
       
 end subroutine gutz_fermig
   
 !*****************************************************************************
-subroutine fermi_gs(ztot,delta,iso,ispin,nspin,e,we,nbmax,wtk,nkpt,&
-            &ecut,estep,ef,ts2,nbtop)
+subroutine fermi_gs(ztot,delta,iso,isospin,e,we,nbmax,wtk,nkpt,&
+            &ecut,estep,ef)
     implicit none
-    integer,intent(in)::nbmax,nkpt,iso,ispin,nspin
-    real(8),intent(in)::ztot,delta,ecut,estep,e(nbmax,nkpt,nspin),wtk(nkpt)
-    real(8),intent(out)::we(nbmax,nkpt,nspin),ef,ts2
-    integer,intent(out)::nbtop
+    integer,intent(in)::nbmax,nkpt,iso,isospin
+    real(8),intent(in)::ztot,delta,ecut,estep,e(nbmax,nkpt,isospin),wtk(nkpt)
+    real(8),intent(out)::we(nbmax,nkpt,isospin),ef
       
-    real(8) efermi,emin,emax,nel,nel0,dnnt,ef0,ef1,de,wt,fac,e1,eta
+    real(8) efermi,nel,nel0,dnnt,ef0,ef1,de,wt,fac,e1
     integer ib,ikp,isp,nnt,nc,rso,rspo
-    real(8),parameter::tol=1.e-6_8,pi =3.141592653589793238_8
+    real(8),parameter::tol=1.e-6_8, pi=3.141592653589793238_8
     integer,parameter::ncmax=10000
       
-    rso=3-iso; rspo=3-max(iso,ispin); nbtop=0
+    rso=3-iso; rspo=3-max(iso,isospin)
     nnt=ztot/rso; dnnt=ztot/rso-nnt
     if(nnt==0)then
         ef0=e(1,1,1)
@@ -305,15 +255,13 @@ subroutine fermi_gs(ztot,delta,iso,ispin,nspin,e,we,nbmax,wtk,nkpt,&
         ef0=e(nnt,1,1)+dnnt*(e(nnt+1,1,1)-e(nnt,1,1))
     endif
     efermi=ef0
-      
     do nc=1,ncmax
-        we=0; emax=ef0-1000._8; emin=ef0+1000_8
-        do isp=1,nspin
+        we=0
+        do isp=1,isospin
             do ikp=1,nkpt
                 do ib=1,nbmax
                     if(e(ib,ikp,isp)>ecut)cycle
                     e1=e(ib,ikp,isp)
-                    emin=min(emin,e1)
                     de=(e1-efermi)/delta
                     if(de<-3._8)then
                         wt=2._8
@@ -326,9 +274,6 @@ subroutine fermi_gs(ztot,delta,iso,ispin,nspin,e,we,nbmax,wtk,nkpt,&
                     endif
                     wt=wt/2*rspo
                     we(ib,ikp,isp)=wt*wtk(ikp)
-                    if(wt>1.e-5_8)then
-                        emax=max(e1,emax); nbtop=max(nbtop,ib)
-                    endif
                 enddo
             enddo
         enddo
@@ -359,23 +304,6 @@ subroutine fermi_gs(ztot,delta,iso,ispin,nspin,e,we,nbmax,wtk,nkpt,&
     write(0,*) 'error in fermi_gs: fermilevel not converged!'; stop
     100   continue
     ef=efermi
-    emax=emax+0.0001_8
-    emin=emin-0.0001_8
-    ! caluculate energycorrection caused by gaussian smearing
-    ! start loop over k-points (for spinpol.systems divide by 2
-    eta=0
-    do ikp=1,nkpt
-        do isp=1,nspin
-            do ib=1,nbmax
-                if(e(ib,ikp,isp)>ecut)cycle
-                de=(e(ib,ikp,isp)-efermi)/delta
-                de=de*de
-                if(de<15._8)eta=eta+0.5*delta*exp(-de)*wtk(ikp)
-            enddo
-        enddo
-    enddo
-    eta=-eta*2._8/sqrt(pi)/ispin
-    ts2=eta/2._8
     return
       
 end subroutine fermi_gs
@@ -468,7 +396,7 @@ subroutine gutz5_wrt(nkp,wt,nelet,ne,kx,ky,kz,kname,efmod,delta)
     real(8) :: br1, br2
       
     integer i,ismear
-    character::file_name*512,str*1
+    character::file_name*512
       
     if(efmod=='GAUSS')then
         ismear=0
@@ -496,7 +424,7 @@ subroutine gutz5_wrt(nkp,wt,nelet,ne,kx,ky,kz,kname,efmod,delta)
         call gh5_write(br2,3,3,'/recip_prim_vec',log_file_id)
     endif
     write(str1,'(i1)')gfile
-    call gh5_write(ne,3,nkp,'/NE_LIST_SPIN'//str,log_file_id)
+    call gh5_write(ne,3,nkp,'/NE_LIST_SPIN'//str1,log_file_id)
     return
       
 end subroutine gutz5_wrt

@@ -24,9 +24,9 @@ def get_file_info(fname, unit, idmf, case, scratch, so, para, cmplx, _band,
         return [unit, "'{}.inso'".format(case), "'unknown'", "'formatted'", 0]
     elif 'indmfl' == fname:
         return [unit, "'{}.indmfl'".format(case), "'old'", "'formatted'", 0]
-    elif 'outputdmf' == fname:
-        return [unit, "'{}.outputdmf{}'".format(case, idmf), "'unknown'", \
-                "'formatted'", 0]
+    elif 'outputdmfupdn' == fname:
+        return [unit, "'{}.outputdmf{}{}'".format(case, idmf, updn), \
+                "'unknown'", "'formatted'", 0]
     elif 'in1c' == fname:
         return [unit, "'{}.in1c'".format(case), "'unknown'", "'formatted'", 0]
     elif 'vectorupdn' == fname:
@@ -69,8 +69,9 @@ def get_file_info(fname, unit, idmf, case, scratch, so, para, cmplx, _band,
     elif 'recprlist' == fname:
         return [unit, "'{}.recprlist'".format(case), "'unknown'", \
                 "'formatted'", 9000]
-    elif 'scf2' == fname:
-        return [unit, "'{}.scf2'".format(case), "'unknown'", "'formatted'", 0]
+    elif 'scf2updn' == fname:
+        return [unit, "'{}.scf2{}'".format(case, updn), \
+                "'unknown'", "'formatted'", 0]
     elif 'norm' == fname:
         return [unit, "'{}.norm{}'".format(case, so), "'unknown'", \
                 "'formatted'", 0]
@@ -84,7 +85,7 @@ def fcreate_def_gwien(case, scratch='.', so='', para='', idmf='1', cmplx='',
     '''
     fdef = open('gwien{}{}.def'.format(idmf,updn), 'w')
     if idmf == '1':
-        fname_list = ['in2', 'inso', 'indmfl', 'outputdmf', \
+        fname_list = ['in2', 'inso', 'indmfl', 'outputdmfupdn', \
                 'in1c', 'vectorupdn', 'vectordnup', 'klist', \
                 'kgen', 'vspupdn', 'vspdnup', 'struct', \
                 'rotlm', 'energydnup', 'energyupdn']
@@ -93,14 +94,12 @@ def fcreate_def_gwien(case, scratch='.', so='', para='', idmf='1', cmplx='',
                 14, 18, 19, 20, \
                 22, 59, 60]
     elif idmf == '2':
-        fname_list = ['in1c', 'inso', 'in2', 'outputdmf', 'indmfl', \
+        fname_list = ['in1c', 'inso', 'in2', 'outputdmfupdn', 'indmfl', \
                 'clmval', 'vectorupdn', 'vectordnup', 'recprlist', 'kgen', \
-                'vspupdn', 'struct', 'scf2', 'rotlm', 'energysodum', \
-                'energyupdn', 'energydnup', 'norm']
+                'vspupdn', 'struct', 'scf2updn', 'rotlm', 'energyupdn']
         unit_list = [3, 4, 5, 6, 7, \
                 8, 9, 10, 13, 14, \
-                18, 20, 21, 22, 29, \
-                30, 31, 12]
+                18, 20, 21, 22, 30]
 
     for fname, unit in zip(fname_list, unit_list):
         fdef.write("{:3d}, {:<15s}, {:<10s}, {:<13s}, {:<4d}\n".format(\
@@ -113,7 +112,9 @@ def onestep(fday, case, exec_name, w_root, para="", band=None, updn=None):
     '''wien2k steps.
     '''
     time_start = time.strftime("%H:%M:%S")
-    cmd = ['{}/x'.format(w_root), exec_name, para, '-f', case]
+    cmd = ['{}/x'.format(w_root), exec_name, '-f', case]
+    if para != "":
+        cmd.append(para)
     if band == '-band':
         cmd.append(band)
         if not os.path.isfile('EFLDA.INP'):
@@ -173,16 +174,29 @@ def get_file_content(fname):
         return ''
 
 
-def scf(case):
-    f_list = ['{}.scf{}'.format(case, i) for i in ['0', '1', 'so', '2']]
-    f_list.append('Eorb.dat')
-    f_list += ['{}.scf{}'.format(case, i) for i in ['1s', '2s', 'c']]
+def scf(case, spinpol):
+    # scf file content
+    if spinpol:
+        f_list = ['{}.scf{}'.format(case, i) for i in ['0', \
+                '1up', '1dn', 'so', '2up', '2dn', \
+                '1s', '2s', 'cup', 'cdn']]
+    else:
+        f_list = ['{}.scf{}'.format(case, i) for i in ['0', \
+                '1', 'so', '2', '1s', '2s', 'c']]
+
     data = ''.join(get_file_content(f) for f in f_list)
 
     with open('{}.scf'.format(case), 'a') as f:
         f.write(data)
 
-    for i in ['clmsum', 'vsp', 'vns', 'vrespsum']:
+    # files saved for mixing.
+    if spinpol:
+        f_list = ['clmsum', 'vspup', 'vspdn', 'vnsup', 'vnsdn', 'vrespsum',
+                'clmdn', 'clmup']
+    else:
+        f_list = ['clmsum', 'vsp', 'vns', 'vrespsum']
+
+    for i in f_list:
         name = '{}.{}'.format(case, i)
         if file_exists(name):
             shutil.copy2(name, '{}_old'.format(name))
@@ -384,7 +398,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         para = ' -p'
         _para = '_x'
 
-    toclean = glob.glob('*.scf') + glob.glob('*.error*') + \
+    toclean = glob.glob('*.scf*') + glob.glob('*.error*') + \
             glob.glob('*.outputdmf?.*') + glob.glob('EMBED_HAMIL_RES*')
     for f in toclean:
         os.remove(f)
@@ -543,8 +557,13 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         # unset slurm environment variables for wien2k type run
         env.unset_environ(slurm_envs)
 
-        onestep(fday, w_case, 'lcore', w_root, para='')
-        scf(w_case)
+        if spinpol:
+            onestep(fday, w_case, 'lcore', w_root, para='', updn="-up")
+            onestep(fday, w_case, 'lcore', w_root, para='', updn="-dn")
+        else:
+            onestep(fday, w_case, 'lcore', w_root, para='')
+
+        scf(w_case, spinpol)
         onestep(fday, w_case, 'mixer', w_root, para='')
         scfm(w_case)
         drho, dene, dvdc = diff(fday, w_case, mix_dc, avg_dc)

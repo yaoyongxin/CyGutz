@@ -1,19 +1,30 @@
-SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recomputeEF,WL,TCLM,TCLM_w,TFOUR,TFOUR_w)
+SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
+        &TCLM,TCLM_w,TFOUR,TFOUR_w)
   USE defs,  ONLY: PI, ZERO, TWO, ZEROC, IMAG
-  USE param, ONLY: IBLOCK, LMAX2, LOMAX, NCOM, NLOAT, NRAD, NGAU, NMAT, NUME, NSYM, NKPT, fh_vec, fastFilesystem
+  USE param, ONLY: IBLOCK, LMAX2, LOMAX, NCOM, NLOAT, NRAD, &
+      &NGAU, NMAT, NUME, NSYM, NKPT, fh_vec, fastFilesystem
   USE atspdt,ONLY: EL, P, DP, PE, DPE, PEI, e_store
   USE char,  ONLY: modus
-  USE com,   ONLY: rel, NSPIN, NAT, NBAND, NK, MINWAV, MAXWAV, NB, EMIN, EF, ELECN, XWT, weigh
+  USE com,   ONLY: rel, sspin, NAT, NBAND, NK, MINWAV, MAXWAV, &
+      &EMIN, ELECN, XWT
   USE charp, ONLY: init_charp, zero_charp, fini_charp
   USE chard, ONLY: init_chard, zero_chard, fini_chard
   USE charf, ONLY: init_charf, zero_charf, fini_charf
-  USE lo,    ONLY: loor, lapw, nlo, nlov, nlon, ilo, a1lo, b1lo, elo_store, alo, blo, clo, pi12lo, pe12lo, pr12lo
-  USE lohelp,ONLY: u21, ue21, u12, ue12, u22, init_lohelp, zerotc_lohelp, fini_lohelp, sum12, sum21, sum22, sume21, sume12
-  USE struk, ONLY: iatnr, mult, isplit, jri, pos, rotij, tauij, rmt, v, rotloc, r0, dx, vol, br1, br2
-  USE xa,    ONLY: LM, R, AVEC, BK, BKROT, BKRLOC, fj, dfj, E, WEIGHT, TC100, TCA100, TCB100, init_xa, fini_xa, SUMA, SUMB, SUMAB, SUMBA
-  USE xa3,   ONLY: bkx, bky, bkz, bkxlo, bkylo, bkzlo, init_xa3, fini_xa3, kx, ky, kz, kxlo, kylo, kzlo, As, As_lo!, A, A_lo
+  USE lo,    ONLY: loor, lapw, nlo, nlov, nlon, ilo, a1lo, b1lo, &
+      &elo_store, alo, blo, clo, pi12lo, pe12lo, pr12lo
+  USE lohelp,ONLY: u21, ue21, u12, ue12, u22, init_lohelp, &
+      &zerotc_lohelp, fini_lohelp, sum12, sum21, sum22, sume21, sume12
+  USE struk, ONLY: iatnr, mult, isplit, jri, pos, rotij, tauij, &
+      &rmt, v, rotloc, r0, dx, vol, br1, br2
+  USE xa,    ONLY: LM, R, AVEC, BK, BKROT, BKRLOC, fj, dfj, E, &
+      &WEIGHT, TC100, TCA100, TCB100, init_xa, fini_xa, &
+      &SUMA, SUMB, SUMAB, SUMBA
+  USE xa3,   ONLY: bkx, bky, bkz, bkxlo, bkylo, bkzlo, init_xa3, &
+      &fini_xa3, kx, ky, kz, kxlo, kylo, kzlo, As, As_lo!, A, A_lo
   USE reclat,ONLY: inst, tauk, kzz
-  USE com_mpi,ONLY: nprocs,myrank,master,FilenameMPI,Reduce_MPI,Gather_procs,FindMax_MPI,cpuID,pr_proc,pr_procr,pr_procs,vector_para,vectors,nvector,fvectors,VECFN,FindMaxK_MPI
+  USE com_mpi,ONLY: nprocs,myrank,master,FilenameMPI,Reduce_MPI, &
+      &Gather_procs,cpuID,pr_proc,pr_procr,pr_procs,vector_para, &
+      &vectors,nvector,fvectors,VECFN,FindMaxK_MPI
   USE w_atpar
   USE dmf
   USE GMPI
@@ -22,16 +33,12 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
   CHARACTER*4, intent(in)  :: cform
   INTEGER, intent(out)     :: nnlo
   CHARACTER*5, intent(in)  :: coord
-  REAL*8, intent(in)       :: ZZ(*), sumw, WL
-  LOGICAL, intent(in)      :: SO
-  INTEGER, intent(in)      :: NSPIN1, nwave
-  LOGICAL, intent(inout)   :: vresp_write
-  INTEGER, intent(in)      :: recomputeEF
+  REAL*8, intent(in)       :: ZZ(*)
+  INTEGER, intent(in)      :: nwave
   REAL*8, intent(out)      :: TCLM,TCLM_w,TFOUR,TFOUR_w
   ! Functions
   INTEGER :: NOTRI
   REAL*8  :: GAUNT
-  INTEGER :: CountSelfenergy
   REAL*8  :: ferm
   ! Common blocks
   COMMON /FACT/   FCT(100)
@@ -42,80 +49,62 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
   REAL*8     :: UA, UB, UBA, UAB
   common /xmean/  xwteh(0:3),xwtel(0:3),xwt1h(0:3),xwt1l(0:3) 
   REAL*8     :: xwteh, xwtel, xwt1h, xwt1l
-  common /mkef/delef,ts2
-  REAL*8     :: delef, ts2
   ! Locals
   real*8, PARAMETER       :: Ry2eV = 13.60569193
   !
-  LOGICAL       :: debug, testLDA
   CHARACTER*10  :: KNAME
-  CHARACTER*150 :: parseline
   LOGICAL       :: more_kpoints
   COMPLEX*16    :: YL((LMAX2+1)*(LMAX2+1))
   COMPLEX*16    :: PHSHEL,CFAC,IMAG1
   REAL*8        :: tc_buf(nrad),vtc_buf(nrad)
   CHARACTER*100 :: CDUMMY
-  COMPLEX*16    :: cc, gtc, CCC
   INTEGER       :: I, J, N, JK, ISCF, LFIRST, LMX, jatom, ilm1, ilm3, n0, ne, nm
-  INTEGER       :: jlm, lmmax, imax, nemin, nemax, DM_nemin, DM_nemax, DM_nemaxx, label, i1
-  INTEGER       :: ii, ibb, i3, isize, latom, mu, index, l, m, maxx, lda, ldb, ldc, num, num0, ilm2
+  INTEGER       :: jlm, lmmax, imax, nemin, DM_nemin, DM_nemax, DM_nemaxx, label, i1
+  INTEGER       :: ii, ibb, i3, isize, latom, mu, index, l, m, maxx, lda, ldb, ldc, num, ilm2
   INTEGER       :: jlo, ilm, li, mi, L1, MMAX, LP, LP1, mpmax, jlop, MP, MS, MPS, MTEST, LY, LPY
   REAL*8        :: arg, arg1, arg2, arg3, argt, argt2, emist, fac, rmt2, GNT
-  REAL*8        :: TWOPI, TEST1, ETOT, ETOT2, EDL,SQRT2, SQRT3, SQFP, Y, CIN, jatombad, lbad
+  REAL*8        :: TWOPI, TEST1, SQRT2, SQRT3, SQFP, Y, CIN, jatombad, lbad
   !
   REAL*8     :: time_bl, time_bl_w, time_reduc, time_reduc_w, time_write, time_writeclm, time_writescf, time4_w, time3, time4
   REAL*8     :: time_write_w, time_writeclm_w, time_ilm, time_ilm_w, time_radprod, time_m, time_rad, time3_w
   REAL*8     :: time_rd_w, time_rd_c, time_atpar_w, time_atpar_c, time_writescf_w, time_r_w, time_r_c, trw, trc
   REAL*8     :: time_writeefg, time_writeeefg_w, time_writeefg_w, t1c, t1w, t2c, t2w, time1, time1_w, time2, time2_w
-  REAL*8     :: time_dmf, time_dmfw, time_int, time_intw, time_ed, time_edw, time_dmf0, time_dmf0w, time_dmf1, time_dmf1w
+  REAL*8     :: time_dmf, time_dmfw, time_int, time_intw, time_ed, time_edw
   !
-  COMPLEX*16 :: gint, wkp, w0, p_w0
-  !COMPLEX*16 :: dh_alm(nume,(LMAX2+1)*(LMAX2+1)), dh_blm(nume,(LMAX2+1)*(LMAX2+1)), dh_clm(nume,(LMAX2+1)*(LMAX2+1),nloat)
-  COMPLEX*16 :: tsa, tsb, tsab, tsba, ts12(nloat), tse12(nloat), ts21(nloat), tse21(nloat), ts22(nloat,nloat)
-  COMPLEX*16 :: tsuma,tsumb,tsumab,tsumba,tsum21(nloat),tsume21(nloat),tsum12(nloat),tsume12(nloat),tsum22(nloat,nloat)
+  COMPLEX*16 :: gint
+  real(8) :: wkp
+  COMPLEX*16 :: tsa, tsb, tsab, tsba, ts12(nloat), &
+      &tse12(nloat), ts21(nloat), tse21(nloat), ts22(nloat,nloat)
+  COMPLEX*16 :: tsuma,tsumb,tsumab,tsumba,tsum21(nloat),&
+      &tsume21(nloat),tsum12(nloat),tsume12(nloat),tsum22(nloat,nloat)
   COMPLEX*16 :: SA, SB, SAB, SBA, s12(nloat), se12(nloat), s21(nloat), se21(nloat), s22(nloat,nloat)
   COMPLEX*16 :: vsa, vsb, vsab, vsba, vs12(nloat), vse12(nloat), vs21(nloat), vse21(nloat), vs22(nloat,nloat)
   REAL*8     :: facv, EQBAD, OVRDIV, TC, EFGFACT, EFG20, EFG22, EFG2M, QXX, QYY, QZZ, QXY, VXX, VYY, VZZ
-  INTEGER    :: LM_MAX, iks,ikp, is, itape,itape1,itape2, ios, icase, lcase, iw, nind, icix, num1, m1, ind, iom, max_nbands
-  REAL*8     :: S,T,Z, vnorm1, BKROT2(3), BKROT3(3), zero3(3), ff, twgh, emax, wgamma
-  integer    :: iorbital(natom,lmax2+1), norbitals, maxdim2, iorb, nbands, nbandsx, it, nomega, npomega, fh_sig, im
+  INTEGER    :: LM_MAX, iks,ikp, is, itape,itape1,ios
+  REAL*8     :: S,T,Z, vnorm1, BKROT2(3), BKROT3(3), zero3(3), ff
+  integer    :: nbands, nbandsx
   real*8     :: h_al(iblock),h_bl(iblock)
   complex*16 :: h_yl((LMAX2+1)*(LMAX2+1),iblock), h_alyl((LMAX2+1)*(LMAX2+1),iblock), h_blyl((LMAX2+1)*(LMAX2+1),iblock)
-  REAL*8     :: zw0(nume), LDA_weight(nume)
   REAL*8,     ALLOCATABLE :: zw2(:)
   COMPLEX*16, ALLOCATABLE :: alm(:,:),blm(:,:),clm(:,:,:), dh_alm(:,:,:), dh_blm(:,:,:), dh_clm(:,:,:,:)
-  COMPLEX*16, ALLOCATABLE :: tmp(:,:), p_tmp(:,:), cfX(:,:,:,:), DMFTU(:,:,:), STrans(:,:,:,:), zw1(:), w1(:,:), Aweight(:,:), Olapm0(:,:,:), Wsum(:,:), Winf(:,:), Wferm(:,:)
-  INTEGER,    ALLOCATABLE :: nindo(:), cix_orb(:), cixdim(:), iSx(:,:), noccur(:,:)
-  complex*16, allocatable :: sigma(:,:,:), s_oo(:,:), Eij(:,:), zek(:), p_zek(:), gloc(:), gij(:,:),  zar(:,:), p_zar(:,:), zal(:,:), p_zal(:,:), zar_inf(:,:), zal_inf(:,:)
-  real*8,     allocatable :: omega(:), zek_inf(:)
+  COMPLEX*16, ALLOCATABLE :: Aweight(:,:)
   ! interstitials
   INTEGER    :: keigen(3,nmat), kmax(3), iff1, iff2, iff3, iff1t, iff2t, iff3t, isig, ierr, ia1, ia2, jj, jx, ij, k
-  REAL*8     :: volin, Tx, beta, ek_inf, dsum, drest, Om
+  REAL*8     :: volin
   COMPLEX*16, ALLOCATABLE :: fft(:,:,:),tp(:,:,:),sumfft(:,:,:),vsumfft(:,:,:),tloc(:,:,:)
   DOUBLE PRECISION,ALLOCATABLE :: dwork(:)
   COMPLEX*16, ALLOCATABLE :: cwork(:)
   COMPLEX*16, ALLOCATABLE :: rho1(:),vrho1(:)
   COMPLEX*16, ALLOCATABLE :: rhok_buf(:),vrhok_buf(:)
-  COMPLEX*16, ALLOCATABLE :: rhok(:),vrhok(:), Asc(:,:), w0inf(:), s_inf(:,:)
-  COMPLEX*16 :: cek, omn, e0, e1, csum(nume)
-  INTEGER :: qmax, j0, j1, j2, iomt, iikp, ivector
-  LOGICAL :: Rho_Renormalize, Tcompute
-  REAL*8,ALLOCATABLE  :: LowE(:,:,:)
+  COMPLEX*16, ALLOCATABLE :: rhok(:),vrhok(:), Asc(:,:)
+  INTEGER :: iikp, ivector
+  LOGICAL :: Tcompute
   REAL(8) DM_EF,DM_EORB,DM_ESUM
   character str*27,fname*256
   
-  Rho_Renormalize = .FALSE.
-  testLDA=.FALSE.
-  debug = .FALSE.
-  wgamma = 1e-10
-  
-  fh_sig = 80
-  emax = ef
   TWOPI=TWO*PI
 
   TEST1=0.0D0                                                        
-  ETOT=0.0D0                                                        
-  ETOT2=0.0; EDL=0
   XWT=0.0                                                           
   SQRT2=SQRT(2.0D0)                                                 
   SQRT3=SQRT(3.D0)                                                  
@@ -124,10 +113,10 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
 
   CALL init_lohelp
   CALL init_xa(nat)
-  
+ 
   vnorm1=1.d0
-  IF((iso.EQ.2).AND.(nspin1.EQ.1)) vnorm1=0.5d0
-  
+  IF((iso.EQ.2).AND.(ispin_pol.EQ.1)) vnorm1=0.5d0
+
   Y=1.0D0                                                           
   DO I=1,49
      J=2*I-1
@@ -144,11 +133,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
      WRITE(8,787) ISCF                        
      WRITE(8,*) '   NORM OF CLM(R) =          '                        
      WRITE(8,*)                                                 
-     if (vresp_write)  then       
-        WRITE(28,787) ISCF                        
-        WRITE(28,*) '   NORM OF CLM(R) =          '                        
-        WRITE(28,*)  
-     endif
      WRITE(6,800)
   endif
   
@@ -160,9 +144,12 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
   time_radprod=zero; time_m=zero; time_rad=zero; time_rd_w=zero; time_rd_c=zero
   time_r_w=zero; time_r_c=zero; time_atpar_w=zero; time_atpar_c=zero; time_writeefg=zero; time_writeefg_w=zero
   time_dmf=zero; time_dmfw=zero; time_int=zero; time_intw=zero; time_ed=zero; time_edw=zero
-  
-  ALLOCATE(alm((lmax2+1)*(lmax2+1),nume),blm((lmax2+1)*(lmax2+1),nume),clm((lmax2+1)*(lmax2+1),nume,nloat))
-  ALLOCATE(dh_alm(nume,(lmax2+1)*(lmax2+1),iso),dh_blm(nume,(lmax2+1)*(lmax2+1),iso),dh_clm(nume,(lmax2+1)*(lmax2+1),nloat,iso)) ! Mar 27
+ 
+  ALLOCATE(alm((lmax2+1)*(lmax2+1),nume),blm((lmax2+1)*(lmax2+1),nume), &
+      &clm((lmax2+1)*(lmax2+1),nume,nloat))
+  ALLOCATE(dh_alm(nume,(lmax2+1)*(lmax2+1),iso), &
+      &dh_blm(nume,(lmax2+1)*(lmax2+1),iso), &
+      &dh_clm(nume,(lmax2+1)*(lmax2+1),nloat,iso)) ! Mar 27
   CALL init_charp(nume)
   CALL init_chard(nume)
   CALL init_charf(nume)
@@ -183,9 +170,9 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
      !------------ vector files need to be read from the beginning -------------------!
      rewind(itape)
   endif
+  ! needed in atpar
   DO i=1,nat
-     READ(itape,'(a)') parseline
-     READ(parseline,'(100(f9.5))') e_store(0:lmax2,i)
+     READ(itape,'(100(f9.5))') e_store(0:lmax2,i)
      READ(itape,'(100(f9.5))') elo_store(0:lomax,1:nloat,i)
   enddo
   if (vector_para) then
@@ -303,8 +290,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
      WRITE(6,*) 'ERROR: sum(pr_procs) should be nkpt, but is not', sum(pr_procs), nkpt
   endif
 
-  max_nbands=0
-  
   ! ---- for interstitial ----
   kmax(:)=0
   ! ..... FIND MAX RECIPROCAL LATTICE VECTORS
@@ -353,7 +338,8 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
   CALL IFFLIM(iff3t,iff3)
   IF (myrank.EQ.master .OR. fastFilesystem/=0) WRITE(6,*) 'n,iff1,iff2,iff3',n-nnlo,iff1,iff2,iff3
   !
-  ALLOCATE (fft(iff1,iff2,iff3),tp(iff1,iff2,iff3),sumfft(iff1,iff2,iff3),vsumfft(iff1,iff2,iff3),tloc(iff1,iff2,iff3))
+  ALLOCATE (fft(iff1,iff2,iff3),tp(iff1,iff2,iff3),&
+      &sumfft(iff1,iff2,iff3),vsumfft(iff1,iff2,iff3),tloc(iff1,iff2,iff3))
   ALLOCATE (dwork(4*(iff1+iff2+iff3)+15),cwork(iff1+iff2+iff3))
   fft=0.0
   tp=0.0
@@ -365,10 +351,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
   w_vRHOLM(:,:,:)=0.0
   w_RHOLM(:,:,:)=0.0
   w_xwt1(:,:)=0.0
-  w_xwt1l(:,:)=0.0
-  w_xwt1h(:,:)=0.0
-  w_xwteh(:,:)=0.0
-  w_xwtel(:,:)=0.0
      
   REWIND 5
   READ(5,fmt='(//,1A)') CDUMMY
@@ -380,10 +362,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
 !!! ---------- Preparation of arrays for paralel executaion --------------                                                     
   IF (myrank.EQ.master .OR. fastFilesystem/=0) WRITE(6,'(A,I3,2x,A,I3)') 'pr_proc=', pr_proc, 'tot-k=', nkpt-1
   IF (myrank.EQ.master .OR. fastFilesystem/=0) print *, 'mpr_proc=', pr_proc, 'myrank=', myrank, 'nprocs=', nprocs, 'nkpt=', nkpt
-  NB(:)=0
 
-  call gh5_init()
-  
   iikp=0
   DO ivector=1,nvector
      IF(GP%LKPVEC)THEN
@@ -392,32 +371,34 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
        WRITE(STR,'(I3)')GP%MYRANK
      ENDIF
      call gh5_open_r('KSWT_'//TRIM(ADJUSTL(STR))//'.h5', f_id)
-     call gh5_read(DM_EF,'/e_fermi',f_id)
-     call gh5_read(DM_EORB,'/e_gamma_dc',f_id)
-     call gh5_read(DM_ESUM,'/e_band',f_id)
-
      IF(IVECTOR.EQ.1)THEN
-       WRITE(21,'(":FER DMFT Fermi Energy",F10.5)')DM_EF
-       WRITE(21,'(":EORB ",F20.9)')DM_EORB
-       WRITE(21,'(":SUM SUM OF DMFT BAND ENERGIES ",F20.9)')DM_ESUM
+        if(sspin=="1")then
+            call gh5_read(DM_EF,'/e_fermi',f_id)
+            call gh5_read(DM_EORB,'/e_gamma_dc',f_id)
+            WRITE(21,'(":FER Gutzwiller Fermi Energy",F10.5)')DM_EF
+            WRITE(21,'(":EORB ",F20.9)')DM_EORB
+        endif
+        if(ispin_pol==1)then
+            call gh5_read(DM_ESUM,'/e_band',f_id)
+        else
+            call gh5_read(DM_ESUM,'/e_band_spin'//sspin,f_id)
+        endif
+        WRITE(21,'(":SUM SUM OF GUTZ BAND ENERGIES ",F20.9)')DM_ESUM
      ENDIF
 
      DO is=1,iso    !------ over up/dn ---------------------!
         itape1=8+is
-        itape2=29+is
         if (vector_para) then
            open(itape1,FILE=fvectors(ivector,is),STATUS='old',FORM='unformatted')
-           open(itape2,FILE=fvectors(ivector,is+2),STATUS='old',FORM='formatted')
         else
            rewind(itape1) !--- both vector files: 9 and 10 rewind -------------------------!
-           rewind(itape2) !--- both vector files: 9 and 10 rewind -------------------------!
         endif
         DO I=1,NAT
            READ(itape1) EMIST !---- At the beginninge we have linearization energies --!
            READ(itape1) EMIST !---- We just skip them ---------------------------------!
         ENDDO
      END DO
-     
+    
      DO iks=1,vectors(ivector,2) ! kpoint loop begin
         if (vector_para) then
            ikp = vectors(ivector,3)+iks  ! successive index in k-point table from case.klist
@@ -428,30 +409,24 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
            !--- This is because we need to read vector file sequentially.
            iikp = ikp-myrank*pr_proc            ! The index of the point to compute. If negative, do not compute!
         endif
-        Tcompute=.FALSE.                                                                                                                                      
-        if (iikp.gt.0) Tcompute=.TRUE.       ! If Tcompute is true, the point needs to be computed.                                                           
-        if (iikp.GT.pr_proc) EXIT            ! Processor finished. The rest of the points will be taken care of by the other processors.                      
+        Tcompute=.FALSE.   
+
+        if (iikp.gt.0) Tcompute=.TRUE.       
+        ! If Tcompute is true, the point needs to be computed.                                                           
+        if (iikp.GT.pr_proc) EXIT            
+        ! Processor finished. The rest of the points will be taken care of by the other processors.                      
 
         call cputim(t1c)
         call walltim(t1w)
+
         !!! Need to read both spins!
-        CALL Read_Vec_Spin(ikp, E, twgh, As, As_lo, kx, ky, kz, kxlo, kylo, kzlo, bkx, bky, bkz, bkxlo, bkylo, bkzlo, nemin, nemax, more_kpoints, n0, emin, emax, iso, nmat, nume, nnlo)
-   
+        CALL Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, kxlo, kylo, kzlo, &
+            &bkx, bky, bkz, bkxlo, bkylo, bkzlo, more_kpoints, n0, &
+            &emin, nemin, iso, nmat, nume, nnlo)
+  
         IF (.NOT.Tcompute) CYCLE
         IF (.NOT.more_kpoints) EXIT
    
-        LDA_weight=0
-        DO num=nemin,nemax
-           IF(E(num).GE.emin.AND.E(num).LE.emax) THEN
-              LDA_weight(num)=weigh(ikp,num)
-              IF(ABS(LDA_weight(num)).GT.1.d-8) THEN
-                 NB(ikp)=NB(ikp)+1
-                 etot=etot+E(num)*LDA_weight(num)*vnorm1
-              ENDIF
-              IF(ABS(LDA_weight(num)).LE.1.d-8) nemax=nemax-1
-           ENDIF
-        ENDDO
-        
         call cputim(t2c)
         call walltim(t2w)
         time_rd_c=time_rd_c+t2c-t1c
@@ -464,12 +439,13 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
    
         call cputim(t1c)
         call walltim(t1w)
- 
-        WRITE(STR,'(I7)')ikp
-        call gh5_read(DM_nemin, '/IKP_'//trim(adjustl(str))//'/nemin',f_id)
-        call gh5_read(DM_nemax, '/IKP_'//trim(adjustl(str))//'/nemax',f_id)
+
+        WRITE(str,'(I7)')ikp
+        call gh5_read(DM_nemin,'/IKP_'//trim(adjustl(str))// &
+                &'/nemin_spin'//sspin,f_id)
+        call gh5_read(DM_nemax,'/IKP_'//trim(adjustl(str))// &
+                &'/nemax_spin'//sspin,f_id)
         nbands = DM_nemax-DM_nemin+1
-   
         call cputim(t2c)
         call walltim(t2w)
         
@@ -479,28 +455,15 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
         call cputim(t1c)
         call walltim(t1w)
         allocate( Aweight(nbands,nbands), zw2(nbands) )
+        call gh5_read(wkp,'/IKP_'//trim(adjustl(str))// &
+                &"/wt",f_id)
         call gh5_read(Aweight,nbands,nbands,'/IKP_'//trim(adjustl(str))// &
-                &'/KSWT',f_id)
-        wkp = (twgh/sumw*2.0)
-        zw0(:)=0
-        DO num=nemin,DM_nemin-1
-           zw0(num) = wkp ! These bands are fully filled
-        ENDDO
-        
-        ! We use the following formula to implement the total energy:
-        ! dE = \sum_{k,i} E_{k,i}^{LDA} * n_{i,i}^{DMFT}
-        ! where E_{k,i} are Kohn-Sham eigenvalues
-        ! and n_{i,i}^{DMFT}= T*sum_{iom}g_{k,ii}^{DMFT} is the DMFT density matrix in KS base
-   
-        DO i=nemin,DM_nemin-1
-           ETOT2 = ETOT2 + E(i)*dble(wkp)*VNORM1
-           EDL=EDL+E(i)*dble(wkp)*VNORM1
-        ENDDO
-        DO i=1,nbands
-           ETOT2 = ETOT2 + E(i+DM_nemin-1)*dble(Aweight(i,i))*VNORM1
-        ENDDO
-        CALL DMFT_WEIGHTS(zw2, Aweight, nbands, debug)
-        
+                &'/KSWT_SPIN'//sspin,f_id)
+        if(ispin_pol==1)then
+            wkp=wkp*2
+        endif
+        CALL DMFT_WEIGHTS(zw2, Aweight, nbands)
+       
         call cputim(t2c)
         call walltim(t2w)
         time_ed=time_ed+t2c-t1c
@@ -508,39 +471,27 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
         
         ! Weights for all bands, which are needed below
         weight=0
-        weight(:DM_nemin-1) = zw0(:DM_nemin-1)
-        weight(DM_nemin:DM_nemax) = zw2(:)
-        
-        
+        weight(:DM_nemin-1) = wkp
+        weight(DM_nemin:DM_nemax) = zw2/vnorm1
         DM_nemaxx=DM_nemax
         DO num=DM_nemin,DM_nemax
-           IF(abs(zw2(num-DM_nemin+1)).LE.1.d-8) DM_nemaxx=DM_nemaxx-1
+           ! zw2 already in descending order
+           IF(abs(zw2(num-DM_nemin+1)).LE.1.d-8)then
+               DM_nemaxx=num-1
+               exit
+           endif 
         ENDDO
-        
-        if (testLDA) DM_nemaxx = max(DM_nemaxx,nemax)
-        ! we need to have alm up to DM_nemax
-        nemax     = max(DM_nemax,nemax)
-   
+       
         do num=nemin,DM_nemaxx
            xwt=xwt+weight(num)*vnorm1
         enddo
+ 
+        WRITE(*,'(I3,A,1x,I4,1x,I4,1x,A,I3,1x,A,I3,1x,A,I3)') &
+            &myrank, ') Finished k-point', ikp, iikp, &
+            &'with DM_nemin=', DM_nemin, 'DM_nemax=', DM_nemax, &
+            &'DM_nemaxx', DM_nemaxx
    
-        if (debug) then
-           print *, 'xwt=', xwt, vnorm1
-           print *, 'DM=', nemin, nemax, DM_nemin, DM_nemax, DM_nemaxx
-           do num=nemin,nemax
-              write(*,'(I3,1x,f20.10,1x)',advance='no') num, E(num)-EF
-              write(*,'(f20.10,1x)', advance='no') LDA_weight(num)  !-(cc-conjg(cc))/(2*pi*IMAG)
-              write(*,'(2f20.10,1x)') weight(num)
-           enddo
-        endif
-        WRITE(*,'(I3,A,1x,I4,1x,I4,1x,A,I3,1x,A,I3,1x,A,I3,1x,A,I3,1x,A,I3,1x)') myrank, ') Finished k-point', ikp, iikp, 'with nemin=', nemin, 'nemax=', nemax, 'DM_nemin=', DM_nemin, 'DM_nemax=', DM_nemax, 'DM_nemaxx', DM_nemaxx
-   
-        deallocate( zw2 )
-        
-        if (TestLDA) then
-           weight(:) = LDA_weight(:)
-        endif
+        deallocate(zw2)
         
         nbandsx = DM_nemaxx-DM_nemin+1
         do jatom=1,nat
@@ -573,20 +524,14 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
            pr12lo(1:nloat,1:nloat,0:lomax) = w_pr12lo(1:nloat,1:nloat,0:lomax,jatom)
            R(1:nrad) = w_R(1:nrad,jatom)
               
-           !.....CALCULATE  BESSELFUNCTIONS                                        
-           !     YLM ARE CALCULATED FOR EACH ENERGY SEPARATLY TO CONSERVE CM-SPACE
-           !     CALL HARMON(N-(nlo+nlon+nlov),bkx,bky,bkz,lmax2,fj,dfj,rmt(jatom))
-           !isize=n0-nnlo
-           !CALL HARMON(isize,bkx,bky,bkz,lmax2,fj(:,:,jatom),dfj(:,:,jatom),rmt(jatom))
-           
            ! zero koeff. for charge analysis
-           CALL zero_charp(nemin,nemax)
-           CALL zero_chard(nemin,nemax)
-           CALL zero_charf(nemin,nemax)
-           CALL zerotc_lohelp(nemin,nemax)
-           TC100(0:lmax2,nemin:nemax)=0.0
-           TCA100(0:lmax2,nemin:nemax)=0.0
-           TCB100(0:lmax2,nemin:nemax)=0.0
+           CALL zero_charp(nemin,DM_nemax)
+           CALL zero_chard(nemin,DM_nemax)
+           CALL zero_charf(nemin,DM_nemax)
+           CALL zerotc_lohelp(nemin,DM_nemax)
+           TC100(0:lmax2,nemin:DM_nemax)=0.0
+           TCA100(0:lmax2,nemin:DM_nemax)=0.0
+           TCB100(0:lmax2,nemin:DM_nemax)=0.0
            
            ! CALCULATE ALM, BLM                                                
            fac=4.0d0*pi*rmt(jatom)**2/SQRT(vol)                              
@@ -596,7 +541,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
               
               latom=latom+1
    
-              DO is=1,iso !!! over spin: Mar 25, 2010           
+              DO is=1,iso ! iso == 1           
                  
                  alm(:,:)=0.0
                  blm(:,:)=0.0
@@ -623,7 +568,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
                        bk(3)=bkrot(1)*br1(3,1)+bkrot(2)*br1(3,2)+bkrot(3)*br1(3,3)   
                        !---- BKRLOC = Rotloc.R_g.(k+K),  is rotates Rotloc.R.(k+K) . Rotation Rotloc entered by user
                        CALL ROTATE (bk,rotloc(1,1,jatom),bkrloc)
-                       !!!! CALL ROTATE (BK,crotloc(1,1,icase),BKRLOC) might beed to do that
                        !---- YLM = Y_{L}(Rotloc.R_g.(k+K))
                        CALL YLM (bkrloc,lmax2,yl)
                        arg1=bkrot(1)*(pos(1,lfirst))*twopi
@@ -674,8 +618,12 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
                     lda=(LMAX2+1)*(LMAX2+1)
                     ldc=lda
                     ldb=nmat 
-                    CALL zgemm('N','N',index,nemax-nemin+1,ibb,(1.d0,0.d0),h_alyl,lda,As(ii,nemin,is),ldb,(1.d0,0.d0),alm(1,nemin),ldc)
-                    CALL zgemm('N','N',index,nemax-nemin+1,ibb,(1.d0,0.d0),h_blyl,lda,As(ii,nemin,is),ldb,(1.d0,0.d0),blm(1,nemin),ldc)
+                    CALL zgemm('N','N',index,DM_nemax-nemin+1,ibb,&
+                        &(1.d0,0.d0),h_alyl,lda,As(ii,nemin,is),ldb, &
+                        &(1.d0,0.d0),alm(1,nemin),ldc)
+                    CALL zgemm('N','N',index,DM_nemax-nemin+1,ibb,&
+                        &(1.d0,0.d0),h_blyl,lda,As(ii,nemin,is),ldb, &
+                        &(1.d0,0.d0),blm(1,nemin),ldc)
                     
                  ENDDO blocked_loop
                  
@@ -690,7 +638,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
                  
                  ldc=(LMAX2+1)*(LMAX2+1)
    
-                 if (nlo.ne.0) call lomain (rotloc(:,:,jatom),is,nemin,nemax,lfirst,latom,n0,jatom,alm,blm,clm)
+                 if (nlo.ne.0) call lomain (rotloc(:,:,jatom),is,nemin,DM_nemax,lfirst,latom,n0,jatom,alm,blm,clm)
               
                  index=0
                  DO l=0,lmax2
@@ -699,18 +647,17 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
                     cfac=cfac*fac
                     DO m=1,maxx
                        index=index+1
-                       DO num=nemin,nemax
+                       DO num=nemin,DM_nemax
                           alm(index,num)=alm(index,num)*cfac
                           blm(index,num)=blm(index,num)*cfac
                        ENDDO
                        DO jlo=1,ilo(l)
-                          DO num=nemin,nemax
+                          DO num=nemin,DM_nemax
                              clm(index,num,jlo)=clm(index,num,jlo)*cfac
                           ENDDO
                        ENDDO
                     ENDDO
                  ENDDO
-                 
                  ! Chenging alm,blm,clm to make them DMFT-like
                  alm(:,DM_nemin:DM_nemaxx)= matmul( alm(:,DM_nemin:DM_nemax), Aweight(:nbands,:nbandsx) )
                  blm(:,DM_nemin:DM_nemaxx)= matmul( blm(:,DM_nemin:DM_nemax), Aweight(:nbands,:nbandsx) )
@@ -725,16 +672,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
                  ENDDO
                  
               enddo  !!! Mar 27, 2010: loop over spin
-   
-              !!! Mar 27, 2010: we need alm for csplit below. Take the average between up and down
-              if (iso.eq.2) then
-                 alm(:,:) = transpose( (dh_alm(:,:,1)+dh_alm(:,:,2))/sqrt(2.) )
-                 blm(:,:) = transpose( (dh_blm(:,:,1)+dh_blm(:,:,2))/sqrt(2.) )
-                 DO jlo=1,nloat
-                    clm(:,:,jlo) = transpose( (dh_clm(:,:,jlo,1)+dh_blm(:,:,2))/sqrt(2.) )
-                 ENDDO
-              endif
-   
    
               CALL cputim(time2)
               CALL walltim(time2_w)
@@ -957,7 +894,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
               time_ilm_w=time_ilm_w+time2_w-time1_w
            ENDDO equiv_atom_loop
    
-           call psplit(w_xwt1(:,jatom),w_xwteh(:,jatom),w_xwtel(:,jatom),w_xwt1h(:,jatom),w_xwt1l(:,jatom),jatom,nemin,DM_nemaxx,test1,EQBAD,jatombad,lbad)
+           call psplit(w_xwt1(:,jatom),jatom,nemin,DM_nemaxx,test1,EQBAD,jatombad,lbad)
         ENDDO
    
         CALL cputim(time1)
@@ -998,35 +935,16 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
      call gh5_close(f_id) 
      DO is=1,iso    !------ over up/dn ---------------------!
         itape1=8+is
-        itape2=29+is
         if (vector_para) then
            close(itape1)
-           close(itape2)
         else
            rewind(itape1)
-           rewind(itape2)
         endif
      ENDDO
   ENDDO
 
-  call gh5_end()
-
-  CALL Reduce_MPI(xwt, etot2, w_RHOLM, w_vRHOLM, w_xwt1, w_xwteh, w_xwtel, w_xwt1h, w_xwt1l, sumfft, vsumfft, nomega, NRAD, LM_MAX, nat, iff1, iff2, iff3)
-#ifdef MPI
-  CALL DSUM1_ALL_MPI(etot)
-#endif
-  if (myrank.eq.master) then
-     WRITE(*,*)'LDA Sum of eigenvalues=',ETOT, 'Ry.'
-     WRITE(*,*)'    Sum of eigenvalues=', ETOT2, 'Ry.'
-     WRITE(*,*)'  Ratio to renormalize=', elecn/xwt
-     IF(ABS(elecn/xwt-1._8).GT.1.E-4_8)THEN
-       WRITE(*,'(" SEVERE WARNING: Ratio to renormalize deviate too much from 1!")')
-     ENDIF
-     if (Rho_Renormalize) then
-        w_RHOLM = w_RHOLM * (elecn/xwt)
-        w_vRHOLM = w_vRHOLM * (elecn/xwt)
-     endif
-  endif
+  CALL Reduce_MPI(xwt, w_RHOLM, w_vRHOLM, w_xwt1, sumfft, vsumfft, &
+      &NRAD, LM_MAX, nat, iff1, iff2, iff3)
 
   if (myrank.eq.master) then
 
@@ -1083,24 +1001,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
               WRITE(6,258) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,21)
               WRITE(21,258) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,21)
            ENDIF
-           do i=0,3
-              if(w_xwt1l(i,jatom).lt.0.00005d0) then
-                 w_XWT1l(i,jatom)=0.00001d0
-                 w_XWTel(i,jatom)=w_XWT1l(i,jatom)*10.00001d0
-              endif
-              if(w_xwt1h(i,jatom).lt.0.00005d0) then
-                 w_XWT1h(i,jatom)=0.00001d0
-                 w_XWTeh(i,jatom)=w_XWT1h(i,jatom)*10.00001d0
-              endif
-           enddo
-           write(6,260)
-           WRITE(6,261) jatom,(w_XWT1l(I,jatom),w_XWTel(I,jatom)/w_XWT1l(I,jatom),I=0,3)
-           write(6,262)
-           WRITE(6,263) jatom,(w_XWT1h(I,jatom),w_XWTeh(I,jatom)/w_XWT1h(I,jatom),I=0,3)
-           write(21,260)
-           WRITE(21,261) jatom,(w_XWT1l(I,jatom),w_XWTel(I,jatom)/w_XWT1l(I,jatom),I=0,3)
-           write(21,262)
-           WRITE(21,263) jatom,(w_XWT1h(I,jatom),w_XWTeh(I,jatom)/w_XWT1h(I,jatom),I=0,3)
            !
            IF(Mi.NE.0) THEN
               IMAX=JRI(JATOM)                                                   
@@ -1125,19 +1025,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
            WRITE(8,2031)
         end DO
         WRITE(8,2030)
-        
-        if(vresp_write) then
-           WRITE(28,1990) JATOM
-           WRITE(28,2001) LMMAX
-           DO ILM=1,LMMAX
-              Li=LM(1,ILM)
-              Mi=LM(2,ILM)
-              WRITE(28,2011) Li,Mi
-              WRITE(28,2022) ( w_vRHOLM(I,ILM,jatom), I=1,IMAX )
-              WRITE(28,2031)
-           end DO
-           WRITE(28,2030)
-        endif
         
         call cputim(time4)
         call walltim(time4_w)
@@ -1233,7 +1120,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
         time_writeefg=time_writeefg+time3-time4
         time_writeefg_w=time_writeefg_w+time3_w-time4_w
         
-        
         CALL cputim(time2)
         CALL walltim(time2_w)
         time_writescf=time_writescf+time2-time3
@@ -1256,18 +1142,12 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
      WRITE(6,'(a,2f8.1)') '   write-scf          (cpu,wall):',time_writescf,time_writescf_w
      WRITE(6,'(a,2f8.1)') '   write-efg          (cpu,wakk):',time_writeefg,time_writeefg_w
      WRITE(6,'(a,2f8.1)') '   write              (cpu,wall):',time_write,time_write_w
-     WRITE(6,'(a,2f8.1)') '   dmft renorm-overlap(cpu,wall):',time_dmf0, time_dmf0w
-     WRITE(6,'(a,2f8.1)') '   dmft chemical pot  (cpu,wall):',time_dmf1, time_dmf1w
      WRITE(6,'(a,2f8.1)') '   dmft transformation(cpu,wall):',time_dmf, time_dmfw
      WRITE(6,'(a,2f8.1)') '   dmft exact-diag    (cpu,wall):',time_ed, time_edw
      WRITE(6,'(a,2f8.1)') '   interstitial charge(cpu,wall):',time_int, time_intw
      
      WRITE(6,881)  XWT
      WRITE(21,881) XWT
-     WRITE(21,725) ETOT2 !+ ts2
-     WRITE(6,882) ETOT2  !+ ts2
-     WRITE(6,'(" EN_DEEP LEVEL=",F12.7,"Ry.")')EDL
-     !
   endif
 
   REWIND fh_vec
@@ -1325,26 +1205,13 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
         rhok(j)  = rhok(j)  * volin
      ENDDO
      
-     if (Rho_Renormalize) then
-        rhok = rhok * (elecn/xwt)
-        vrhok = vrhok * (elecn/xwt)
-     endif
-     
      WRITE(8,*) '   VALENCE CHARGE DENSITY IN INTERSTITIAL '
      WRITE(8,*)
      WRITE(8,2061)  NWAVE
      WRITE(8,2071)  ( (KZZ(JX,J),JX=1,3),RHOK(J), J=1,NWAVE)
-     
-     if(vresp_write) then
-        WRITE(28,*) '   VALENCE CHARGE DENSITY IN INTERSTITIAL '
-        WRITE(28,*)
-        WRITE(28,2061)  NWAVE
-        WRITE(28,2071)  ( (KZZ(JX,J),JX=1,3),VRHOK(J), J=1,NWAVE)
-     endif
-     WRITE(6,204) NWAVE,kmax
-     
      close(8)
-     
+
+     WRITE(6,204) NWAVE,kmax
      DEALLOCATE(rhok,vrhok)
      DEALLOCATE(rho1,vrho1)
   endif
@@ -1372,18 +1239,10 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recompute
 256 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PX,PY,PZ,',' ',/,':QTL',i3.3,':',12F7.4)
 257 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PX,PY,PZ,','D-Z2,D-X2Y2,D-XY,D-XZ,D-YZ ',/,':QTL',i3.3,':',12F7.4)                        
 258 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PX,PY,PZ,D-Z2,D-X2Y2,D-XY,D-XZ,D-YZ,F00,F11,F22',',F33,','F1M,F2M,F3M ',/,':QTL',i3.3,':',19F7.4)
-260 FORMAT(8x,'Q-s-low E-s-low   Q-p-low E-p-low   Q-d-low E-d-low','   Q-f-low E-f-low')
-261 FORMAT(':EPL',i3.3,':',4(2F8.4,2x))
-262 FORMAT(8x,'Q-s-hi  E-s-hi    Q-p-hi  E-p-hi    Q-d-hi  E-d-hi ','   Q-f-hi  E-f-hi ')
-263 FORMAT(':EPH',i3.3,':',4(2F8.4,2x))
-501 FORMAT(2i5,' k-point, nband')
-503 FORMAT(5e17.9)
 720 FORMAT(/,':CHA',i3.3,':',1X,'TOTAL CHARGE INSIDE SPHERE ',I3,' = ',F12.6)         
-725 FORMAT(/,':ESUM  :',1X,'SUM OF EIGENVALUES =  ',F20.9,/)            
 787 FORMAT('    VALENCE CHARGE DENSITY   IN  MT SPHERES',5X,I3,' ITERATION')
 800 FORMAT(/,10X,68(1H-),/,11X,'W A V E F U N C T I O N S','   AND   C H A R G E S   IN   S P H E R E S',/,10X,68(1H-))                                         
 881 FORMAT(/,':CHA  :',' TOTAL CHARGE INSIDE UNIT CELL =',F15.6) 
-882 FORMAT(//,3X,'SUM OF EIGENVALUES:'/24X,F15.6/)                    
 1003 FORMAT(251(I3,I2))                                                 
 1005 FORMAT(/,7X,'LMMAX',I3,/,7x,'LM= ',17(i3,I2),(/,7x,18(i3,i2)))          
 1990 FORMAT(3X,'ATOMNUMBER   ',I3,5X,10A4)                             

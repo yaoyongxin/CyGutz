@@ -4,7 +4,6 @@ PROGRAM DMFT2
   USE reallocate
   USE ams
   USE normal
-  USE bandm
   USE kpp1
   USE struk
   USE xa2
@@ -13,7 +12,13 @@ PROGRAM DMFT2
   USE dmf
   USE com_mpi
   USE GMPI
+  use ghdf5_base
   IMPLICIT REAL*8 (A-H,O-Z)
+
+#ifdef MPI
+  include 'mpif.h'
+#endif
+
   REAL*8, allocatable       ::  ZZ(:)
   REAL*8,PARAMETER       :: Ry2eV= 13.60569193
   REAL*8           GMAX
@@ -24,28 +29,20 @@ PROGRAM DMFT2
   CHARACTER*67       ERRMSG
   CHARACTER*80       DEFFN, ERRFN
   CHARACTER*77     RMARGN                                           
-  CHARACTER*180     FNAME,FNAME1,fnamehelp
+  CHARACTER*180     FNAME,FNAME1
   CHARACTER*200 :: vec_up, vec_dn, ene_up, ene_dn
-  LOGICAL         SO,vresp_write, helpfiles, Qident
-  INTEGER :: irenormalize, latom, i, icix, wicix, wndim, size, minsigind, recomputeEF
-  REAL*8  :: xx(3), xz(3), thetaz, phiz, ddd, check, sw(3), sumw
-  REAL*8, allocatable :: wtmpx(:)
+  INTEGER :: latom, i, icix, wicix, wndim, size, minsigind
+  REAL*8  :: xx(3), xz(3), thetaz, phiz, ddd, check, sw(3)
   INTEGER :: INDEX, INDEX1, MI, JR, JC
   REAL*8 :: POST(3)
-  common /mkef/delef,ts2
-  DATA             RELA/'RELA'/,SO/.false./                           
-  save TTOTAL,TFERMI,TCLM,TFOUR,tstart,errfn                          
+  DATA             RELA/'RELA'/                           
+  save TTOTAL,TCLM,TFOUR,tstart,errfn                          
 
   CALL start_MPI()
 
   Qcomplex=.FALSE.
-  nspin1=2
   nlo=0
   RCFILE='NOFI'
-  fnamehelp=''
-  vresp_write=.false.
-  helpfiles=.false.
-  iso=1
 !-----------------------------------------------------------------------  
 !                                                                       
   CALL init_ams
@@ -68,34 +65,22 @@ PROGRAM DMFT2
            CALL FilenameMPI(FNAME)    ! Each processor will have different information file
            OPEN(IUNIT,FILE=FNAME,STATUS=STATUS,FORM=FORM,ERR=920)
         endif
-     else if (iunit.eq.8.or.iunit.eq.21.or.iunit.eq.fh_dos) then
+     else if (iunit.eq.8.or.iunit.eq.21) then
         if (myrank.eq.master) OPEN(IUNIT,FILE=FNAME,STATUS=STATUS,FORM=FORM,ERR=920)
+     elseif (iunit.eq.13)then
+        fname1=fname
      else
         OPEN(IUNIT,FILE=FNAME,STATUS=STATUS,FORM=FORM,ERR=920)
      endif
 
      if(iunit.eq.18) then
         do i=180,5,-1
-           if(fname(i:i).ne.' ') then
-              if(fname(i-2:i).eq.'vsp') nspin1=1
-              CYCLE
+           if(fname(i-4:i).eq.'vspdn')then
+               sspin="2"
+               exit
            endif
         enddo
      endif
-     if(iunit.eq.12) then
-        do i=180,6,-1
-           if(fname(i:i).ne.' ') then
-              if(fname(i-5:i).eq.'normso') then
-                 SO=.true.
-                 Qcomplex=.TRUE.
-                 iso=2
-              endif
-           endif
-        enddo
-     endif
-     if(iunit==28) vresp_write=.true.
-     if(iunit.eq.13) fname1=fname
-     close(13)
      if(iunit.eq.3) then
         read(iunit,'(A5)',end=12) CHARS
         Qcomplex=.true. ! switches Qcomplex  on if case.in1c exists and is nonzero
@@ -105,14 +90,12 @@ PROGRAM DMFT2
 20 CONTINUE
   CLOSE (1)
 
-  JSPIN=NSPIN1; GISO=ISO
-
   if (nprocs.EQ.1) then
      write(6,*)'Running DMFT2 in single processor mode'
-     write(6,*)' '
+     write(6,*)
   else if (myrank.EQ.master .OR. fastFilesystem/=0) then
      write(6,*)'Running DMFT2 in mpi mode'
-     write(6,*)' '
+     write(6,*)
   endif
   
   !                                                                       
@@ -158,7 +141,6 @@ PROGRAM DMFT2
      READ(20,1051) ((ROTLOC(I,J,JATOM),I=1,3),J=1,3)                
   ENDDO
 
-
   allocate (pu1u1(0:lxdos,0:lxdos),pu1ue(0:lxdos,0:lxdos),pu1u2(0:lxdos,0:lxdos,nloat),pueue(0:lxdos,0:lxdos),pueu2(0:lxdos,0:lxdos,nloat),pu2u2(0:lxdos,nloat,0:lxdos,nloat))
   ALLOCATE (rotij(3,3,index),tauij(3,index))
   ndif=index
@@ -168,12 +150,9 @@ PROGRAM DMFT2
   if (myrank.EQ.master .OR. fastFilesystem/=0) write(6,*)  ' Modus: ', MODUS
   esepermin=0.5d0
   eseper0=0.05d0
-
   READ(5,*,err=4716)  EMIN,ELECN,esepermin,eseper0
   if (myrank.EQ.master .OR. fastFilesystem/=0) write(6,*) 'no read error'
 4716 continue
-
-  if(esepermin.lt.1.d-3)   esepermin=0.5d0
 
   READ(5,*) efmod,GDELTA
   DO I=1,NAT
@@ -191,7 +170,6 @@ PROGRAM DMFT2
   
   if (myrank.EQ.master .OR. fastFilesystem/=0) WRITE(6,*) 'RECPR LIST: ',RCFILE
      
-  ts2=0.d0
   if (myrank.EQ.master .OR. fastFilesystem/=0) then
      WRITE(6,800)                                                      
      WRITE(6,805)  TITLE                                               
@@ -238,120 +216,47 @@ PROGRAM DMFT2
      nvector=1
   endif
 
-  natm = sum(mult)
-  nbmax=-5
-  sumw=0.0
-  ! This computes weights and also reads all k-points
-  ! sets nkpt
-  CALL FERMI(nbmax,sumw)
-  if (myrank.EQ.master) print *, 'sumw=', sumw
-
-  if (.not. vector_para) then
-     vectors(1,2)=nkpt
-  endif
+  call gh5_init()
 #ifdef MPI
   CALL INI_GMPI(MYRANK,NPROCS,MASTER,VECTOR_PARA,NVECTOR,VECTORS)
 #endif
-  eseper=-999.
-  eftest=ef 
 
-  if (myrank.EQ.master .OR. fastFilesystem/=0) then
-     write(6,*)
-     write(6,*) 'Bandranges (emin - emax) and occupancy:'
-  endif
-  if (myrank.EQ.master) write(21,*) '        Bandranges (emin - emax) and occupancy:'
-  do i=1,nume
-     if(ebmax(i).lt.-990.d0) exit
-     wtmp=0
-     do i1=1,nkpt-1
-        wtmp=wtmp+weigh(i1,i)
-     enddo
-     if (myrank.EQ.master .OR. fastFilesystem/=0) then
-        write(6,901) 'band',i,ebmin(i),ebmax(i),wtmp
-     endif
-     if(myrank.EQ.master .AND. (i.le.nbmax+5.and.i.ge.nbmax-10)) write(21,'(a4,i5.5,a1,i4,2f12.6,f12.8)') ':BAN',i,':',i,ebmin(i),ebmax(i),wtmp
-  enddo
-  if (myrank.EQ.master .OR. fastFilesystem/=0) then
-     write(6,*)
-     write(6,*) 'eseper below EF',esepermin
-     write(6,*) 'eseper minimum gap',eseper0
+
+  if(myrank.EQ.master)then
+      call gh5_open_r('GPARAMBANDS.h5', f_id)
+      call gh5_read(nkpt, "/kptdim", f_id)
+      call gh5_read(nmat, "/nkmax", f_id)
+      call gh5_read(nume, "/nbmax", f_id)
+      call gh5_read(iso, "/iso", f_id)
+      call gh5_read(ispin_pol, "/ispin", f_id)
+      call gh5_close(f_id)
+#ifdef MPI
+      call mpi_bcast(nkpt,1,mpi_integer,master,mpi_comm_world,ierr)
+      call mpi_bcast(nmat,1,mpi_integer,master,mpi_comm_world,ierr)
+      call mpi_bcast(nume,1,mpi_integer,master,mpi_comm_world,ierr)
+      call mpi_bcast(iso,1,mpi_integer,master,mpi_comm_world,ierr)
+      call mpi_bcast(ispin_pol,1,mpi_integer,master,mpi_comm_world,ierr)
+#endif
   endif
 
-  do i=nume-1,2,-1
-     if(ebmax(i).lt.-990.d0) cycle
-     if(ebmax(i-1).lt.eftest - esepermin ) then
-        !... requires band gaps of more than eseper0 and Esepermin below EF for e-seperation
-        if(ebmin(i)-eseper0 .gt. ebmax(i-1)) then
-           eseper=ebmin(i)-eseper0
-           exit
-        endif
-     endif
-  enddo
-  if (myrank.EQ.master .OR. fastFilesystem/=0) write(6,*) 'Energy to separate semicore and valence states:',eseper
-  if (myrank.EQ.master) write(21,121) eseper
-  IF(SO) then
-     do i1=1,nkpt-1   ! 110
-        do i2=1,nume  ! 110
-           WEIGH(i1,i2)=WEIGH(i1,i2)*2.0d0/NSPIN1
-        enddo         ! 110
-     enddo            ! 110
-  ENDIF
-     
-  if (myrank.EQ.master .OR. fastFilesystem/=0) then
-     WRITE(6,1060)  ELECN,EF
+  if (.not.vector_para) then
+     vectors(1,2)=nkpt
   endif
-  if (myrank.EQ.master) WRITE(21,1060) ELECN,EF    
-  DELEF=0.d0                                       
-         
-  !write(26)EF,eseper
-  
-  wmist=0.d0
-  do j=1,nkpt-1
-     do n=1,ne(j)
-        wmist=wmist+WEIGH(J,N)
-     enddo
-  enddo
 
-  !do j=1,nkpt-1
-  !   write(26)NE(J)
-  !   write(26)(WEIGH(J,N), N=1,NE(J))
-  !enddo
-  if (myrank.EQ.master .OR. fastFilesystem/=0)  write(6,*) 'wmist',wmist
-
-  CALL CPUTIM(TTIME)
-  TFERMI=TTIME                                        
-  call walltim(TTIME)
-  TFermi_w=TTIME
+  if(iso==2)Qcomplex=.true.
 
   !.....CALCULATE CHARGE DENSITY CLM(R) IN SPHERES,  PARTIAL CHARGES      
-  call l2main(cform,nlo,coord,zz,so,NSPIN1,vresp_write,sumw,nwave,recomputeEF,WL,TCLM,TCLM_w,TFOUR,TFOUR_w)
+  call l2main(cform,nlo,coord,zz,nwave,TCLM,TCLM_w,TFOUR,TFOUR_w)
   
-  !CALL CPUTIM(TTIME)
-  !TCLM=TTIME
-  !call walltim(TTIME)
-  !Tclm_w=TTIME
-     
-  !.....CALCULATE CHARGE DENSITY RHOK(K) IN INTERSTITIAL                  
-  !CALL FOURIR(nlo,nwave,vresp_write)
-  
-  !CALL CPUTIM(TTIME)
-     
-  !TFOUR=TTIME                                          
-  !call walltim(TTIME)
-  !TFOUR_w=TTIME
-
   !.....CALCULATE CPUTIME REQUIRED                                        
   TTOTAL=TFOUR-TSTART                                               
   TFOUR=TFOUR-TCLM                                                  
   PFOUR=TFOUR/TTOTAL*100.                                           
-  TCLM=TCLM-TFERMI                                                  
+  TCLM=TCLM-TSTART                                                  
   PCLM=TCLM/TTOTAL*100.                                             
-  TFERMI=TFERMI-TSTART                                              
-  PFERMI=TFERMI/TTOTAL*100.                                         
   if (myrank.EQ.master .OR. fastFilesystem/=0) then
      WRITE(6,2000)                                                     
      WRITE(6,2010) TTOTAL,100.0
-     WRITE(6,2020) TFERMI,PFERMI
      WRITE(6,2030) TCLM,PCLM
      WRITE(6,2040) TFOUR,PFOUR
   endif
@@ -359,18 +264,17 @@ PROGRAM DMFT2
   TTOTAL_w=TFOUR_w-TSTART_w                                               
   TFOUR_w=TFOUR_w-TCLM_w                                                  
   PFOUR_w=TFOUR_w/TTOTAL_w*100.                                           
-  TCLM_w=TCLM_w-TFERMI_w                                                  
+  TCLM_w=TCLM_w-TSTART_w                                                  
   PCLM_w=TCLM_w/TTOTAL_w*100.                                             
-  TFERMI_w=TFERMI_w-TSTART_w                                              
-  PFERMI_w=TFERMI_w/TTOTAL_w*100.                                         
   if (myrank.EQ.master .OR. fastFilesystem/=0) then
      WRITE(6,2001)                                                     
      WRITE(6,2010) TTOTAL_w,100.0
-     WRITE(6,2020) TFERMI_w,PFERMI_w
      WRITE(6,2030) TCLM_w,PCLM_w
      WRITE(6,2040) TFOUR_w,PFOUR_w
   endif
   if (myrank.EQ.master) CALL ERRCLR(ERRFN)
+
+  call gh5_end()
 
   CALL stop_MPI()
   
@@ -423,14 +327,7 @@ PROGRAM DMFT2
 999 STOP 'DMFT2 - Error. Check file lapw2.error'
 !                                                                       
 !                                                                       
-78 FORMAT('K-PNT',I6,':',2x,I4,' BANDS')
-79 FORMAT(2(F16.12))
-80 FORMAT('FERMI ENERGY: ',F12.9,I8,' K-POINTS')
-81 FORMAT(A30)
-43 FORMAT(3X,A77)                                                    
-44 FORMAT(I3,A77)                                                    
 121 format('        Energy to separate low and high energy','states: ',f10.5)
-700 FORMAT(I3,A77)                                                    
 720 FORMAT(':GMA  :',' POTENTIAL AND CHARGE CUT-OFF',f7.2,' Ry**.5')
 800 FORMAT(////,30X,50(1H-),/,33X,'S T R U C T U R A L   ','I N F O R M A T I O N',/,30X,50(1H-),//)                  
 805 FORMAT(3X,'SUBSTANCE',20X,'= ',A80,/)                             
@@ -452,15 +349,10 @@ PROGRAM DMFT2
 1051 FORMAT(20X,3F10.8)                                             
 1002 FORMAT(3F10.5,I5)                                                 
 1003 FORMAT(A5,a5,a5)                                                        
-1060 FORMAT(//,':NLDA  :',1X,'NUMBER OF ELECTRONS',10X,'=',F8.3,//   ,':FLDA  :',1X,'F E R M I - ENERGY',11X,'= ',F9.5)            
-1061 FORMAT(//,':NLDA  :',1X,'NUMBER OF ELECTRONS',10X,'=',F8.3,//   ,':FLDA  :',1X,'F E R M I - ENERGY(TETRAH.M.)','= ',F9.5)           
-1062 FORMAT(//,':NLDA  :',1X,'NUMBER OF ELECTRONS',10X,'=',F8.3,//   ,':FLDA  :',1X,'F E R M I - ENERGY(GAUSS-.M.)','= ',F9.5)           
-1063 FORMAT(//,':NLDA  :',1X,'NUMBER OF ELECTRONS',10X,'=',F8.3,//   ,':FLDA  :',1X,'F E R M I - ENERGY(FERMI-SM.)','= ',F9.5)           
 1234 FORMAT(//,1A)
 2000 FORMAT(//,3X,'=====>>> CPU TIME SUMMARY',/)                       
 2001 FORMAT(//,3X,'=====>>> WALL TIME SUMMARY',/)                       
 2010 FORMAT(12X,'TOTAL       : ',F8.1,5X,'... ',F4.0,' PERCENT')       
-2020 FORMAT(12X,'PART FERMI  : ',F8.1,5X,'... ',F4.0,' PERCENT')       
 2030 FORMAT(12X,'PART CLM    : ',F8.1,5X,'... ',F4.0,' PERCENT')       
 2040 FORMAT(12X,'PART FOURIR : ',F8.1,5X,'... ',F4.0,' PERCENT')       
 2061 FORMAT(1X,'        ',I10,1X,'NUMBER OF PW')    !EECE

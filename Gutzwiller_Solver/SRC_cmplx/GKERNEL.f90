@@ -83,7 +83,8 @@ module gkernel
     if(gkmem%iembeddiag==10)then
         call init_wh_x(io,1._q)
     else
-        call init_wh_x(io,.99_q)
+        ! call init_wh_x(io,.99_q)
+        call init_wh_x(io,1._q)
     endif
     return
 
@@ -380,7 +381,7 @@ module gkernel
     if(gkmem%iembeddiag==10)then
         call calc_eu2_hf_list()
     endif
-    etot=bnd%eband-wh%edcla1-sum(dc%e)+sum(wh%eu2)+sum(wh%et1)
+    etot=sum(bnd%eband)-wh%edcla1-sum(dc%e)+sum(wh%eu2)+sum(wh%et1)
     if(io>0)then
         write(io,'(" e_total_model = ",f0.7)')etot
         if(gkmem%iter>1)then

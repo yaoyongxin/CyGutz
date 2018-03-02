@@ -27,7 +27,7 @@ PROGRAM DMFTMAIN
   CHARACTER*161   TEXT
   INTEGER,ALLOCATABLE :: ieband(:)        
   !INTEGER         IPROC
-  LOGICAL         SO, Qcomplex, newform
+  LOGICAL         Qcomplex, newform
   INTEGER         kindex, nsymop
   INTEGER         wndim, icix, wicix, size, imatsubara
   REAL*8       :: EF_LDA, Ry2eV
@@ -38,20 +38,19 @@ PROGRAM DMFTMAIN
   COMMON /GENER/  BR1(3,3),BR2(3,3)                                 
   COMMON /RADFU/  RRAD1(NRAD,0:LMAX2),RADE1(NRAD,0:LMAX2), RRAD2(NRAD,0:LMAX2),RADE2(NRAD,0:LMAX2)
   DIMENSION  S(3)
-  DATA SO /.false./, Qcomplex /.false./, IMAG/(0.0D0,1.0D0)/, Ry2eV/13.60569193D0/
+  DATA Qcomplex /.false./, IMAG/(0.0D0,1.0D0)/, Ry2eV/13.60569193D0/
   DATA strlen/200/
 
 
   CALL start_MPI()
   CALL GTFNAM(DEFFN,ERRFN)
+  call set_gfile(deffn)
+
   if (myrank.EQ.master) CALL ERRFLG(ERRFN,'Error in DMFT')
   
-  nspin1=1
   OPEN (1,FILE=DEFFN,STATUS='OLD',ERR=910,IOSTAT=ios) ! opens gwien1.def file
 
   vector_para = .False.  
-  iso=1
-  iso2=1
   ! The following few lines read gwien1.def file 
   ! containing all filename definitions
   DO 
@@ -79,8 +78,8 @@ PROGRAM DMFTMAIN
      if(iunit.eq.18) then
         do i=strlen,5,-1
            if(fname(i:i).ne.' ') then
-              if(fname(i-2:i).eq.'pup') nspin1=2
-              if(fname(i-2:i).eq.'pdn') nspin1=2 
+              if(fname(i-2:i).eq.'pup') ispin_pol=2
+              if(fname(i-2:i).eq.'pdn') ispin_pol=2 
            endif
         enddo
      endif
@@ -90,33 +89,20 @@ PROGRAM DMFTMAIN
 12      continue
      end if
      if(iunit.eq.9) then
-        iloop1: do i=strlen,2,-1
-           if(fname(i:i).ne.' ') then
-              if(fname(i-1:i).eq.'so') then
-                 SO=.true.
-                 iso=2
-                 iso2=1
-                 Qcomplex=.true.
-                 exit iloop1
-              endif
-           endif
+        iloop1: do i=strlen,8,-1
+            if(fname(i-7:i).eq.'vectorso') then
+               iso=2
+               Qcomplex=.true.
+               exit iloop1
+            endif
         enddo iloop1
-        iloop2: do i=strlen,4,-1
-           if(fname(i:i).ne.' ') then
-              if(fname(i-3:i).eq.'soup') then
-                 SO=.true.
-                 iso=2
-                 iso2=2
-                 Qcomplex=.true.
-                 exit iloop2
-              endif
-           endif
-        enddo iloop2
      endif
   ENDDO ! 10
 20 CONTINUE
   CLOSE (1)
   ! finished gwien1.def
+
+  isospin=max(1,ispin_pol/iso)
 
   !.....READING STRUCT 
   ! It reads case.struct file and saves data into module named "param". These variables are available in dmftmain.f.
@@ -125,9 +111,12 @@ PROGRAM DMFTMAIN
      write(6,'(A)')'******Program DMFT: Computes Gloc and Delta for Dynamical Mean Field Theory calculation ******'
      if (Qcomplex) write(6,*)'CALCULATION WITH COMPLEX VECTORS'
      
-     if (so)then
-        if(iso2.eq.2)write(6,*)'CALCULATION WITH SOC-UP AND DN VECTORS REQUIRED'
-        if(iso2.eq.1)write(6,*)'CALCULATION WITH SOC VECTORS REQUIRED'
+     if (iso==2)then
+        if(ispin_pol.eq.2)then
+            write(6,*)'CALCULATION WITH SOC-UP AND DN VECTORS REQUIRED'
+        else
+            write(6,*)'CALCULATION WITH SOC VECTORS REQUIRED'
+        endif
      endif
   endif
 
@@ -318,7 +307,7 @@ PROGRAM DMFTMAIN
 
   ! For spin-orbit coupling crates transformation "rotloc"      
   !....reading *.inso
-  if (so) then
+  if (iso==2) then
      do i=1,3
         read(4,*)
      end do
@@ -406,15 +395,8 @@ PROGRAM DMFTMAIN
 
   ! If SO-coupling and symmetrization over all k-points
   ! not trivial
-  if (so) then
+  if (iso==2) then
      CALL SYM(THETA,FI)
-  ! else
-  !    do i=1,3
-  !       do j=1,3
-  !          iz(i,j,1)=0
-  !          if (i.eq.j) iz(i,j,1)=1
-  !       end do
-  !    end do
   endif
 
   !*****  finds nmat and nume in energy file *****
@@ -439,7 +421,7 @@ PROGRAM DMFTMAIN
         ENDDO
      endif
 
-     do is=1,iso
+     do is=1,isospin
         itape = 61-is
         DO I=1,NAT
            READ(itape,'(f9.5)',END=1005) EMIST
@@ -459,7 +441,7 @@ PROGRAM DMFTMAIN
      end do
 1005 CONTINUE
 
-     DO is=1,iso    !------ over up/dn ---------------------!
+     DO is=1,isospin    !------ over up/dn ---------------------!
         itape=61-is
         if (vector_para) then
            close(itape)
@@ -473,7 +455,6 @@ PROGRAM DMFTMAIN
   CALL IMAX1_ALL_MPI(NUME)
 #endif
 
-  CALL init_com(nume,numkpt)  ! Allocates weigh(numkpt,nume) and nb(numkpt) in module com.
   CALL init_abc(nume,nmat,lmax2,ndim2,nrf) ! Allocates variables:
 
   READ(3,*); READ(3,*)TMP,ELECN; READ(3,*)efmod,delta
@@ -488,10 +469,11 @@ PROGRAM DMFTMAIN
       endif
       if(gfile==1)then
           call gh5_write(iso,'/iso/',log_file_id)
-          call gh5_write(iso2,'/ispin',log_file_id)
+          call gh5_write(ispin_pol,'/ispin',log_file_id)
           call gh5_write(nume,'/nbmax',log_file_id)
           call gh5_write(iord,'/symnop',log_file_id)
           call gh5_write(sym_ie,'/symie',log_file_id)
+          call gh5_write(nmat,'/nkmax',log_file_id)
       endif
   ENDIF
 

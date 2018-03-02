@@ -472,6 +472,7 @@ module warehouse
     integer i,naso,na22,ibase
     complex(q),allocatable::h1e(:,:)
 
+    wh%h1e=0
     do i=1,wh%num_imp
         naso=wh%naso_imp(i)
         if(i>1)then
@@ -482,8 +483,8 @@ module warehouse
         else
             allocate(h1e(naso,naso))
         endif
-        call gh5_read(h1e,naso,naso,'/IMPURITY_'//trim(int_to_str(i))//"/H1E",&
-                &f_id)
+        call gh5_read(h1e,naso,naso,'/IMPURITY_'//trim(int_to_str(i))// &
+                &"/H1E_SPIN1",f_id)
         wh%co(i)%h1e(1:naso,1:naso)=h1e
         if(wh%iso==1)then
             if(ispin_in==2)then

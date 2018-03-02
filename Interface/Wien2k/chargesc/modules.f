@@ -65,17 +65,6 @@ MODULE normal
   REAL*8,allocatable  ::    pu1u1(:,:),pu1ue(:,:),pu1u2(:,:,:),pueue(:,:),pueu2(:,:,:),pu2u2(:,:,:,:)
 END MODULE normal
 
-MODULE bandm
-  REAL*8,ALLOCATABLE    :: ebmin(:),ebmax(:)
-  REAL*8                :: eseper
-
- CONTAINS
-  SUBROUTINE init_bandm(nume)
-    ALLOCATE(ebmin(1:nume),ebmax(1:nume))
-    ebmin=999.d0; ebmax=-999.d0 
-  END SUBROUTINE init_bandm
-END MODULE bandm
-
 MODULE char
   CHARACTER*5           :: modus,efmod,modus1
 END MODULE char
@@ -217,17 +206,10 @@ END MODULE charf
 MODULE com
   USE param
   LOGICAL               :: rel
-  INTEGER               :: NSPIN,NAT,NBAND,NK,MINWAV,MAXWAV,JSPIN,GISO
-  INTEGER,ALLOCATABLE   :: NB(:)
-  REAL*8                :: EMIN,EF,GDELTA,ELECN,XWT
-  REAL*8,ALLOCATABLE    :: weigh(:,:) 
+  INTEGER               :: NAT,NBAND,NK,MINWAV,MAXWAV
+  REAL*8                :: EMIN,GDELTA,ELECN,XWT
+  character :: sspin*1="1"
 
- CONTAINS
-  SUBROUTINE init_com(nkpt,nume)
-    ALLOCATE(nb(2*nkpt),weigh(2*nkpt,nume))
-    nb=0; weigh=0.0d0
-    !print *, 'nkpt=', nkpt
-  END SUBROUTINE init_com
 END MODULE com
 
 MODULE kpp1
@@ -429,9 +411,9 @@ END MODULE xa3
 
 MODULE dmf
   REAL*8  :: gammac, gamma, aom_default, bom_default
-  INTEGER :: iso  
+  INTEGER :: iso, ispin_pol
   LOGICAL :: Qcomplex
-  INTEGER :: projector, nom_default, natom, natm
+  INTEGER :: projector, nom_default, natom
   INTEGER, ALLOCATABLE :: ll(:,:), qsplit(:,:), cix(:,:), iatom(:), isort(:)
   REAL*8,  ALLOCATABLE :: crotloc(:,:,:)
   CHARACTER*1 :: mode

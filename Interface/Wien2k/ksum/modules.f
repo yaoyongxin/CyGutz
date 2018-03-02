@@ -143,19 +143,15 @@ MODULE sym2
 END MODULE sym2
 
 MODULE com
-  REAL*8,ALLOCATABLE  :: WEIGH(:,:)
-  INTEGER             :: nband,iso,iso2,minwav,maxwav,nspin1
+  INTEGER             :: nband,iso=1,minwav,maxwav,ispin_pol=1,isospin
   INTEGER             :: klmax= 0          !pb
   REAL*8              :: emin,emax,ef,elecn,delta
   REAL*8              :: delef,ts2
   CHARACTER*5         :: efmod
   integer             :: gfile=1 ! interface file index.
-  INTEGER,POINTER :: BND_NE(:,:)
-  REAL(8),POINTER :: BND_EK(:,:)
- CONTAINS
-  SUBROUTINE init_com(nume,nkpt)
-    ALLOCATE(weigh(2*nkpt,nume))
-  END SUBROUTINE init_com
+  INTEGER,ALLOCATABLE :: BND_NE(:,:,:)
+  REAL(8),ALLOCATABLE :: BND_EK(:,:,:)
+
 END MODULE com
 
 MODULE abc

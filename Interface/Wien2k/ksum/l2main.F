@@ -6,9 +6,11 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   !------------------------------------------------------------------------------  
   USE param,   ONLY: LMAX2, LOMAX, NRAD, nloat, nrf, nmat, nume, IBLOCK, fastFilesystem
   USE struct,  ONLY: VOL, RMT, iord, sym_ie, iz, nat, mult, pos, tau, rotij, tauij, nsym, iatnr, aname
-  USE case,    ONLY: cf, maxsize, nl, cix, ll, iatom, maxdim, natom, ncix, isort, crotloc, ifirst
+  USE case,    ONLY: cf, maxsize, nl, cix, ll, iatom, &
+                    &maxdim, natom, ncix, isort, crotloc, ifirst
   USE sym2,    ONLY: tmat, phase, idet
-  USE com,     ONLY: MINWAV, MAXWAV, iso, iso2, emin, emax, EF, WEIGH, &
+  USE com,     ONLY: MINWAV, MAXWAV, iso, emin, emax, &
+                    &EF, ispin_pol, &
                     &elecn,BND_NE,EFMOD,DELTA,gfile
   USE abc,     ONLY: KX, KY, KZ, BKX, BKY, BKZ, E, A, ALM, ALML
   USE kpts,    ONLY: mweight,tweight,numkpt,MSX,MSY,MSZ,MKNAME
@@ -121,7 +123,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   !--  self-energy of all l's and all atoms. If more than one atom is correlated, we ---!
   !--  can not avoid looping over all correlated atoms in the inside loop --------------!
   !-------------------------------------------------------------------------------------!
-  do is=1,iso2 !------ preparing input files case.vsp and case.vspn containing potential parameters -----!
+  do is=1,iso !------ preparing input files case.vsp and case.vspn containing potential parameters -----!
      jtape=17+is
      READ(jtape,2032) ISCF
   end do
@@ -153,7 +155,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
            !------------ vector files need to be read from the beginning -------------------!
            rewind(itape)
         endif
-        if(is.eq.2.and.iso2.eq.1) then  ! fix for SO-coupling and non-spinpolarized
+        if(is.eq.2.and.ispin_pol.eq.1) then  ! fix for SO-coupling and non-spinpolarized
            jtape=18
            rewind(jtape)
            READ(jtape,2032) ISCF 
@@ -196,7 +198,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   !------------ allocating some important arrays --------------!
   ALLOCATE( a_real(nmat) ) !---  for eigenvectors -------------!
 
-  IF(myrank==master) CALL GUTZ5_WRT(numkpt,MWEIGHT,ELECN,BND_NE, &
+  IF(myrank==master) CALL GUTZ5_WRT(numkpt,MWEIGHT,ELECN,BND_NE(:,:,1), &
         &MSX,MSY,MSZ,MKNAME,EFMOD,DELTA)
 
   allocate(h1e_list(maxdim2,maxdim2,norbitals))
@@ -256,7 +258,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
      !------- reading from vector for both spins -----------!
         DO is=1,iso    !------ over up/dn ---------------------!
            itape=8+is
-           READ(itape,END=998) S,T,Z,BNAME,N,NE  !--- Here we can jupm out of loop 4 and stop at 998 -----------------------------------!
+           READ(itape,END=998) S,T,Z,BNAME,N,NE  !--- Here we can jump out of loop 4 and stop at 998 -----------------------------------!
            IF(N.GT.MAXWAV) MAXWAV=N                                         
            IF(N.LT.MINWAV) MINWAV=N                                         
            READ(itape) (KX(I),KY(I),KZ(I),I=1,N) !--- Reads all reciprocal vectors -----------------------------------------------------!
@@ -272,8 +274,6 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
                  READ(itape) (A(I,NUM,is),I=1,N)  !--- eigenvector complex of size n (where n is number of reciprocal vectors) --!
               end if
            ENDDO
-           NEMIN = BND_NE(2,IKP)
-           NEMAX = BND_NE(3,IKP)
 
            IF (Tcompute) THEN
               DO I=1,N                              !----- Over reciprocal vectors --------------------------------------------------------!
@@ -292,12 +292,17 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
         ENDDO  ! is
         call gh5_write(E(1:NE),NE,'/IKP_'//TRIM(ADJUSTL(STR))// &
                 &'/ek0_spin'//str_gfile,f_id)
+
         if (.not.Tcompute) CYCLE  
         ! This k-points was read, but will not be computed on this processor
         !---  Finished reading eigenvectors and eigenvalues for both spins -----!
         !---   E(iband) contains eigenvalues   -----------------------------!
         !---   A(:,iband,is) contains eigenvectors -------------------------!
-        
+      
+        ! always work with one spin-channel
+        nemin = bnd_ne(2,ikp,1)
+        nemax = bnd_ne(3,ikp,1)
+
         nbands = nemax-nemin+1
         allocate( DMFTU(nbands,maxdim2,norbitals),dmftu2(nbands,nbands))
         !----------- sum over all k-points in the star of the irreducible k-point ---------------------------------!
@@ -399,8 +404,8 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
                        !---- alm[lm,iband][1,is] = sum_G Apw(lm,is,K+G) * C(k+G,iband,is)
                        !---- alm[lm,iband][2,is] = sum_G Bpw(lm,is,K+G) * C(k+G,iband,is)
                        !---- Where C(k+G,iband,is) are eigenvectors, and Apw and Bpw are expansion coefficients defined in Shick et.al., PRB 60, 10763 (1999).
-                       call zgemm('N','N',2*l+1,nemax-nemin+1,ibb,(1.d0,0.d0), h_alyl(1,1,is),lda,a(ii,nemin,is),ldb,(1.d0,0.d0), alm(1,nemin,1,is),ldc)
-                       call zgemm('N','N',2*l+1,nemax-nemin+1,ibb,(1.d0,0.d0), h_blyl(1,1,is),lda,a(ii,nemin,is),ldb,(1.d0,0.d0), alm(1,nemin,2,is),ldc)
+                       call zgemm('N','N',2*l+1,nbands,ibb,(1.d0,0.d0), h_alyl(1,1,is),lda,a(ii,nemin,is),ldb,(1.d0,0.d0), alm(1,nemin,1,is),ldc)
+                       call zgemm('N','N',2*l+1,nbands,ibb,(1.d0,0.d0), h_blyl(1,1,is),lda,a(ii,nemin,is),ldb,(1.d0,0.d0), alm(1,nemin,2,is),ldc)
                     ENDDO !----------- over both spins ---------!
                  ENDDO    !----------- over iblock -------------!
                  
@@ -430,7 +435,11 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
                  icix = cix(icase,lcase)
                  iorb = iorbital(icase,lcase)
 
-                 CALL CmpDMFTRANS(DMFTU, alml, ri_mat, projector, cfX, Rspin, l1, iorb, cix_orb, nindo, iso, nemin, nbands, nind, maxdim2, maxdim, icix, idt, lmax2, nume, nrf, natom, ncix, nrf, norbitals)
+                 CALL CmpDMFTRANS(DMFTU, alml, ri_mat, projector, cfX, &
+                        &Rspin, l1, iorb, cix_orb, nindo, iso, &
+                        &nemin, nbands, nind, maxdim2, maxdim, &
+                        &icix, idt, lmax2, nume, nrf, natom, &
+                        &ncix, nrf, norbitals)
               enddo
            ENDDO  ! over atom-cases
 
