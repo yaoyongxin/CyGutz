@@ -325,7 +325,8 @@ def create_gomp_file():
 
 def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         startp='lapw0', endp='', band='', openmp=False, cygutz='CyGutz',
-        pa_list=[], recycle_rl=True, avg_dc=True, spinpol=False):
+        pa_list=[], recycle_rl=True, avg_dc=True, spinpol=False,
+        p_so=False):
     '''Driver for Wien2k + Gutzwiller-Slave-boson job.
     '''
     if '-s' in sys.argv:
@@ -353,6 +354,8 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         avg_dc = False
     if "-sp" in sys.argv:
         spinpol = True
+    if "-so" in sys.argv:
+        p_so = True
     if band == '-band':
         _band = '_band'
         nmaxiter = 1
@@ -417,8 +420,6 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     fday.write('Calculating {} in {} \non {} with PID {}\n'.format(\
             w_case, os.getcwd(), socket.gethostname(), os.getpid()))
 
-    # spin-orbit calculation?
-    p_so = file_exists(w_case+'.inso')
     print('calculation with spin-orbit = {}'.format(p_so))
     if p_so:
         so='so'
@@ -460,7 +461,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     if spinpol:
         fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
                 idmf='1', cmplx=cmplx, _band=_band, updn="up", dnup='dn')
-        if so != "so":
+        if not p_so:
             fcreate_def_gwien(w_case, scratch=w_scratch, so=so, para=_para,
                     idmf='1', cmplx=cmplx, _band=_band, updn="dn", dnup='up')
 
@@ -525,7 +526,8 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
         if icycle > 0 or (startp in 'lapw0 lapw1 lapwso gwien1'):
             if spinpol:
                 gonestep(fday, 'gwien1', mpi, updn="up")
-                gonestep(fday, 'gwien1', mpi, updn="dn")
+                if not p_so:
+                    gonestep(fday, 'gwien1', mpi, updn="dn")
             else:
                 gonestep(fday, 'gwien1', mpi)
             if openmp:

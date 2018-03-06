@@ -69,13 +69,14 @@ program cygutz
 #endif
     integer ierr
     external::g_fcn
-    
+
     call set_time_point(1,1)
 #ifdef mpi_mode
     call mpi_init(ierr)
 #endif
     call gh5_init()
     call init_gmpi()
+
     if(gp%io>0)then
         open(gp%io,file='GUTZ.LOG',status='replace')
 #ifdef with_compile_date

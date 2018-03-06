@@ -124,6 +124,7 @@ module bandstru
                 &" ispin=",i2," ispo=",i2)')bnd%ispin_in, &
                 &wh%iso,wh%ispin,wh%ispo
     endif
+
     ! modify ispin_in for iso=2
     bnd%ispin_in=max(1, bnd%ispin_in/iso)
     allocate(bnd%ne(3,kpt%dim,bnd%ispin_in))
@@ -140,6 +141,7 @@ module bandstru
         bnd%ne(2,:,:)=1
         bnd%ne(3,:,:)=bnd%nmax
     endif
+
     call h5lexists_f(f_id,'/ensemble',lexist,gh5_err)
     if(lexist)then
         call gh5_read(kpt%ensemble,'/ensemble',f_id)
@@ -158,7 +160,6 @@ module bandstru
     call gh5_read(sym%ie,'/symie',f_id)
     call gh5_read_wh_h1e(bnd%ispin_in)
     call gh5_close(f_id)
-
     call rotate_h1e_list()
     call calc_herm_matrices_pp(wh%h1e,'h1e',wh%hm,.false.,io,-1)
     kpt%twt=sum(kpt%wt)
