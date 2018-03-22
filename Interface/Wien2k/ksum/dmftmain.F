@@ -482,6 +482,8 @@ PROGRAM DMFTMAIN
 #endif
 
   CALL GUTZ_SET_EF_LDA(NUME,NUMKPT,projector)
+  call gh5_save_normso(nume,numkpt)
+
   if (myrank.EQ.master .OR. fastFilesystem) then
      WRITE(6 ,1060)  ELECN,EF
   endif

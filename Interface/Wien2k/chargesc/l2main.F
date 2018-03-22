@@ -81,7 +81,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
   COMPLEX*16 :: vsa, vsb, vsab, vsba, vs12(nloat), vse12(nloat), vs21(nloat), vse21(nloat), vs22(nloat,nloat)
   REAL*8     :: facv, EQBAD, OVRDIV, TC, EFGFACT, EFG20, EFG22, EFG2M, QXX, QYY, QZZ, QXY, VXX, VYY, VZZ
   INTEGER    :: LM_MAX, iks,ikp, is, itape,itape1,ios
-  REAL*8     :: S,T,Z, vnorm1, BKROT2(3), BKROT3(3), zero3(3), ff
+  REAL*8     :: S,T,Z, vnorm1, vnorm(nume), BKROT2(3), BKROT3(3), zero3(3), ff
   integer    :: nbands, nbandsx
   real*8     :: h_al(iblock),h_bl(iblock)
   complex*16 :: h_yl((LMAX2+1)*(LMAX2+1),iblock), h_alyl((LMAX2+1)*(LMAX2+1),iblock), h_blyl((LMAX2+1)*(LMAX2+1),iblock)
@@ -100,7 +100,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
   INTEGER :: iikp, ivector
   LOGICAL :: Tcompute
   REAL(8) DM_EF,DM_EORB,DM_ESUM
-  character str*27,fname*256
+  character str*27,fname*256,sspin1*1
   
   TWOPI=TWO*PI
 
@@ -111,11 +111,21 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
   SQFP=SQRT(4.D0*PI)                                                
   zero3(:) = 0.0
 
+
   CALL init_lohelp
   CALL init_xa(nat)
  
-  vnorm1=1.d0
-  IF((iso.EQ.2).AND.(ispin_pol.EQ.1)) vnorm1=0.5d0
+  IF(iso.EQ.2)then ! iso_orig=2 and ispin_pol=1
+      vnorm1=0.5d0
+  else
+      vnorm1=1.d0
+  endif
+
+  if(iso_orig==2)then
+      sspin1="1"
+  else
+      sspin1=sspin
+  endif
 
   Y=1.0D0                                                           
   DO I=1,49
@@ -420,7 +430,8 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
         call walltim(t1w)
 
         !!! Need to read both spins!
-        CALL Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, kxlo, kylo, kzlo, &
+        CALL Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, vnorm, &
+            &kxlo, kylo, kzlo, &
             &bkx, bky, bkz, bkxlo, bkylo, bkzlo, more_kpoints, n0, &
             &emin, nemin, iso, nmat, nume, nnlo)
   
@@ -442,9 +453,9 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
 
         WRITE(str,'(I7)')ikp
         call gh5_read(DM_nemin,'/IKP_'//trim(adjustl(str))// &
-                &'/nemin_spin'//sspin,f_id)
+                &'/nemin_spin'//sspin1,f_id)
         call gh5_read(DM_nemax,'/IKP_'//trim(adjustl(str))// &
-                &'/nemax_spin'//sspin,f_id)
+                &'/nemax_spin'//sspin1,f_id)
         nbands = DM_nemax-DM_nemin+1
         call cputim(t2c)
         call walltim(t2w)
@@ -458,7 +469,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
         call gh5_read(wkp,'/IKP_'//trim(adjustl(str))// &
                 &"/wt",f_id)
         call gh5_read(Aweight,nbands,nbands,'/IKP_'//trim(adjustl(str))// &
-                &'/KSWT_SPIN'//sspin,f_id)
+                &'/KSWT_SPIN'//sspin1,f_id)
         if(ispin_pol==1)then
             wkp=wkp*2
         endif
@@ -483,7 +494,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
         ENDDO
        
         do num=nemin,DM_nemaxx
-           xwt=xwt+weight(num)*vnorm1
+           xwt=xwt+weight(num)*vnorm1*vnorm(num)
         enddo
  
         WRITE(*,'(I3,A,1x,I4,1x,I4,1x,A,I3,1x,A,I3,1x,A,I3)') &
@@ -1168,7 +1179,6 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
   TCLM = time2
   CALL walltim(time2_w)
   TCLM_w = time2
-
   
   if (myrank.EQ.master) then
      

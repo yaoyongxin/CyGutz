@@ -72,8 +72,11 @@ def get_file_info(fname, unit, idmf, case, scratch, so, para, cmplx, _band,
     elif 'scf2updn' == fname:
         return [unit, "'{}.scf2{}'".format(case, updn), \
                 "'unknown'", "'formatted'", 0]
-    elif 'norm' == fname:
-        return [unit, "'{}.norm{}'".format(case, so), "'unknown'", \
+    elif 'normupdn' == fname:
+        return [unit, "'{}.norm{}{}'".format(case, so, updn), "'unknown'", \
+                "'formatted'", 0]
+    elif 'normdnup' == fname:
+        return [unit, "'{}.norm{}{}'".format(case, so, dnup), "'unknown'", \
                 "'formatted'", 0]
     else:
         raise ValueError('No matching file name {}!'.format(fname))
@@ -88,18 +91,22 @@ def fcreate_def_gwien(case, scratch='.', so='', para='', idmf='1', cmplx='',
         fname_list = ['in2', 'inso', 'indmfl', 'outputdmfupdn', \
                 'in1c', 'vectorupdn', 'vectordnup', 'klist', \
                 'kgen', 'vspupdn', 'vspdnup', 'struct', \
-                'rotlm', 'energydnup', 'energyupdn']
+                'rotlm', 'energydnup', 'energyupdn', 'normupdn', \
+                'normdnup']
         unit_list = [3, 4, 5, 6, \
                 7, 9, 10, 13, \
                 14, 18, 19, 20, \
-                22, 59, 60]
+                22, 59, 60, 12, \
+                11]
     elif idmf == '2':
         fname_list = ['in1c', 'inso', 'in2', 'outputdmfupdn', 'indmfl', \
                 'clmval', 'vectorupdn', 'vectordnup', 'recprlist', 'kgen', \
-                'vspupdn', 'struct', 'scf2updn', 'rotlm', 'energyupdn']
+                'vspupdn', 'struct', 'scf2updn', 'rotlm', 'energyupdn', \
+                'normupdn', 'normdnup']
         unit_list = [3, 4, 5, 6, 7, \
                 8, 9, 10, 13, 14, \
-                18, 20, 21, 22, 30]
+                18, 20, 21, 22, 30, \
+                12, 11]
 
     for fname, unit in zip(fname_list, unit_list):
         fdef.write("{:3d}, {:<15s}, {:<10s}, {:<13s}, {:<4d}\n".format(\
@@ -125,7 +132,7 @@ def onestep(fday, case, exec_name, w_root, para="", band=None, updn=None):
     print(' '.join(x for x in cmd))
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     out, err = process.communicate()
-    fday.write('>{:<10s} ({}) {}\n'.format(exec_name, time_start, out))
+    fday.write('>{:<10s} ({}) {}\n'.format(exec_name, time_start, out[:-1]))
     fday.flush()
     for f in glob.glob('{}.error*'.format(exec_name)):
         if os.path.getsize(f) > 0:

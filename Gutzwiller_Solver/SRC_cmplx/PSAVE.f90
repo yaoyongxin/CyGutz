@@ -98,7 +98,7 @@ module psave
 
     ! h1e
     call gh5_open_r('GPARAMBANDS.h5',f_id)
-    call gh5_read_wh_h1e(bnd%ispin_in)
+    call gh5_read_wh_h1e(bnd%nspin_in)
     call gh5_close(f_id)
     call rotate_h1e_list()
 
@@ -148,7 +148,7 @@ module psave
         call gh5_write(gp%kvec(ivec,3)+1,"/IKP_START",f_id)
         call gh5_write(gp%kvec(ivec,3)+gp%kvec(ivec,2),"/IKP_END",f_id)
         do isp=1,wh%nspin
-            ispp=min(isp,bnd%ispin_in)
+            ispp=min(isp,bnd%nspin_in)
             ikpl=kbase
             call gh5_create_group("/ISPIN_"//trim(int_to_str(isp)),f_id)
             do iks=1,gp%kvec(ivec,2)

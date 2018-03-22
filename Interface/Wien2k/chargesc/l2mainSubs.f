@@ -1,10 +1,10 @@
-SUBROUTINE Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, &
+SUBROUTINE Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, vnorm, &
         &kxlo, kylo, kzlo, bkx, bky, bkz, bkxlo, bkylo, bkzlo, &
         &more_kpoints, n0, emin, nemin, iso, nmat, nume, nnlo)
   use dmf, ONLY: Qcomplex
   IMPLICIT NONE
   INTEGER, intent(in)  :: ikp
-  REAL*8,  intent(out) :: E(nume) 
+  REAL*8,  intent(out) :: E(nume), vnorm(nume)
   COMPLEX*16,intent(out) :: As(nmat,nume,iso)
   COMPLEX*16,intent(out) :: As_lo(nnlo,nume,iso)
   INTEGER, intent(out) :: kx(nmat), ky(nmat), kz(nmat), kxlo(nnlo), kylo(nnlo), kzlo(nnlo)
@@ -52,9 +52,16 @@ SUBROUTINE Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, &
         IF(e(num).LT.emin) nemin=nemin+1
         IF(num.EQ.ne) EXIT
      ENDDO
-  ENDDO     
+  ENDDO    
+
+  READ(12,202,iostat=ios) (vnorm(i),i=1,ne)
+  IF (ios /= 0) THEN
+      vnorm=1.d0
+  ENDIF
+
   RETURN
 
+202 FORMAT(4e20.12)
 END SUBROUTINE Read_Vec_Spin
 
 

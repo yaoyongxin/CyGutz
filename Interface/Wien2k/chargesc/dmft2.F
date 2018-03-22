@@ -186,7 +186,7 @@ PROGRAM DMFT2
   CALL CPUTIM(TTIME)
   TSTART=TTIME
   call walltim(TTIME)
-  Tstart_w=TTIME
+  TSTART_w=TTIME
   
   CALL RECFIL(FNAME1,GMAX,RCFILE,KXMAX,KYMAX,KZMAX,NWAVE)
 
@@ -239,11 +239,16 @@ PROGRAM DMFT2
 #endif
   endif
 
+  iso_orig = iso
+  iso = iso/ispin_pol
+
   if (.not.vector_para) then
      vectors(1,2)=nkpt
   endif
 
-  if(iso==2)Qcomplex=.true.
+  if(iso_orig==2)then
+      Qcomplex=.true.
+  endif
 
   !.....CALCULATE CHARGE DENSITY CLM(R) IN SPHERES,  PARTIAL CHARGES      
   call l2main(cform,nlo,coord,zz,nwave,TCLM,TCLM_w,TFOUR,TFOUR_w)
@@ -255,7 +260,7 @@ PROGRAM DMFT2
   TCLM=TCLM-TSTART                                                  
   PCLM=TCLM/TTOTAL*100.                                             
   if (myrank.EQ.master .OR. fastFilesystem/=0) then
-     WRITE(6,2000)                                                     
+     WRITE(6,2000) 
      WRITE(6,2010) TTOTAL,100.0
      WRITE(6,2030) TCLM,PCLM
      WRITE(6,2040) TFOUR,PFOUR
@@ -267,7 +272,7 @@ PROGRAM DMFT2
   TCLM_w=TCLM_w-TSTART_w                                                  
   PCLM_w=TCLM_w/TTOTAL_w*100.                                             
   if (myrank.EQ.master .OR. fastFilesystem/=0) then
-     WRITE(6,2001)                                                     
+     WRITE(6,2001)
      WRITE(6,2010) TTOTAL_w,100.0
      WRITE(6,2030) TCLM_w,PCLM_w
      WRITE(6,2040) TFOUR_w,PFOUR_w

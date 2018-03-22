@@ -466,8 +466,8 @@ module warehouse
     end subroutine eval_sl_vec_all
 
 
-    subroutine gh5_read_wh_h1e(ispin_in)
-    integer,intent(in)::ispin_in
+    subroutine gh5_read_wh_h1e(nspin_in)
+    integer,intent(in)::nspin_in
 
     integer i,naso,na22,ibase
     complex(q),allocatable::h1e(:,:)
@@ -487,7 +487,7 @@ module warehouse
                 &"/H1E_SPIN1",f_id)
         wh%co(i)%h1e(1:naso,1:naso)=h1e
         if(wh%iso==1)then
-            if(ispin_in==2)then
+            if(nspin_in==2)then
                 call gh5_read(h1e,naso,naso,'/IMPURITY_' &
                         &//trim(int_to_str(i))//"/H1E_SPIN2",f_id)
             endif

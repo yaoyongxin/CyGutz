@@ -118,6 +118,30 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
 end subroutine gutz_set_ef_lda
 
 
+subroutine gh5_save_normso(nume,nkpt)
+    use ghdf5_base
+    use com,only: iso,bnd_ne
+    use com_mpi,only: myrank,master
+    implicit none
+    integer,intent(in)::nume,nkpt
+
+    integer isp,ifile,ikp
+    real(8)normso(nume,2,nkpt)
+
+    if(iso==1.or.myrank/=master)return
+    normso=0
+    do isp=1,2
+        ifile=13-isp
+        do ikp=1,nkpt
+            read(ifile,*)normso(1:bnd_ne(1,ikp,1),isp,ikp)
+        enddo
+    enddo
+    call gh5_write(normso,nume,2,nkpt,"/normso",log_file_id)
+    return
+
+end subroutine gh5_save_normso
+
+
 subroutine set_gfile(deffn)
     use com,only: gfile
     implicit none

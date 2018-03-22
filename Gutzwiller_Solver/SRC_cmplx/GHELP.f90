@@ -139,7 +139,7 @@ subroutine output_energies(io)
 
     call output_energies_wh(io)
     call output_energies_dc(io)
-    if(wh%nspin==2)then
+    if(wh%ispin==2)then
         write(io,'(" spin-up band energy = ",f0.7)')bnd%eband(1)
         write(io,'(" spin-dn band energy = ",f0.7)')bnd%eband(2)
     endif
@@ -171,10 +171,9 @@ subroutine gh5_wrt_kswt()
         if(ivec==1)then
             call gh5_write(bnd%ef,'/e_fermi',f_id)
             call gh5_write(e_gamma_dc,'/e_gamma_dc',f_id)
-            if(bnd%ispin_in==1)then
-                eband=sum(bnd%eband)
-                call gh5_write(eband,'/e_band',f_id)
-            else
+            eband=sum(bnd%eband)
+            call gh5_write(eband,'/e_band',f_id)
+            if(wh%ispin==2)then
                 call gh5_write(bnd%eband(1),'/e_band_spin1',f_id)
                 call gh5_write(bnd%eband(2),'/e_band_spin2',f_id)
             endif
@@ -186,7 +185,7 @@ subroutine gh5_wrt_kswt()
             else
                 ikpl=ikpl+1
             endif
-            do isp=1,bnd%ispin_in
+            do isp=1,bnd%nspin_in
                 nbands=bnd%ne(3,ikp,isp)-bnd%ne(2,ikp,isp)+1
                 p_kswt(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2,sym%ie, &
                         &ikpl,isp)
