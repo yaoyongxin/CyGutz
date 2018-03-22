@@ -61,7 +61,7 @@ module dcstd
 
     type dc_std
         integer::mode=1
-        real(q),allocatable::e(:),vpot(:),u_avg(:),j_avg(:),nelf(:)
+        real(q),allocatable::e(:),vpot(:,:),u_avg(:),j_avg(:),nelf(:,:)
     end type dc_std
 
     type(dc_std)::dc
@@ -73,8 +73,8 @@ module dcstd
     subroutine init_dc_std(io)
     integer,intent(in)::io
 
-    allocate(dc%vpot(wh%num_imp),dc%u_avg(wh%num_imp),dc%j_avg(wh%num_imp), &
-            &dc%nelf(wh%num_imp),dc%e(wh%num_imp))
+    allocate(dc%vpot(2,wh%num_imp),dc%u_avg(wh%num_imp),dc%j_avg(wh%num_imp),&
+            &dc%nelf(2,wh%num_imp),dc%e(wh%num_imp))
     dc%u_avg=0; dc%j_avg=0; dc%nelf=0
     call set_nelf_list(io)
     return
@@ -85,6 +85,7 @@ module dcstd
     subroutine set_nelf_list(io)
     integer,intent(in)::io
 
+    integer i
     logical lexist
 
     call gh5_open_r('GPARAM.h5',f_id)
@@ -96,9 +97,11 @@ module dcstd
     if(dc%mode>1)then
         call h5lexists_f(f_id,'/dc_nelf_list',lexist,gh5_err)
         if(lexist)then
-            call gh5_read(dc%nelf,wh%num_imp,'/dc_nelf_list',f_id)
+            call gh5_read(dc%nelf,2,wh%num_imp,'/dc_nelf_list',f_id)
         else
-            dc%nelf=wh%co(:)%net
+            do i=1,wh%num_imp
+                dc%nelf(:,i)=wh%co(i)%net
+            enddo
         endif
     endif
     call gh5_close(f_id)
@@ -120,7 +123,7 @@ module dcstd
 
         if(dc%mode>1)then
             write(io,'(" input nelf:")')
-            write(io,'(8x,5(f8.3,2x))')dc%nelf
+            write(io,'(8x,5(f8.3,2x))')(sum(dc%nelf(:,i)), i=1,wh%num_imp)
         endif
 
         if(dc%mode>0)then
@@ -138,12 +141,13 @@ module dcstd
     subroutine update_nelf_list(io)
     integer,intent(in)::io
 
-    integer idx(1)
+    integer idx(1),i
     real(q) ndiff(wh%num_imp)
     character(20) fmt
 
-
-    ndiff=wh%co(:)%net-dc%nelf
+    do i=1,wh%num_imp
+        ndiff(i)=sum(wh%co(i)%net-dc%nelf(:,i))
+    enddo
     idx=maxloc(abs(ndiff))
 
     if(io>0)then
@@ -152,9 +156,11 @@ module dcstd
 
     if(io>0)then
         call gh5_open_w('GDC_NELF_OUT.h5',f_id)
-        call gh5_write(dc%nelf,wh%num_imp,'/dc_nelf_list_inp',f_id)
-        dc%nelf=wh%co(:)%net
-        call gh5_write(dc%nelf,wh%num_imp,'/dc_nelf_list_out',f_id)
+        call gh5_write(dc%nelf,2,wh%num_imp,'/dc_nelf_list_inp',f_id)
+        do i=1,wh%num_imp
+            dc%nelf(:,i)=wh%co(i)%net
+        enddo
+        call gh5_write(dc%nelf,2,wh%num_imp,'/dc_nelf_list_out',f_id)
         call gh5_close(f_id)
     endif
     return
@@ -163,19 +169,40 @@ module dcstd
 
 
     subroutine calc_vdc_list()
-    integer i,j
+    integer i,j,na2,na
+    real(q) ntot
 
     if(dc%mode==1)then
-        dc%nelf=wh%co(:)%net
+        do i=1,wh%num_imp
+            dc%nelf(:,i)=wh%co(i)%net
+        enddo
     endif
-    dc%vpot=dc%u_avg*(dc%nelf-.5_q)-dc%j_avg/2*(dc%nelf-1)
-
+    do i=1,wh%num_imp
+        ntot=sum(dc%nelf(:,i))
+        do j=1,2
+            dc%vpot(j,i)=dc%u_avg(i)*(ntot-.5_q)- &
+                    &dc%j_avg(i)*(dc%nelf(j,i)-0.5_q)
+        enddo
+    enddo
     ! add to co%la2
     wh%la2=0
     do i=1,wh%num_imp
-        do j=1,wh%na2_imp(i)
-            wh%co(i)%la2(j,j)=-dc%vpot(i)
-        enddo
+        na2=wh%na2_imp(i); na=na2/2
+        if(.not.associated(wh%db2sab))then
+            do j=1,na
+                ! spin-index-faster convention
+                wh%co(i)%la2(2*j-1,2*j-1)=-dc%vpot(1,i)
+                wh%co(i)%la2(2*j,2*j)=-dc%vpot(2,i)
+            enddo
+        else
+             do j=1,na
+                ! orbital-index-faster convention
+                wh%co(i)%la2(j,j)=-dc%vpot(1,i)
+                wh%co(i)%la2(j+na,j+na)=-dc%vpot(2,i)
+            enddo
+            ! subsequent transformation to the symmetry-adapted basis
+            call uhau(wh%co(i)%la2,wh%co(i)%db2sab,na2,na2)
+        endif
     enddo
     return
 
@@ -192,12 +219,22 @@ module dcstd
 
 
     subroutine calc_edc_list()
+    integer i,isp
+    real(q) ntot
 
     if(dc%mode==1)then
-        dc%nelf=wh%co(:)%net
+        do i=1,wh%num_imp
+            dc%nelf(:,i)=wh%co(i)%net
+        enddo
     endif
-    dc%e=dc%u_avg*dc%nelf*(dc%nelf-1)/2-dc%j_avg*dc%nelf/2*(dc%nelf/2-1)+ &
-            &+dc%vpot*(wh%co(:)%net-dc%nelf)
+    do i=1,wh%num_imp
+        ntot=sum(dc%nelf(:,i))
+        dc%e(i)=dc%u_avg(i)*ntot*(ntot-1)/2
+        do isp=1,2
+            dc%e(i)=dc%e(i)-dc%j_avg(i)*dc%nelf(isp,i)*(dc%nelf(isp,i)-1)/2+ &
+                    &+dc%vpot(isp,i)*(wh%co(i)%net(isp)-dc%nelf(isp,i))
+        enddo
+    enddo
     return
     
     end subroutine calc_edc_list

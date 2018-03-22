@@ -61,7 +61,7 @@ module corrorb
     type corr_orb
         !< number of correlated orbital, spin-orbital, dim*ispin
         integer dim,dim2,dimso
-        real(q) :: net,elc,elc_old !< level center of the correlated orbitals
+        real(q) :: net(2)
         integer :: dim_hs_l
         complex(q),pointer :: nks(:,:),nc_var(:,:),nc_phy(:,:),isimix(:,:), &
                 &r(:,:),r0(:,:),z(:,:),d(:,:),d0(:,:), &
@@ -120,6 +120,35 @@ module corrorb
       
     end subroutine calc_co_lambdac
     
+
+    subroutine calc_co_net(co)
+    type(corr_orb) co
+
+    integer i
+    complex(q) zbuf(co%dim2,co%dim2),sab2db(co%dim2,co%dim2)
+
+    co%net=0
+    if(associated(co%db2sab))then
+        ! transposition is needed for nks.
+        zbuf=transpose(co%nks)
+        sab2db=conjg(transpose(co%db2sab))
+        call uhau(zbuf,sab2db,co%dim2,co%dim2)
+        ! orbital-index faster
+        do i=1,co%dim
+            co%net(1)=co%net(1)+zbuf(i,i)
+            co%net(2)=co%net(2)+zbuf(i+co%dim,i+co%dim)
+        enddo
+    else
+        ! spin-index faster
+        do i=1,co%dim
+            co%net(1)=co%net(1)+co%nks(2*i-1,2*i-1)
+            co%net(2)=co%net(2)+co%nks(2*i,2*i)
+        enddo
+    endif
+    return
+
+    end subroutine calc_co_net
+
 
     !*************************************************************************
     ! isimix = (nks(1-nks))^(-1/2)

@@ -159,7 +159,8 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
         if ldc == 2:
             ipos += 1
             stmp = sys.argv[ipos]
-            unique_nf_list = [float(s) for s in stmp.split('-')]
+            unique_nf_list = [[float(s)/2, float(s)/2] \
+                    for s in stmp.split('-')]
     else:
         unique_df_list = []
         unique_corr_symbol_list = []
@@ -210,7 +211,7 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
                     except:
                         continue
                 print(answer, file=usr_input)
-                unique_nf_list.append(nf)
+                unique_nf_list.append([nf/2,nf/2])
 
             if 'y' == spin_polarization == spin_orbit_coup:
                 if 'y' == ferromagnetism:

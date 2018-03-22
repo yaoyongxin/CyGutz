@@ -119,6 +119,7 @@ module bandstru
     call gh5_read(bnd%ispin_in,'/ispin',f_id)
     call gh5_read(kpt%dim,'/kptdim',f_id)
     call gh5_read(bnd%nmax,'/nbmax',f_id)
+    wh%ispin_in=bnd%ispin_in
     if(io>0)then
         write(io,'(" ispin_in=",i2," iso=",i2, &
                 &" ispin=",i2," ispo=",i2)')bnd%ispin_in, &

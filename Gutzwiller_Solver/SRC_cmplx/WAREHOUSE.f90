@@ -84,7 +84,7 @@ module warehouse
                 &nval_bot_ityp(:),nval_top_ityp(:)
         real(q),allocatable :: et1(:),eu2(:)
         integer :: na2112,na2max,nasomax,nasotot
-        integer :: iso,ispin,ispo,rspo,nspin,ivext=1
+        integer :: iso,ispin,ispin_in,ispo,rspo,nspin,ivext=1
         type(corr_orb),allocatable::co(:)
         type(frozen),pointer::fz(:)
 
@@ -834,9 +834,17 @@ module warehouse
     integer,intent(in)::io
 
     integer i
+    real(q) res
 
     do i=1,wh%num_imp
-        wh%co(i)%net=trace_a(wh%co(i)%nks,wh%co(i)%dim2)
+        if(wh%ispin_in==1)then
+            ! case of lda
+            res = trace_a(wh%co(i)%nks,wh%co(i)%dim2)
+            wh%co(i)%net=res/2
+        else
+            ! case of lsda
+            call calc_co_net(wh%co(i))
+        endif
     enddo
     if(io>0)then
         write(io,'(" nele_loc total:")')

@@ -240,8 +240,9 @@ def diff(fday, case, mix_dc, avg_dc):
             nelf_diff_list = nelf_list_out - nelf_list_inp
             nelf_list_mix = nelf_list_inp + mix_dc*nelf_diff_list
             if avg_dc:
-                val = np.sum(nelf_list_mix)/len(nelf_list_mix)
-                nelf_list_mix = [val for x in nelf_list_inp]
+                valup = np.sum(nelf_list_mix[:,0])/nelf_list_mix.shape[0]
+                valdn = np.sum(nelf_list_mix[:,1])/nelf_list_mix.shape[0]
+                nelf_list_mix = [[valup,valdn] for x in nelf_list_inp]
             if ldc == 12:
                 if avg_dc:
                     dcv_err = np.sum(nelf_diff_list)/len(nelf_list_mix)
