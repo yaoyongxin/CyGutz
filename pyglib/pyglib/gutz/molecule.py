@@ -76,7 +76,7 @@ def xtal_extract_mol(symbols, scaled_positions, cell, iat, dist_cut_,
     if dist_cut_ > dist[1]:
         dist_cut = dist_cut_
     else:
-        dist_cut = dist[12] + 0.1
+        dist_cut = dist[12] + 0.7
         print(" The default dist_cut for extracting a centered cluster" +\
                 "\n for symmetry evaluation = {}".format(dist_cut))
     molecule_positions = [mpos for mpos, pdist in
