@@ -295,9 +295,6 @@ module bandstru
     if(.not.associated(wh%db2sab))return
 
     ikpl=0
-    !$omp parallel do firstprivate(ikpl) &
-    !$omp &private(ivec,isym,iks,ikp,nbands,p_2d) &
-    !$omp &schedule(static,1)
     do ivec=1,gp%nvec
         do iks=1,gp%kvec(ivec,2)
             ikp=gp%kvec(ivec,3)+iks
@@ -309,27 +306,26 @@ module bandstru
             do isp=1,bnd%nspin_in
                 nbands=bnd%ne(3,ikp,isp)-bnd%ne(2,ikp,isp)+1
                 p_2d(1:nbands,1:nbands)=>bnd%psi0_b(1:nbands**2,ikpl,isp)
-                call site_wise_rtrans(p_2d,nbands)
+                call site_wise_rtrans(p_2d,nbands,1)
                 do isym=1,sym%nop
                     p_2d(1:nbands,1:nbands)=>bnd%hk0(1:nbands**2, &
                             &isym,ikpl,isp)
-                    call site_wise_rtrans(p_2d,nbands)
+                    call site_wise_rtrans(p_2d,nbands,1)
                     p_2d=transpose(p_2d)
-                    call site_wise_rtrans(p_2d,nbands)
+                    call site_wise_rtrans(p_2d,nbands,-1)
                     p_2d=transpose(p_2d)
                 enddo
             enddo
         enddo
     enddo
-    !$omp end parallel do
     nullify(p_2d)
     return
       
     end subroutine rotate_bare_hamiltonian
 
 
-    subroutine site_wise_rtrans(a,n)
-    integer,intent(in)::n
+    subroutine site_wise_rtrans(a,n,mode)
+    integer,intent(in)::n,mode
     complex(q),intent(inout)::a(n,n)
 
     integer nbase,i,naso
@@ -339,13 +335,16 @@ module bandstru
     nbase=0
     do i=1,wh%num_imp
         naso=wh%co(i)%dimso
+        p_trans(1:naso,1:naso) => utrans(1:naso**2)
         if(wh%iso==1)then
-            p_trans(1:naso,1:naso) => utrans(1:naso**2)
             p_trans=wh%co(i)%db2sab(1:naso,1::2)
         else
-            p_trans => wh%co(i)%db2sab
+            p_trans = wh%co(i)%db2sab
         endif
-        call anmxbmm('n',a(:,nbase+1:nbase+naso), &
+        if(mode<0)then
+            p_trans=conjg(p_trans)
+        endif
+        call anmxbmm("n",a(:,nbase+1:nbase+naso), &
                 &p_trans,n,naso)
         nbase=nbase+naso
     enddo

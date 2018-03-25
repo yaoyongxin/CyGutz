@@ -240,7 +240,7 @@ PROGRAM DMFT2
   endif
 
   iso_orig = iso
-  iso = iso/ispin_pol
+  iso = max(1,iso/ispin_pol)
 
   if (.not.vector_para) then
      vectors(1,2)=nkpt

@@ -120,7 +120,7 @@ end subroutine gutz_set_ef_lda
 
 subroutine gh5_save_normso(nume,nkpt)
     use ghdf5_base
-    use com,only: iso,bnd_ne
+    use com,only: iso,bnd_ne,ispin_pol
     use com_mpi,only: myrank,master
     implicit none
     integer,intent(in)::nume,nkpt
@@ -128,7 +128,7 @@ subroutine gh5_save_normso(nume,nkpt)
     integer isp,ifile,ikp
     real(8)normso(nume,2,nkpt)
 
-    if(iso==1.or.myrank/=master)return
+    if(iso==1.or.myrank/=master.or.ispin_pol==1)return
     normso=0
     do isp=1,2
         ifile=13-isp

@@ -428,16 +428,13 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
 
         call cputim(t1c)
         call walltim(t1w)
-
         !!! Need to read both spins!
         CALL Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, vnorm, &
             &kxlo, kylo, kzlo, &
             &bkx, bky, bkz, bkxlo, bkylo, bkzlo, more_kpoints, n0, &
             &emin, nemin, iso, nmat, nume, nnlo)
-  
         IF (.NOT.Tcompute) CYCLE
         IF (.NOT.more_kpoints) EXIT
-   
         call cputim(t2c)
         call walltim(t2w)
         time_rd_c=time_rd_c+t2c-t1c

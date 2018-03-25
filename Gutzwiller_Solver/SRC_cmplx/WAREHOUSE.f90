@@ -848,7 +848,7 @@ module warehouse
     enddo
     if(io>0)then
         write(io,'(" nele_loc total:")')
-        write(io,'(4x,5f10.5)')(wh%co(i)%net,i=1,wh%num_imp)
+        write(io,'(4x,2(2f10.5,3x))')(wh%co(i)%net,i=1,wh%num_imp)
     endif
     return
 

@@ -123,11 +123,6 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   !--  self-energy of all l's and all atoms. If more than one atom is correlated, we ---!
   !--  can not avoid looping over all correlated atoms in the inside loop --------------!
   !-------------------------------------------------------------------------------------!
-  do is=1,iso !------ preparing input files case.vsp and case.vspn containing potential parameters -----!
-     jtape=17+is
-     READ(jtape,2032) ISCF
-  end do
-  
   call w_allocate(maxucase) !------ contains all variables which depend on atom / which are changed by atpar -----------!
 
   DO jatom=1,nat    !------  over all atoms (all sorts) even if we do not require qtl for them ------------------!
@@ -158,8 +153,8 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
         if(is.eq.2.and.ispin_pol.eq.1) then  ! fix for SO-coupling and non-spinpolarized
            jtape=18
            rewind(jtape)
-           READ(jtape,2032) ISCF 
         endif
+        READ(jtape,2032) ISCF 
         CALL ATPAR(jatom,itape,jtape,is,iso,QoffDiag)
         if (vector_para) then
            close(itape)

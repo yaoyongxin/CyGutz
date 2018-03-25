@@ -83,8 +83,7 @@ module gkernel
     if(gkmem%iembeddiag==10)then
         call init_wh_x(io,1._q)
     else
-        ! call init_wh_x(io,.99_q)
-        call init_wh_x(io,1._q)
+        call init_wh_x(io,.99_q)
     endif
     return
 
