@@ -30,7 +30,11 @@ SUBROUTINE ATPAR (JATOM,itape,jtape,is,ISPIN,QoffDiag)
   READ(jtape,2022)(VR(J),J=1,JRJ(JATOM))
   READ(jtape,2031)
   READ(jtape,2030)
-  
+ 
+write(0,*)"IDUMMY=",IDUMMY,jtape
+write(0,*)VR(1:3)
+
+
   DO J=1,JRJ(JATOM)
      VR(J)=VR(J)/2.0D0  
   ENDDO
