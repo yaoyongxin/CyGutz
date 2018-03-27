@@ -170,13 +170,16 @@ module dcstd
 
     subroutine calc_vdc_list()
     integer i,j,na2,na
-    real(q) ntot
+    real(q) ntot,ntotp
 
-    if(dc%mode==1)then
-        do i=1,wh%num_imp
-            dc%nelf(:,i)=wh%co(i)%net
-        enddo
-    endif
+    ntot=1._q; ntotp=1._q
+    do i=1,wh%num_imp
+        if(dc%mode/=1)then
+            ntot=sum(dc%nelf(:,i))
+            ntotp=sum(wh%co(i)%net)
+        endif
+        dc%nelf(:,i)=wh%co(i)%net*ntot/ntotp
+    enddo
     do i=1,wh%num_imp
         ntot=sum(dc%nelf(:,i))
         do j=1,2

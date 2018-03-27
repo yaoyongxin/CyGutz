@@ -32,8 +32,11 @@ def modify_gparam():
                     '-maxiter') + 1])]
         if '-dc_nelf_list' in sys.argv:
             stmp = sys.argv[sys.argv.index('-dc_nelf_list')+1]
-            f['/dc_nelf_list'][()] = [float(s) for s in
-                    stmp.split('-')]
+            ne_list = [float(s) for s in stmp.split('-')]
+            if '/dc_nelf_list' in f:
+                f['/dc_nelf_list'][()] = ne_list
+            else:
+                f['/dc_nelf_list'] = ne_list
         if '-nval_bot_ityp' in sys.argv:
             stmp = sys.argv[sys.argv.index('-nval_bot_ityp')+1]
             f['/nval_bot_ityp'][()] = [int(s) for s in
