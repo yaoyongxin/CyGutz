@@ -11,14 +11,9 @@ PROGRAM DMFT2
   USE char
   USE dmf
   USE com_mpi
-  USE GMPI
+  use gmpi,only:ini_gmpi
   use ghdf5_base
   IMPLICIT REAL*8 (A-H,O-Z)
-
-#ifdef MPI
-  include 'mpif.h'
-#endif
-
   REAL*8, allocatable       ::  ZZ(:)
   REAL*8,PARAMETER       :: Ry2eV= 13.60569193
   REAL*8           GMAX

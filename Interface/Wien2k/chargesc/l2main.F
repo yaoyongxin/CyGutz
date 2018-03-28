@@ -27,7 +27,7 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
       &vectors,nvector,fvectors,VECFN,FindMaxK_MPI
   USE w_atpar
   USE dmf
-  USE GMPI
+  use gmpi,only:gp
   use ghdf5_base
   IMPLICIT NONE
   CHARACTER*4, intent(in)  :: cform
