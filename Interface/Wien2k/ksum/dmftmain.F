@@ -452,7 +452,8 @@ PROGRAM DMFTMAIN
   END DO
 
 #ifdef MPI
-  CALL IMAX1_ALL_MPI(NUME)
+  call imax1_all_mpi(nume)
+  call imax1_all_mpi(nmat)
 #endif
 
   CALL init_abc(nume,nmat,lmax2,ndim2,nrf) ! Allocates variables:

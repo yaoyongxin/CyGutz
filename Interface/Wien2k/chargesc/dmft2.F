@@ -225,14 +225,14 @@ PROGRAM DMFT2
       call gh5_read(iso, "/iso", f_id)
       call gh5_read(ispin_pol, "/ispin", f_id)
       call gh5_close(f_id)
-#ifdef MPI
-      call mpi_bcast(nkpt,1,mpi_integer,master,mpi_comm_world,ierr)
-      call mpi_bcast(nmat,1,mpi_integer,master,mpi_comm_world,ierr)
-      call mpi_bcast(nume,1,mpi_integer,master,mpi_comm_world,ierr)
-      call mpi_bcast(iso,1,mpi_integer,master,mpi_comm_world,ierr)
-      call mpi_bcast(ispin_pol,1,mpi_integer,master,mpi_comm_world,ierr)
-#endif
   endif
+#ifdef MPI
+  call mpi_bcast(nkpt,1,mpi_integer,master,mpi_comm_world,ierr)
+  call mpi_bcast(nmat,1,mpi_integer,master,mpi_comm_world,ierr)
+  call mpi_bcast(nume,1,mpi_integer,master,mpi_comm_world,ierr)
+  call mpi_bcast(iso,1,mpi_integer,master,mpi_comm_world,ierr)
+  call mpi_bcast(ispin_pol,1,mpi_integer,master,mpi_comm_world,ierr)
+#endif
 
   iso_orig = iso
   iso = max(1,iso/ispin_pol)
