@@ -219,6 +219,7 @@ module bandstru
     allocate(bnd%ferwe (bnd%nmax,kpt%dim,wh%nspin))
     allocate(bnd%ferwer(bnd%nmax,kpt%dim,wh%nspin))
     allocate(bnd%ek(bnd%nmax,kpt%dim,wh%nspin))
+    bnd%ek=0
     allocate(bnd%hk0(bnd%nmaxin**2,sym%nop,kpt%diml,bnd%nspin_in))
     allocate(bnd%vk (bnd%nmaxin**2,sym%nop,kpt%diml, &
             &wh%nspin))
@@ -281,6 +282,9 @@ module bandstru
         call gh5_close(f_id)
     enddo
     nullify(p_2d)
+#ifdef mpi_mode
+    call dsum_all_mpi(bnd%ek,bnd%nmax*kpt%dim*wh%nspin)
+#endif
     return
       
     end subroutine read_bare_hamiltonian
