@@ -263,7 +263,7 @@ def diff(fday, case, mix_dc, avg_dc, gskip):
     return d_rho, d_etot, dcv_err
 
 
-def processes_convert(so):
+def processes_convert(so,updn):
     if not file_exists('.processes'):
         print('.processes file not present. It must be a serial run.')
         return
@@ -276,7 +276,7 @@ def processes_convert(so):
             vecn = [None]*4
             i, nkp, nprc = map(int,data[::2])
             if not so:
-                fdef = open('lapw1_{}.def'.format(i), 'r')
+                fdef = open('{}lapw1_{}.def'.format(updn,i), 'r')
                 for line in fdef:
                     data = line.split(',')
                     data0 = int(data[0])
@@ -290,7 +290,7 @@ def processes_convert(so):
                                  m.group(2))
                 fdef.close()
             else:
-                fdef = open('lapwso_{}.def'.format(i), 'r')
+                fdef = open('{}lapwso_{}.def'.format(updn,i), 'r')
                 for line in fdef:
                     data = line.split(',')
                     if int(data[0])==42: vecn[0]=data[1].split("'")[1]
@@ -540,7 +540,10 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
                 onestep(fday, w_case, 'lapwso', w_root, para=para, band=band)
 
         if icycle==0 and para != '':
-            processes_convert(p_so)
+            if spinpol:
+                processes_convert(p_so, updn="up")
+            else:
+                processes_convert(p_so, updn="")
 
         #set slurm environment variables for mpi run
         env.set_environ(slurm_envs)
