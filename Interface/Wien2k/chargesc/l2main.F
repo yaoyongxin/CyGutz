@@ -1,121 +1,121 @@
-SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
-        &TCLM,TCLM_w,TFOUR,TFOUR_w)
-  USE defs,  ONLY: PI, ZERO, TWO, ZEROC, IMAG
-  USE param, ONLY: IBLOCK, LMAX2, LOMAX, NCOM, NLOAT, NRAD, &
-      &NGAU, NMAT, NUME, NSYM, NKPT, fh_vec, fastFilesystem
-  USE atspdt,ONLY: EL, P, DP, PE, DPE, PEI, e_store
-  USE char,  ONLY: modus
-  USE com,   ONLY: rel, sspin, NAT, NBAND, NK, MINWAV, MAXWAV, &
-      &EMIN, ELECN, XWT
-  USE charp, ONLY: init_charp, zero_charp, fini_charp
-  USE chard, ONLY: init_chard, zero_chard, fini_chard
-  USE charf, ONLY: init_charf, zero_charf, fini_charf
-  USE lo,    ONLY: loor, lapw, nlo, nlov, nlon, ilo, a1lo, b1lo, &
+subroutine l2main(cform,nnlo,coord,zz,nwave,&
+        &tclm,tclm_w,tfour,tfour_w)
+  use defs,  only: pi, zero, two, zeroc, imag
+  use param, only: iblock, lmax2, lomax, ncom, nloat, nrad, &
+      &ngau, nmat, nume, nsym, nkpt, fh_vec, fastfilesystem
+  use atspdt,only: el, p, dp, pe, dpe, pei, e_store
+  use char,  only: modus
+  use com,   only: rel, sspin, nat, nband, nk, minwav, maxwav, &
+      &emin, elecn, xwt
+  use charp, only: init_charp, zero_charp, fini_charp
+  use chard, only: init_chard, zero_chard, fini_chard
+  use charf, only: init_charf, zero_charf, fini_charf
+  use lo,    only: loor, lapw, nlo, nlov, nlon, ilo, a1lo, b1lo, &
       &elo_store, alo, blo, clo, pi12lo, pe12lo, pr12lo
-  USE lohelp,ONLY: u21, ue21, u12, ue12, u22, init_lohelp, &
+  use lohelp,only: u21, ue21, u12, ue12, u22, init_lohelp, &
       &zerotc_lohelp, fini_lohelp, sum12, sum21, sum22, sume21, sume12
-  USE struk, ONLY: iatnr, mult, isplit, jri, pos, rotij, tauij, &
+  use struk, only: iatnr, mult, isplit, jri, pos, rotij, tauij, &
       &rmt, v, rotloc, r0, dx, vol, br1, br2
-  USE xa,    ONLY: LM, R, AVEC, BK, BKROT, BKRLOC, fj, dfj, E, &
-      &WEIGHT, TC100, TCA100, TCB100, init_xa, fini_xa, &
-      &SUMA, SUMB, SUMAB, SUMBA
-  USE xa3,   ONLY: bkx, bky, bkz, bkxlo, bkylo, bkzlo, init_xa3, &
-      &fini_xa3, kx, ky, kz, kxlo, kylo, kzlo, As, As_lo!, A, A_lo
-  USE reclat,ONLY: inst, tauk, kzz
-  USE com_mpi,ONLY: nprocs,myrank,master,FilenameMPI,Reduce_MPI, &
-      &Gather_procs,cpuID,pr_proc,pr_procr,pr_procs,vector_para, &
-      &vectors,nvector,fvectors,VECFN,FindMaxK_MPI
-  USE w_atpar
-  USE dmf
+  use xa,    only: lm, r, avec, bk, bkrot, bkrloc, fj, dfj, e, &
+      &weight, tc100, tca100, tcb100, init_xa, fini_xa, &
+      &suma, sumb, sumab, sumba
+  use xa3,   only: bkx, bky, bkz, bkxlo, bkylo, bkzlo, init_xa3, &
+      &fini_xa3, kx, ky, kz, kxlo, kylo, kzlo, as, as_lo!, a, a_lo
+  use reclat,only: inst, tauk, kzz
+  use com_mpi,only: nprocs,myrank,master,filenamempi,reduce_mpi, &
+      &gather_procs,cpuid,pr_proc,pr_procr,pr_procs,vector_para, &
+      &vectors,nvector,fvectors,vecfn,findmaxk_mpi
+  use w_atpar
+  use dmf
   use gmpi,only:gp
   use ghdf5_base
-  IMPLICIT NONE
-  CHARACTER*4, intent(in)  :: cform
-  INTEGER, intent(out)     :: nnlo
-  CHARACTER*5, intent(in)  :: coord
-  REAL*8, intent(in)       :: ZZ(*)
-  INTEGER, intent(in)      :: nwave
-  REAL*8, intent(out)      :: TCLM,TCLM_w,TFOUR,TFOUR_w
-  ! Functions
-  INTEGER :: NOTRI
-  REAL*8  :: GAUNT
-  REAL*8  :: ferm
-  ! Common blocks
-  COMMON /FACT/   FCT(100)
-  REAL*8     :: FCT
-  COMMON /RADFU/  RRAD1(NRAD,0:LMAX2),RADE1(NRAD,0:LMAX2),RRAD2(NRAD,0:LMAX2),RADE2(NRAD,0:LMAX2)
-  REAL*8     :: RRAD1, RADE1, RRAD2, RADE2
-  COMMON /UHELP/  UA(NRAD),UB(NRAD),UBA(NRAD),UAB(NRAD)
-  REAL*8     :: UA, UB, UBA, UAB
+  implicit none
+  character*4, intent(in)  :: cform
+  integer, intent(out)     :: nnlo
+  character*5, intent(in)  :: coord
+  real*8, intent(in)       :: zz(*)
+  integer, intent(in)      :: nwave
+  real*8, intent(out)      :: tclm,tclm_w,tfour,tfour_w
+  ! functions
+  integer :: notri
+  real*8  :: gaunt
+  real*8  :: ferm
+  ! common blocks
+  common /fact/   fct(100)
+  real*8     :: fct
+  common /radfu/  rrad1(nrad,0:lmax2),rade1(nrad,0:lmax2),rrad2(nrad,0:lmax2),rade2(nrad,0:lmax2)
+  real*8     :: rrad1, rade1, rrad2, rade2
+  common /uhelp/  ua(nrad),ub(nrad),uba(nrad),uab(nrad)
+  real*8     :: ua, ub, uba, uab
   common /xmean/  xwteh(0:3),xwtel(0:3),xwt1h(0:3),xwt1l(0:3) 
-  REAL*8     :: xwteh, xwtel, xwt1h, xwt1l
-  ! Locals
-  real*8, PARAMETER       :: Ry2eV = 13.60569193
+  real*8     :: xwteh, xwtel, xwt1h, xwt1l
+  ! locals
+  real*8, parameter       :: ry2ev = 13.60569193
   !
-  CHARACTER*10  :: KNAME
-  LOGICAL       :: more_kpoints
-  COMPLEX*16    :: YL((LMAX2+1)*(LMAX2+1))
-  COMPLEX*16    :: PHSHEL,CFAC,IMAG1
-  REAL*8        :: tc_buf(nrad),vtc_buf(nrad)
-  CHARACTER*100 :: CDUMMY
-  INTEGER       :: I, J, N, JK, ISCF, LFIRST, LMX, jatom, ilm1, ilm3, n0, ne, nm
-  INTEGER       :: jlm, lmmax, imax, nemin, DM_nemin, DM_nemax, DM_nemaxx, label, i1
-  INTEGER       :: ii, ibb, i3, isize, latom, mu, index, l, m, maxx, lda, ldb, ldc, num, ilm2
-  INTEGER       :: jlo, ilm, li, mi, L1, MMAX, LP, LP1, mpmax, jlop, MP, MS, MPS, MTEST, LY, LPY
-  REAL*8        :: arg, arg1, arg2, arg3, argt, argt2, emist, fac, rmt2, GNT
-  REAL*8        :: TWOPI, TEST1, SQRT2, SQRT3, SQFP, Y, CIN, jatombad, lbad
+  character*10  :: kname
+  logical       :: more_kpoints
+  complex*16    :: yl((lmax2+1)*(lmax2+1))
+  complex*16    :: phshel,cfac,imag1
+  real*8        :: tc_buf(nrad),vtc_buf(nrad)
+  character*100 :: cdummy
+  integer       :: i, j, n, jk, iscf, lfirst, lmx, jatom, ilm1, ilm3, n0, ne, nm
+  integer       :: jlm, lmmax, imax, nemin, dm_nemin, dm_nemax, dm_nemaxx, label, i1
+  integer       :: ii, ibb, i3, isize, latom, mu, index, l, m, maxx, lda, ldb, ldc, num, ilm2
+  integer       :: jlo, ilm, li, mi, l1, mmax, lp, lp1, mpmax, jlop, mp, ms, mps, mtest, ly, lpy
+  real*8        :: arg, arg1, arg2, arg3, argt, argt2, emist, fac, rmt2, gnt
+  real*8        :: twopi, test1, sqrt2, sqrt3, sqfp, y, cin, jatombad, lbad
   !
-  REAL*8     :: time_bl, time_bl_w, time_reduc, time_reduc_w, time_write, time_writeclm, time_writescf, time4_w, time3, time4
-  REAL*8     :: time_write_w, time_writeclm_w, time_ilm, time_ilm_w, time_radprod, time_m, time_rad, time3_w
-  REAL*8     :: time_rd_w, time_rd_c, time_atpar_w, time_atpar_c, time_writescf_w, time_r_w, time_r_c, trw, trc
-  REAL*8     :: time_writeefg, time_writeeefg_w, time_writeefg_w, t1c, t1w, t2c, t2w, time1, time1_w, time2, time2_w
-  REAL*8     :: time_dmf, time_dmfw, time_int, time_intw, time_ed, time_edw
+  real*8     :: time_bl, time_bl_w, time_reduc, time_reduc_w, time_write, time_writeclm, time_writescf, time4_w, time3, time4
+  real*8     :: time_write_w, time_writeclm_w, time_ilm, time_ilm_w, time_radprod, time_m, time_rad, time3_w
+  real*8     :: time_rd_w, time_rd_c, time_atpar_w, time_atpar_c, time_writescf_w, time_r_w, time_r_c, trw, trc
+  real*8     :: time_writeefg, time_writeeefg_w, time_writeefg_w, t1c, t1w, t2c, t2w, time1, time1_w, time2, time2_w
+  real*8     :: time_dmf, time_dmfw, time_int, time_intw, time_ed, time_edw
   !
-  COMPLEX*16 :: gint
+  complex*16 :: gint
   real(8) :: wkp
-  COMPLEX*16 :: tsa, tsb, tsab, tsba, ts12(nloat), &
+  complex*16 :: tsa, tsb, tsab, tsba, ts12(nloat), &
       &tse12(nloat), ts21(nloat), tse21(nloat), ts22(nloat,nloat)
-  COMPLEX*16 :: tsuma,tsumb,tsumab,tsumba,tsum21(nloat),&
+  complex*16 :: tsuma,tsumb,tsumab,tsumba,tsum21(nloat),&
       &tsume21(nloat),tsum12(nloat),tsume12(nloat),tsum22(nloat,nloat)
-  COMPLEX*16 :: SA, SB, SAB, SBA, s12(nloat), se12(nloat), s21(nloat), se21(nloat), s22(nloat,nloat)
-  COMPLEX*16 :: vsa, vsb, vsab, vsba, vs12(nloat), vse12(nloat), vs21(nloat), vse21(nloat), vs22(nloat,nloat)
-  REAL*8     :: facv, EQBAD, OVRDIV, TC, EFGFACT, EFG20, EFG22, EFG2M, QXX, QYY, QZZ, QXY, VXX, VYY, VZZ
-  INTEGER    :: LM_MAX, iks,ikp, is, itape,itape1,ios
-  REAL*8     :: S,T,Z, vnorm1, vnorm(nume), BKROT2(3), BKROT3(3), zero3(3), ff
+  complex*16 :: sa, sb, sab, sba, s12(nloat), se12(nloat), s21(nloat), se21(nloat), s22(nloat,nloat)
+  complex*16 :: vsa, vsb, vsab, vsba, vs12(nloat), vse12(nloat), vs21(nloat), vse21(nloat), vs22(nloat,nloat)
+  real*8     :: facv, eqbad, ovrdiv, tc, efgfact, efg20, efg22, efg2m, qxx, qyy, qzz, qxy, vxx, vyy, vzz
+  integer    :: lm_max, iks,ikp, is, itape,itape1,ios
+  real*8     :: s,t,z, vnorm1, vnorm(nume), bkrot2(3), bkrot3(3), zero3(3), ff
   integer    :: nbands, nbandsx
   real*8     :: h_al(iblock),h_bl(iblock)
-  complex*16 :: h_yl((LMAX2+1)*(LMAX2+1),iblock), h_alyl((LMAX2+1)*(LMAX2+1),iblock), h_blyl((LMAX2+1)*(LMAX2+1),iblock)
-  REAL*8,     ALLOCATABLE :: zw2(:)
-  COMPLEX*16, ALLOCATABLE :: alm(:,:),blm(:,:),clm(:,:,:), dh_alm(:,:,:), dh_blm(:,:,:), dh_clm(:,:,:,:)
-  COMPLEX*16, ALLOCATABLE :: Aweight(:,:)
+  complex*16 :: h_yl((lmax2+1)*(lmax2+1),iblock), h_alyl((lmax2+1)*(lmax2+1),iblock), h_blyl((lmax2+1)*(lmax2+1),iblock)
+  real*8,     allocatable :: zw2(:)
+  complex*16, allocatable :: alm(:,:),blm(:,:),clm(:,:,:), dh_alm(:,:,:), dh_blm(:,:,:), dh_clm(:,:,:,:)
+  complex*16, allocatable :: aweight(:,:)
   ! interstitials
-  INTEGER    :: keigen(3,nmat), kmax(3), iff1, iff2, iff3, iff1t, iff2t, iff3t, isig, ierr, ia1, ia2, jj, jx, ij, k
-  REAL*8     :: volin
-  COMPLEX*16, ALLOCATABLE :: fft(:,:,:),tp(:,:,:),sumfft(:,:,:),vsumfft(:,:,:),tloc(:,:,:)
-  DOUBLE PRECISION,ALLOCATABLE :: dwork(:)
-  COMPLEX*16, ALLOCATABLE :: cwork(:)
-  COMPLEX*16, ALLOCATABLE :: rho1(:),vrho1(:)
-  COMPLEX*16, ALLOCATABLE :: rhok_buf(:),vrhok_buf(:)
-  COMPLEX*16, ALLOCATABLE :: rhok(:),vrhok(:), Asc(:,:)
-  INTEGER :: iikp, ivector
-  LOGICAL :: Tcompute
-  REAL(8) DM_EF,DM_EORB,DM_ESUM
+  integer    :: keigen(3,nmat), kmax(3), iff1, iff2, iff3, iff1t, iff2t, iff3t, isig, ierr, ia1, ia2, jj, jx, ij, k
+  real*8     :: volin
+  complex*16, allocatable :: fft(:,:,:),tp(:,:,:),sumfft(:,:,:),vsumfft(:,:,:),tloc(:,:,:)
+  double precision,allocatable :: dwork(:)
+  complex*16, allocatable :: cwork(:)
+  complex*16, allocatable :: rho1(:),vrho1(:)
+  complex*16, allocatable :: rhok_buf(:),vrhok_buf(:)
+  complex*16, allocatable :: rhok(:),vrhok(:), asc(:,:)
+  integer :: iikp, ivector
+  logical :: tcompute
+  real(8) dm_ef,dm_eorb,dm_esum
   character str*27,fname*256,sspin1*1
   
-  TWOPI=TWO*PI
+  twopi=two*pi
 
-  TEST1=0.0D0                                                        
-  XWT=0.0                                                           
-  SQRT2=SQRT(2.0D0)                                                 
-  SQRT3=SQRT(3.D0)                                                  
-  SQFP=SQRT(4.D0*PI)                                                
+  test1=0.0d0                                                        
+  xwt=0.0                                                           
+  sqrt2=sqrt(2.0d0)                                                 
+  sqrt3=sqrt(3.d0)                                                  
+  sqfp=sqrt(4.d0*pi)                                                
   zero3(:) = 0.0
 
 
-  CALL init_lohelp
-  CALL init_xa(nat)
+  call init_lohelp
+  call init_xa(nat)
  
-  IF(iso.EQ.2)then ! iso_orig=2 and ispin_pol=1
+  if(iso.eq.2)then ! iso_orig=2 and ispin_pol=1
       vnorm1=0.5d0
   else
       vnorm1=1.d0
@@ -127,26 +127,25 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
       sspin1=sspin
   endif
 
-  Y=1.0D0                                                           
-  DO I=1,49
-     J=2*I-1
-     FCT(J)=Y  ! FCT(i) = ((i+1)/2)!
-     Y=Y*I
-  END DO
+  y=1.0d0                                                           
+  do i=1,49
+     j=2*i-1
+     fct(j)=y  ! fct(i) = ((i+1)/2)!
+     y=y*i
+  end do
   
-  CIN=1.d0/137.0359895d0**2                       
-  IF (.NOT.REL) CIN=4.0*1.0D-22                                     
-  
-  READ(18,2032) ISCF                                                     
+  cin=1.d0/137.0359895d0**2                       
+  if (.not.rel) cin=4.0*1.0d-22                                     
+  read(18,2032) iscf                                                     
 
   if (myrank.eq.master) then
-     WRITE(8,787) ISCF                        
-     WRITE(8,*) '   NORM OF CLM(R) =          '                        
-     WRITE(8,*)                                                 
-     WRITE(6,800)
+     write(8,787) iscf                        
+     write(8,*) '   norm of clm(r) =          '                        
+     write(8,*)                                                 
+     write(6,800)
   endif
   
-  LFIRST=1
+  lfirst=1
   nnlo=0
   time_bl=zero; time_bl_w=zero; time_reduc=zero; time_reduc_w=zero
   time_write=zero; time_writeclm=zero; time_writescf=zero; time_write_w=zero
@@ -155,35 +154,33 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
   time_r_w=zero; time_r_c=zero; time_atpar_w=zero; time_atpar_c=zero; time_writeefg=zero; time_writeefg_w=zero
   time_dmf=zero; time_dmfw=zero; time_int=zero; time_intw=zero; time_ed=zero; time_edw=zero
  
-  ALLOCATE(alm((lmax2+1)*(lmax2+1),nume),blm((lmax2+1)*(lmax2+1),nume), &
+  allocate(alm((lmax2+1)*(lmax2+1),nume),blm((lmax2+1)*(lmax2+1),nume), &
       &clm((lmax2+1)*(lmax2+1),nume,nloat))
-  ALLOCATE(dh_alm(nume,(lmax2+1)*(lmax2+1),iso), &
+  allocate(dh_alm(nume,(lmax2+1)*(lmax2+1),iso), &
       &dh_blm(nume,(lmax2+1)*(lmax2+1),iso), &
-      &dh_clm(nume,(lmax2+1)*(lmax2+1),nloat,iso)) ! Mar 27
-  CALL init_charp(nume)
-  CALL init_chard(nume)
-  CALL init_charf(nume)
+      &dh_clm(nume,(lmax2+1)*(lmax2+1),nloat,iso)) ! mar 27
+  call init_charp(nume)
+  call init_chard(nume)
+  call init_charf(nume)
   
-  LMX=LMAX2                                                    
-  
+  lmx=lmax2                                                    
   allocate (e_store(0:lmax2,nat),elo_store(0:lomax,1:nloat,nat))
-
   itape=30
   if (vector_para) then
      if (nvector.ge.1) then
-        FNAME = fvectors(1,3)
-     else   ! No k-point to compute, but still need linearization energies
-        FNAME = TRIM(VECFN(4))//'_1'
+        fname = fvectors(1,3)
+     else   ! no k-point to compute, but still need linearization energies
+        fname = trim(vecfn(4))//'_1'
      endif
-     open(itape,FILE=FNAME,STATUS='old',FORM='formatted')
+     open(itape,file=fname,status='old',form='formatted')
   else
      !------------ vector files need to be read from the beginning -------------------!
      rewind(itape)
   endif
   ! needed in atpar
-  DO i=1,nat
-     READ(itape,'(100(f9.5))') e_store(0:lmax2,i)
-     READ(itape,'(100(f9.5))') elo_store(0:lomax,1:nloat,i)
+  do i=1,nat
+     read(itape,'(100(f9.5))') e_store(0:lmax2,i)
+     read(itape,'(100(f9.5))') elo_store(0:lomax,1:nloat,i)
   enddo
   if (vector_para) then
      close(itape)
@@ -191,39 +188,39 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
      rewind(itape)
   endif
   
-  CALL w_allocate0(nat)
-  ! Reads case.in2 to determin LM array
-  ! and maximum LM -> LM_MAX=max(LM(1,:))
-  LM_MAX=0
+  call w_allocate0(nat)
+  ! reads case.in2 to determin lm array
+  ! and maximum lm -> lm_max=max(lm(1,:))
+  lm_max=0
   do jatom=1,nat
-     ! neg L MEANS NEGATIVE SPHERICAL HARMONIC COMB (SEE KURKI-SUONIO)   
+     ! neg l means negative spherical harmonic comb (see kurki-suonio)   
      read(5,1003) ( (lm(j,jlm),j=1,2), jlm=1,ncom )
-     ! Find maximum LMMAX
-     DO JLM=2,NCOM
-        IF(LM(1,JLM).EQ.0) EXIT
-     ENDDO
-     LMMAX=JLM-1
-     if (LMMAX.GT.LM_MAX) LM_MAX = LMMAX
+     ! find maximum lmmax
+     do jlm=2,ncom
+        if(lm(1,jlm).eq.0) exit
+     enddo
+     lmmax=jlm-1
+     if (lmmax.gt.lm_max) lm_max = lmmax
      
-     if (myrank.EQ.master .OR. fastFilesystem/=0) then
-        write(6,*) ' atom',jatom,' ncomu',0,' lmmax',LMMAX
-        WRITE(6, 1005) LMMAX,((LM(J,JLM),J=1,2), JLM=1,LMMAX)             
+     if (myrank.eq.master .or. fastfilesystem/=0) then
+        write(6,*) ' atom',jatom,' ncomu',0,' lmmax',lmmax
+        write(6, 1005) lmmax,((lm(j,jlm),j=1,2), jlm=1,lmmax)             
      endif
-     if (myrank.EQ.master) then
-        WRITE(21,13)   JATOM,IATNR(JATOM),(POS(I,lfirst),I=1,3),MULT(JATOM)
-        WRITE(21,1005) LMMAX,((LM(J,JLM),J=1,2), JLM=1,lmmax)             
+     if (myrank.eq.master) then
+        write(21,13)   jatom,iatnr(jatom),(pos(i,lfirst),i=1,3),mult(jatom)
+        write(21,1005) lmmax,((lm(j,jlm),j=1,2), jlm=1,lmmax)             
      endif
-     w_lm(1:2,1:NCOM,jatom) = lm(1:2,1:NCOM)
+     w_lm(1:2,1:ncom,jatom) = lm(1:2,1:ncom)
      w_lmmax(jatom) = lmmax
   enddo
   
   ! allocates memory to store radial wave functions and 
   ! all results of subroutine "atpar", which is called outside
   ! the k - loop.
-  CALL w_allocate(LM_MAX,nat)
+  call w_allocate(lm_max,nat)
   
   do jatom=1,nat
-     ! Here we calculate all radial wave functions and other quantities
+     ! here we calculate all radial wave functions and other quantities
      ! computed by atpar, which do not depend on k vector.
      
      lfirst=1
@@ -231,13 +228,13 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
         lfirst=lfirst + mult(i)
      enddo
 
-     ! calculate radial functions U(r), UE(R), ...                       
+     ! calculate radial functions u(r), ue(r), ...                       
      call atpar (rel,nat,jatom,lfirst,cform,zz(jatom))               
      
-     IMAX=JRI(JATOM)
-     DO I=1,IMAX
-        R(I)=R0(JATOM)*EXP((I-1)*DX(JATOM)) ! Radial mesh
-     ENDDO
+     imax=jri(jatom)
+     do i=1,imax
+        r(i)=r0(jatom)*exp((i-1)*dx(jatom)) ! radial mesh
+     enddo
      
      nnlo=nlo+nlon+nlov
      
@@ -255,33 +252,33 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
      
      w_a1lo(1:nrad,1:nloat,0:lomax,jatom) = a1lo(1:nrad,1:nloat,0:lomax)
      w_b1lo(1:nrad,1:nloat,0:lomax,jatom) = b1lo(1:nrad,1:nloat,0:lomax)
-     w_RRAD1(1:nrad,0:lmax2,jatom) = RRAD1(1:nrad,0:lmax2)
-     w_RRAD2(1:nrad,0:lmax2,jatom) = RRAD2(1:nrad,0:lmax2)
-     w_RADE1(1:nrad,0:lmax2,jatom) = RADE1(1:nrad,0:lmax2)
-     w_RADE2(1:nrad,0:lmax2,jatom) = RADE2(1:nrad,0:lmax2) 
+     w_rrad1(1:nrad,0:lmax2,jatom) = rrad1(1:nrad,0:lmax2)
+     w_rrad2(1:nrad,0:lmax2,jatom) = rrad2(1:nrad,0:lmax2)
+     w_rade1(1:nrad,0:lmax2,jatom) = rade1(1:nrad,0:lmax2)
+     w_rade2(1:nrad,0:lmax2,jatom) = rade2(1:nrad,0:lmax2) 
      
-     w_P(0:LMAX2,jatom) = P(0:LMAX2)
-     w_DP(0:LMAX2,jatom) = DP(0:LMAX2)
-     w_PE(0:LMAX2,jatom) = PE(0:LMAX2)
-     w_DPE(0:LMAX2,jatom) = DPE(0:LMAX2)
-     w_PEI(0:LMAX2,jatom) = PEI(0:LMAX2)
+     w_p(0:lmax2,jatom) = p(0:lmax2)
+     w_dp(0:lmax2,jatom) = dp(0:lmax2)
+     w_pe(0:lmax2,jatom) = pe(0:lmax2)
+     w_dpe(0:lmax2,jatom) = dpe(0:lmax2)
+     w_pei(0:lmax2,jatom) = pei(0:lmax2)
      w_pi12lo(1:nloat,0:lomax,jatom) = pi12lo(1:nloat,0:lomax)
      w_pe12lo(1:nloat,0:lomax,jatom) = pe12lo(1:nloat,0:lomax)
      w_pr12lo(1:nloat,1:nloat,0:lomax,jatom) = pr12lo(1:nloat,1:nloat,0:lomax)
      
-     w_R(1:nrad,jatom) = R(1:nrad)
+     w_r(1:nrad,jatom) = r(1:nrad)
   enddo
 
   !---------------------------------
-  ! START LOOP OVER ALL k-POINTS
+  ! start loop over all k-points
   !---------------------------------
-  CALL init_xa3(nmat,nnlo,nume,iso)
+  call init_xa3(nmat,nnlo,nume,iso)
   if (vector_para) then
      pr_proc = sum(vectors(:,2))
      pr_procr = pr_proc
-     if (myrank.EQ.master .or. FastFilesystem/=0) WRITE(6,'(A,I3,2x,A,I3)') 'pr_proc=', pr_proc, 'tot-k=', nkpt
+     if (myrank.eq.master .or. fastfilesystem/=0) write(6,'(a,i3,2x,a,i3)') 'pr_proc=', pr_proc, 'tot-k=', nkpt
   else
-     pr_proc  = floor(nkpt/DBLE(nprocs)+0.999)  ! The maximum number of points calculated per processor
+     pr_proc  = floor(nkpt/dble(nprocs)+0.999)  ! the maximum number of points calculated per processor
      ! correcting pr_proc is the number of k-points is not dividable
      pr_procr = pr_proc
      if ((myrank+1)*pr_proc .gt. nkpt) then
@@ -291,49 +288,23 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
            pr_procr = 0
         endif
      endif
-     if (myrank.EQ.master .OR. fastFilesystem/=0) WRITE(6,'(A,I3,2x,A,I3)') 'pr_proc=', pr_proc, 'pr_procr=', pr_procr, 'tot-k=', nkpt
+     if (myrank.eq.master .or. fastfilesystem/=0) write(6,'(a,i3,2x,a,i3)') 'pr_proc=', pr_proc, 'pr_procr=', pr_procr, 'tot-k=', nkpt
   endif
 
-  ALLOCATE( pr_procs(nprocs) )
-  CALL Gather_procs(pr_procr, pr_procs, nprocs)
-  if (myrank.EQ.master .and. SUM(pr_procs).NE.nkpt) then
-     WRITE(6,*) 'ERROR: sum(pr_procs) should be nkpt, but is not', sum(pr_procs), nkpt
+  allocate( pr_procs(nprocs) )
+  call gather_procs(pr_procr, pr_procs, nprocs)
+  if (myrank.eq.master .and. sum(pr_procs).ne.nkpt) then
+     write(6,*) 'error: sum(pr_procs) should be nkpt, but is not', sum(pr_procs), nkpt
   endif
 
   ! ---- for interstitial ----
-  kmax(:)=0
-  ! ..... FIND MAX RECIPROCAL LATTICE VECTORS
+  call get_kmax(kmax,nat,nnlo)
 
-  DO ivector=1,nvector
-     if (vector_para) then
-        open(fh_vec,FILE=fvectors(ivector,1),STATUS='old',FORM='unformatted')
-     else
-        rewind(fh_vec) !--- both vector files: 9 and 10 rewind -------------------------!
-     endif
-     DO I=1,NAT
-        READ(fh_vec) EMIST !---- At the beginninge we have linearization energies --!
-        READ(fh_vec) EMIST !---- We just skip them ---------------------------------!
-     ENDDO
-     READ(fh_vec) s,t,z,kname,n,ne
-     READ(fh_vec) (keigen(1,i),keigen(2,i),keigen(3,i),i=1,n)
-     if (vector_para) then
-        close(fh_vec)
-     else
-        rewind(fh_vec)
-     endif
-     DO i=n-nnlo,1,-1
-        kmax(1)=MAX(keigen(1,i),kmax(1))
-        kmax(2)=MAX(keigen(2,i),kmax(2))
-        kmax(3)=MAX(keigen(3,i),kmax(3))
-     ENDDO
-  ENDDO
-  CALL FindMaxK_MPI(kmax)
-
-  IF (myrank.EQ.master .OR. fastFilesystem/=0) WRITE(6,*) 'max k indices:',kmax(1),kmax(2),kmax(3)
+  if (myrank.eq.master .or. fastfilesystem/=0) write(6,*) 'max k indices:',kmax(1),kmax(2),kmax(3)
   kmax(1)=kmax(1)+1
   kmax(2)=kmax(2)+1
   kmax(3)=kmax(3)+1
-  ! -----  set iff values for FFT calculation
+  ! -----  set iff values for fft calculation
   iff1=2*kmax(1)
   iff2=2*kmax(2)
   iff3=2*kmax(3)
@@ -343,14 +314,14 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
   iff1t=iff1
   iff2t=iff2
   iff3t=iff3
-  CALL IFFLIM(iff1t,iff1)
-  CALL IFFLIM(iff2t,iff2)
-  CALL IFFLIM(iff3t,iff3)
-  IF (myrank.EQ.master .OR. fastFilesystem/=0) WRITE(6,*) 'n,iff1,iff2,iff3',n-nnlo,iff1,iff2,iff3
+  call ifflim(iff1t,iff1)
+  call ifflim(iff2t,iff2)
+  call ifflim(iff3t,iff3)
+  if (myrank.eq.master .or. fastfilesystem/=0) write(6,*) 'n,iff1,iff2,iff3',n-nnlo,iff1,iff2,iff3
   !
-  ALLOCATE (fft(iff1,iff2,iff3),tp(iff1,iff2,iff3),&
+  allocate (fft(iff1,iff2,iff3),tp(iff1,iff2,iff3),&
       &sumfft(iff1,iff2,iff3),vsumfft(iff1,iff2,iff3),tloc(iff1,iff2,iff3))
-  ALLOCATE (dwork(4*(iff1+iff2+iff3)+15),cwork(iff1+iff2+iff3))
+  allocate (dwork(4*(iff1+iff2+iff3)+15),cwork(iff1+iff2+iff3))
   fft=0.0
   tp=0.0
   sumfft=0.0
@@ -358,83 +329,89 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
   tloc=0.0
   ! --- finished for interstitial
 
-  w_vRHOLM(:,:,:)=0.0
-  w_RHOLM(:,:,:)=0.0
+  w_vrholm(:,:,:)=0.0
+  w_rholm(:,:,:)=0.0
   w_xwt1(:,:)=0.0
      
-  REWIND 5
-  READ(5,fmt='(//,1A)') CDUMMY
+  rewind 5
+  read(5,fmt='(//,1a)') cdummy
   
   rewind(30)
   rewind(18)
-  READ(18,2032) ISCF                                                     
+  read(18,2032) iscf                                                     
   
-!!! ---------- Preparation of arrays for paralel executaion --------------                                                     
-  IF (myrank.EQ.master .OR. fastFilesystem/=0) WRITE(6,'(A,I3,2x,A,I3)') 'pr_proc=', pr_proc, 'tot-k=', nkpt-1
-  IF (myrank.EQ.master .OR. fastFilesystem/=0) print *, 'mpr_proc=', pr_proc, 'myrank=', myrank, 'nprocs=', nprocs, 'nkpt=', nkpt
+!!! ---------- preparation of arrays for paralel executaion --------------                                                     
+  if (myrank.eq.master .or. fastfilesystem/=0) write(6,'(a,i3,2x,a,i3)') 'pr_proc=', pr_proc, 'tot-k=', nkpt-1
+  if (myrank.eq.master .or. fastfilesystem/=0) print *, 'mpr_proc=', pr_proc, 'myrank=', myrank, 'nprocs=', nprocs, 'nkpt=', nkpt
 
   iikp=0
-  DO ivector=1,nvector
-     IF(GP%LKPVEC)THEN
-       WRITE(STR,'(I3)')GP%KVEC(IVECTOR,1)
-     ELSE
-       WRITE(STR,'(I3)')GP%MYRANK
-     ENDIF
-     call gh5_open_r('KSWT_'//TRIM(ADJUSTL(STR))//'.h5', f_id)
-     IF(IVECTOR.EQ.1)THEN
+  do ivector=1,nvector
+     if(gp%lkpvec)then
+       write(str,'(i3)')gp%kvec(ivector,1)
+     else
+       write(str,'(i3)')gp%myrank
+     endif
+     call gh5_open_r('KSWT_'//trim(adjustl(str))//'.h5', f_id)
+     if(ivector.eq.1)then
         if(sspin=="1")then
-            call gh5_read(DM_EF,'/e_fermi',f_id)
-            call gh5_read(DM_EORB,'/e_gamma_dc',f_id)
-            WRITE(21,'(":FER Gutzwiller Fermi Energy",F10.5)')DM_EF
-            WRITE(21,'(":EORB ",F20.9)')DM_EORB
+            call gh5_read(dm_ef,'/e_fermi',f_id)
+            call gh5_read(dm_eorb,'/e_gamma_dc',f_id)
+            write(21,'(":FER gutzwiller fermi energy",f10.5)')dm_ef
+            write(21,'(":EORB ",f20.9)')dm_eorb
         endif
         if(ispin_pol==1)then
-            call gh5_read(DM_ESUM,'/e_band',f_id)
+            call gh5_read(dm_esum,'/e_band',f_id)
         else
-            call gh5_read(DM_ESUM,'/e_band_spin'//sspin,f_id)
+            call gh5_read(dm_esum,'/e_band_spin'//sspin,f_id)
         endif
-        WRITE(21,'(":SUM SUM OF GUTZ BAND ENERGIES ",F20.9)')DM_ESUM
-     ENDIF
+        write(21,'(":SUM sum of gutz band energies ",f20.9)')dm_esum
+     endif
 
-     DO is=1,iso    !------ over up/dn ---------------------!
+     do is=1,iso    !------ over up/dn ---------------------!
         itape1=8+is
         if (vector_para) then
-           open(itape1,FILE=fvectors(ivector,is),STATUS='old',FORM='unformatted')
+           open(itape1,file=fvectors(ivector,is),status='old',form='unformatted')
         else
            rewind(itape1) !--- both vector files: 9 and 10 rewind -------------------------!
         endif
-        DO I=1,NAT
-           READ(itape1) EMIST !---- At the beginninge we have linearization energies --!
-           READ(itape1) EMIST !---- We just skip them ---------------------------------!
-        ENDDO
-     END DO
-    
-     DO iks=1,vectors(ivector,2) ! kpoint loop begin
+        do i=1,nat
+           read(itape1) emist !---- at the beginninge we have linearization energies --!
+           read(itape1) emist !---- we just skip them ---------------------------------!
+        enddo
+     end do
+   
+     ! normso_x
+     if (vector_para) then
+        open(12,file=fvectors(ivector,5), &
+                &status='old',form='formatted')
+     endif
+
+     do iks=1,vectors(ivector,2) ! kpoint loop begin
         if (vector_para) then
            ikp = vectors(ivector,3)+iks  ! successive index in k-point table from case.klist
            iikp = iikp+1                 ! successive index in k-point table on this processor
         else
            ikp = iks                     ! successive index in k-point table from case.klist
-           !--- We need to go over all k-points even though we will compute only some of them on this processor.
-           !--- This is because we need to read vector file sequentially.
-           iikp = ikp-myrank*pr_proc            ! The index of the point to compute. If negative, do not compute!
+           !--- we need to go over all k-points even though we will compute only some of them on this processor.
+           !--- this is because we need to read vector file sequentially.
+           iikp = ikp-myrank*pr_proc            ! the index of the point to compute. if negative, do not compute!
         endif
-        Tcompute=.FALSE.   
+        tcompute=.false.   
 
-        if (iikp.gt.0) Tcompute=.TRUE.       
-        ! If Tcompute is true, the point needs to be computed.                                                           
-        if (iikp.GT.pr_proc) EXIT            
-        ! Processor finished. The rest of the points will be taken care of by the other processors.                      
+        if (iikp.gt.0) tcompute=.true.       
+        ! if tcompute is true, the point needs to be computed.                                                           
+        if (iikp.gt.pr_proc) exit            
+        ! processor finished. the rest of the points will be taken care of by the other processors.                      
 
         call cputim(t1c)
         call walltim(t1w)
-        !!! Need to read both spins!
-        CALL Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, vnorm, &
+        !!! need to read both spins!
+        call read_vec_spin(ikp, e, as, as_lo, kx, ky, kz, vnorm, &
             &kxlo, kylo, kzlo, &
             &bkx, bky, bkz, bkxlo, bkylo, bkzlo, more_kpoints, n0, &
             &emin, nemin, iso, nmat, nume, nnlo)
-        IF (.NOT.Tcompute) CYCLE
-        IF (.NOT.more_kpoints) EXIT
+        if (.not.tcompute) cycle
+        if (.not.more_kpoints) exit
         call cputim(t2c)
         call walltim(t2w)
         time_rd_c=time_rd_c+t2c-t1c
@@ -442,18 +419,18 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
    
         do jatom=1,nat
            isize=n0-nnlo
-           CALL HARMON(isize,bkx,bky,bkz,lmax2,fj(:,:,jatom),dfj(:,:,jatom),rmt(jatom))
+           call harmon(isize,bkx,bky,bkz,lmax2,fj(:,:,jatom),dfj(:,:,jatom),rmt(jatom))
         enddo
    
         call cputim(t1c)
         call walltim(t1w)
 
-        WRITE(str,'(I7)')ikp
-        call gh5_read(DM_nemin,'/IKP_'//trim(adjustl(str))// &
+        write(str,'(i7)')ikp
+        call gh5_read(dm_nemin,'/IKP_'//trim(adjustl(str))// &
                 &'/nemin_spin'//sspin1,f_id)
-        call gh5_read(DM_nemax,'/IKP_'//trim(adjustl(str))// &
+        call gh5_read(dm_nemax,'/IKP_'//trim(adjustl(str))// &
                 &'/nemax_spin'//sspin1,f_id)
-        nbands = DM_nemax-DM_nemin+1
+        nbands = dm_nemax-dm_nemin+1
         call cputim(t2c)
         call walltim(t2w)
         
@@ -462,50 +439,50 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
         
         call cputim(t1c)
         call walltim(t1w)
-        allocate( Aweight(nbands,nbands), zw2(nbands) )
+        allocate( aweight(nbands,nbands), zw2(nbands) )
         call gh5_read(wkp,'/IKP_'//trim(adjustl(str))// &
                 &"/wt",f_id)
-        call gh5_read(Aweight,nbands,nbands,'/IKP_'//trim(adjustl(str))// &
+        call gh5_read(aweight,nbands,nbands,'/IKP_'//trim(adjustl(str))// &
                 &'/KSWT_SPIN'//sspin1,f_id)
         if(ispin_pol==1)then
             wkp=wkp*2
         endif
-        CALL DMFT_WEIGHTS(zw2, Aweight, nbands)
+        call dmft_weights(zw2, aweight, nbands)
        
         call cputim(t2c)
         call walltim(t2w)
         time_ed=time_ed+t2c-t1c
         time_edw=time_edw+t2w-t1w
         
-        ! Weights for all bands, which are needed below
+        ! weights for all bands, which are needed below
         weight=0
-        weight(:DM_nemin-1) = wkp
-        weight(DM_nemin:DM_nemax) = zw2/vnorm1
-        DM_nemaxx=DM_nemax
-        DO num=DM_nemin,DM_nemax
+        weight(:dm_nemin-1) = wkp
+        weight(dm_nemin:dm_nemax) = zw2/vnorm1
+        dm_nemaxx=dm_nemax
+        do num=dm_nemin,dm_nemax
            ! zw2 already in descending order
-           IF(abs(zw2(num-DM_nemin+1)).LE.1.d-8)then
-               DM_nemaxx=num-1
+           if(abs(zw2(num-dm_nemin+1)).le.1.d-8)then
+               dm_nemaxx=num-1
                exit
            endif 
-        ENDDO
+        enddo
        
-        do num=nemin,DM_nemaxx
+        do num=nemin,dm_nemaxx
            xwt=xwt+weight(num)*vnorm1*vnorm(num)
         enddo
  
-        WRITE(*,'(I3,A,1x,I4,1x,I4,1x,A,I3,1x,A,I3,1x,A,I3)') &
-            &myrank, ') Finished k-point', ikp, iikp, &
-            &'with DM_nemin=', DM_nemin, 'DM_nemax=', DM_nemax, &
-            &'DM_nemaxx', DM_nemaxx
+        write(*,'(i3,a,1x,i4,1x,i4,1x,a,i3,1x,a,i3,1x,a,i3)') &
+            &myrank, ') finished k-point', ikp, iikp, &
+            &'with dm_nemin=', dm_nemin, 'dm_nemax=', dm_nemax, &
+            &'dm_nemaxx', dm_nemaxx
    
         deallocate(zw2)
         
-        nbandsx = DM_nemaxx-DM_nemin+1
+        nbandsx = dm_nemaxx-dm_nemin+1
         do jatom=1,nat
-           ! Quantities computed by "atpar" which do not depend on k-point
+           ! quantities computed by "atpar" which do not depend on k-point
            lfirst = w_lfirst(jatom)
-           lm(1:2,1:NCOM) = w_lm(1:2,1:NCOM,jatom)
+           lm(1:2,1:ncom) = w_lm(1:2,1:ncom,jatom)
            lmmax = w_lmmax(jatom)
            nlo = w_nlo(jatom)
            nlov = w_nlov(jatom)
@@ -518,234 +495,234 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
            clo(0:lomax,1:nloat) = w_clo(0:lomax,1:nloat,jatom)
            a1lo(1:nrad,1:nloat,0:lomax) = w_a1lo(1:nrad,1:nloat,0:lomax,jatom)
            b1lo(1:nrad,1:nloat,0:lomax) = w_b1lo(1:nrad,1:nloat,0:lomax,jatom)
-           RRAD1(1:nrad,0:lmax2) = w_RRAD1(1:nrad,0:lmax2,jatom)
-           RRAD2(1:nrad,0:lmax2) = w_RRAD2(1:nrad,0:lmax2,jatom)
-           RADE1(1:nrad,0:lmax2) = w_RADE1(1:nrad,0:lmax2,jatom)
-           RADE2(1:nrad,0:lmax2) = w_RADE2(1:nrad,0:lmax2,jatom)
-           P(0:LMAX2) = w_P(0:LMAX2,jatom)
-           DP(0:LMAX2) = w_DP(0:LMAX2,jatom)
-           PE(0:LMAX2) = w_PE(0:LMAX2,jatom)
-           DPE(0:LMAX2) = w_DPE(0:LMAX2,jatom)
-           PEI(0:LMAX2) = w_PEI(0:LMAX2,jatom)
+           rrad1(1:nrad,0:lmax2) = w_rrad1(1:nrad,0:lmax2,jatom)
+           rrad2(1:nrad,0:lmax2) = w_rrad2(1:nrad,0:lmax2,jatom)
+           rade1(1:nrad,0:lmax2) = w_rade1(1:nrad,0:lmax2,jatom)
+           rade2(1:nrad,0:lmax2) = w_rade2(1:nrad,0:lmax2,jatom)
+           p(0:lmax2) = w_p(0:lmax2,jatom)
+           dp(0:lmax2) = w_dp(0:lmax2,jatom)
+           pe(0:lmax2) = w_pe(0:lmax2,jatom)
+           dpe(0:lmax2) = w_dpe(0:lmax2,jatom)
+           pei(0:lmax2) = w_pei(0:lmax2,jatom)
            pi12lo(1:nloat,0:lomax) = w_pi12lo(1:nloat,0:lomax,jatom)
            pe12lo(1:nloat,0:lomax) = w_pe12lo(1:nloat,0:lomax,jatom)
            pr12lo(1:nloat,1:nloat,0:lomax) = w_pr12lo(1:nloat,1:nloat,0:lomax,jatom)
-           R(1:nrad) = w_R(1:nrad,jatom)
+           r(1:nrad) = w_r(1:nrad,jatom)
               
            ! zero koeff. for charge analysis
-           CALL zero_charp(nemin,DM_nemax)
-           CALL zero_chard(nemin,DM_nemax)
-           CALL zero_charf(nemin,DM_nemax)
-           CALL zerotc_lohelp(nemin,DM_nemax)
-           TC100(0:lmax2,nemin:DM_nemax)=0.0
-           TCA100(0:lmax2,nemin:DM_nemax)=0.0
-           TCB100(0:lmax2,nemin:DM_nemax)=0.0
+           call zero_charp(nemin,dm_nemax)
+           call zero_chard(nemin,dm_nemax)
+           call zero_charf(nemin,dm_nemax)
+           call zerotc_lohelp(nemin,dm_nemax)
+           tc100(0:lmax2,nemin:dm_nemax)=0.0
+           tca100(0:lmax2,nemin:dm_nemax)=0.0
+           tcb100(0:lmax2,nemin:dm_nemax)=0.0
            
-           ! CALCULATE ALM, BLM                                                
-           fac=4.0d0*pi*rmt(jatom)**2/SQRT(vol)                              
+           ! calculate alm, blm                                                
+           fac=4.0d0*pi*rmt(jatom)**2/sqrt(vol)                              
            latom=lfirst-1                                                    
    
-           equiv_atom_loop: DO mu=1,mult(jatom)
+           equiv_atom_loop: do mu=1,mult(jatom)
               
               latom=latom+1
    
-              DO is=1,iso ! iso == 1           
+              do is=1,iso ! iso == 1           
                  
                  alm(:,:)=0.0
                  blm(:,:)=0.0
                  clm(:,:,:)=0.0
    
-                 CALL cputim(time1)
-                 CALL walltim(time1_w)
+                 call cputim(time1)
+                 call walltim(time1_w)
               
-                 blocked_loop: DO ii=1,n0-nnlo,iblock !iblock*ibpp,iblock
-                    ibb=MIN(iblock,n0-(nlo+nlon+nlov)-ii+1)
-                    if(ibb.le.0) EXIT
+                 blocked_loop: do ii=1,n0-nnlo,iblock !iblock*ibpp,iblock
+                    ibb=min(iblock,n0-(nlo+nlon+nlov)-ii+1)
+                    if(ibb.le.0) exit
                     i3=0
-                    DO i=ii,min(ii+iblock-1,n0-nnlo) !ii+iblock-1
-                       !---------  rotates ylm(k+K) to ylm(k'+K) where k' is in star of irreducible k. ------------!
+                    do i=ii,min(ii+iblock-1,n0-nnlo) !ii+iblock-1
+                       !---------  rotates ylm(k+k) to ylm(k'+k) where k' is in star of irreducible k. ------------!
                        i3=i3+1
-                       bk(1)=bkx(i) !-----  reciprocal vector and irreducible vector: G=K+k ----!
+                       bk(1)=bkx(i) !-----  reciprocal vector and irreducible vector: g=k+k ----!
                        bk(2)=bky(i)
                        bk(3)=bkz(i)
-                       ! BKROT = R_g.(k+K)
-                       CALL ROTATE (bk,rotij(1,1,latom),bkrot)
-                       !---- BR1 transforms integer reciprocal lattice vectors, as given in the VECTORLIST of LAPW1, into cartesian system ----!
+                       ! bkrot = r_g.(k+k)
+                       call rotate (bk,rotij(1,1,latom),bkrot)
+                       !---- br1 transforms integer reciprocal lattice vectors, as given in the vectorlist of lapw1, into cartesian system ----!
                        bk(1)=bkrot(1)*br1(1,1)+bkrot(2)*br1(1,2)+bkrot(3)*br1(1,3)   
                        bk(2)=bkrot(1)*br1(2,1)+bkrot(2)*br1(2,2)+bkrot(3)*br1(2,3)   
                        bk(3)=bkrot(1)*br1(3,1)+bkrot(2)*br1(3,2)+bkrot(3)*br1(3,3)   
-                       !---- BKRLOC = Rotloc.R_g.(k+K),  is rotates Rotloc.R.(k+K) . Rotation Rotloc entered by user
-                       CALL ROTATE (bk,rotloc(1,1,jatom),bkrloc)
-                       !---- YLM = Y_{L}(Rotloc.R_g.(k+K))
-                       CALL YLM (bkrloc,lmax2,yl)
+                       !---- bkrloc = rotloc.r_g.(k+k),  is rotates rotloc.r.(k+k) . rotation rotloc entered by user
+                       call rotate (bk,rotloc(1,1,jatom),bkrloc)
+                       !---- ylm = y_{l}(rotloc.r_g.(k+k))
+                       call ylm (bkrloc,lmax2,yl)
                        arg1=bkrot(1)*(pos(1,lfirst))*twopi
                        arg2=bkrot(2)*(pos(2,lfirst))*twopi
                        arg3=bkrot(3)*(pos(3,lfirst))*twopi
-                       ! ARGT = (K+k)*tau(isym) 
+                       ! argt = (k+k)*tau(isym) 
                        argt=(bkx(i)*tauij(1,latom)+bky(i)*tauij(2,latom)+bkz(i)*tauij(3,latom))*twopi
-                       ! PHSEHL = e^{I*2pi*( (R_g.(k+K)) *  R(iatom) + (K+k)*tau(isym))}
-                       phshel=EXP( imag*(arg1+arg2+arg3+argt) )
+                       ! phsehl = e^{i*2pi*( (r_g.(k+k)) *  r(iatom) + (k+k)*tau(isym))}
+                       phshel=exp( imag*(arg1+arg2+arg3+argt) )
                        index=0
-                       DO  l=0,lmx
+                       do  l=0,lmx
                           maxx=2*l+1
-                          DO  m=1,maxx
+                          do  m=1,maxx
                              index=index+1
-                             h_yl(index,i3)=CONJG(yl(index))*phshel
-                          ENDDO
-                       ENDDO
-                    ENDDO
+                             h_yl(index,i3)=conjg(yl(index))*phshel
+                          enddo
+                       enddo
+                    enddo
                     
                     index=0
-                    rmt2=1.D0/(rmt(jatom)**2)
-                    DO l=0,lmx
+                    rmt2=1.d0/(rmt(jatom)**2)
+                    do l=0,lmx
                        i3=0
-                       DO i=ii,ii+iblock-1
-                          IF(i.GT.n0-(nlo+nlon+nlov)) EXIT
+                       do i=ii,ii+iblock-1
+                          if(i.gt.n0-(nlo+nlon+nlov)) exit
                           i3=i3+1
                           if(lapw(l)) then
                              h_al(i3)=dfj(l,i,jatom)*pe(l)-fj(l,i,jatom)*dpe(l) 
                              h_bl(i3)=fj(l,i,jatom)*dp(l)-dfj(l,i,jatom)*p(l)
-                          ELSE
+                          else
                              h_al(i3) = rmt2*fj(l,i,jatom)/p(l)
                              h_bl(i3) = 0.d0
-                          ENDIF
-                       ENDDO
+                          endif
+                       enddo
                        maxx=2*l+1
-                       DO m=1,maxx
+                       do m=1,maxx
                           index=index+1
                           i3=0
-                          DO i=ii,ii+iblock-1
-                             IF(i.GT.n0-(nlo+nlon+nlov)) EXIT
+                          do i=ii,ii+iblock-1
+                             if(i.gt.n0-(nlo+nlon+nlov)) exit
                              i3=i3+1
                              h_alyl(index,i3)=h_al(i3)*h_yl(index,i3)
                              h_blyl(index,i3)=h_bl(i3)*h_yl(index,i3)
-                          ENDDO
-                       ENDDO
-                    ENDDO
+                          enddo
+                       enddo
+                    enddo
                     !
-                    lda=(LMAX2+1)*(LMAX2+1)
+                    lda=(lmax2+1)*(lmax2+1)
                     ldc=lda
                     ldb=nmat 
-                    CALL zgemm('N','N',index,DM_nemax-nemin+1,ibb,&
-                        &(1.d0,0.d0),h_alyl,lda,As(ii,nemin,is),ldb, &
+                    call zgemm('n','n',index,dm_nemax-nemin+1,ibb,&
+                        &(1.d0,0.d0),h_alyl,lda,as(ii,nemin,is),ldb, &
                         &(1.d0,0.d0),alm(1,nemin),ldc)
-                    CALL zgemm('N','N',index,DM_nemax-nemin+1,ibb,&
-                        &(1.d0,0.d0),h_blyl,lda,As(ii,nemin,is),ldb, &
+                    call zgemm('n','n',index,dm_nemax-nemin+1,ibb,&
+                        &(1.d0,0.d0),h_blyl,lda,as(ii,nemin,is),ldb, &
                         &(1.d0,0.d0),blm(1,nemin),ldc)
                     
-                 ENDDO blocked_loop
+                 enddo blocked_loop
                  
               
-                 CALL cputim(time2)
-                 CALL walltim(time2_w)
+                 call cputim(time2)
+                 call walltim(time2_w)
                  time_bl=time_bl+time2-time1
                  time_bl_w=time_bl_w+time2_w-time1_w
                  
-                 CALL cputim(time1)
-                 CALL walltim(time1_w)
+                 call cputim(time1)
+                 call walltim(time1_w)
                  
-                 ldc=(LMAX2+1)*(LMAX2+1)
+                 ldc=(lmax2+1)*(lmax2+1)
    
-                 if (nlo.ne.0) call lomain (rotloc(:,:,jatom),is,nemin,DM_nemax,lfirst,latom,n0,jatom,alm,blm,clm)
+                 if (nlo.ne.0) call lomain (rotloc(:,:,jatom),is,nemin,dm_nemax,lfirst,latom,n0,jatom,alm,blm,clm)
               
                  index=0
-                 DO l=0,lmax2
+                 do l=0,lmax2
                     maxx=2*l+1
                     cfac=imag**l
                     cfac=cfac*fac
-                    DO m=1,maxx
+                    do m=1,maxx
                        index=index+1
-                       DO num=nemin,DM_nemax
+                       do num=nemin,dm_nemax
                           alm(index,num)=alm(index,num)*cfac
                           blm(index,num)=blm(index,num)*cfac
-                       ENDDO
-                       DO jlo=1,ilo(l)
-                          DO num=nemin,DM_nemax
+                       enddo
+                       do jlo=1,ilo(l)
+                          do num=nemin,dm_nemax
                              clm(index,num,jlo)=clm(index,num,jlo)*cfac
-                          ENDDO
-                       ENDDO
-                    ENDDO
-                 ENDDO
-                 ! Chenging alm,blm,clm to make them DMFT-like
-                 alm(:,DM_nemin:DM_nemaxx)= matmul( alm(:,DM_nemin:DM_nemax), Aweight(:nbands,:nbandsx) )
-                 blm(:,DM_nemin:DM_nemaxx)= matmul( blm(:,DM_nemin:DM_nemax), Aweight(:nbands,:nbandsx) )
-                 DO jlo=1,nloat
-                    clm(:,DM_nemin:DM_nemaxx,jlo)= matmul( clm(:,DM_nemin:DM_nemax,jlo), Aweight(:nbands,:nbandsx) )
-                 ENDDO
+                          enddo
+                       enddo
+                    enddo
+                 enddo
+                 ! chenging alm,blm,clm to make them dmft-like
+                 alm(:,dm_nemin:dm_nemaxx)= matmul( alm(:,dm_nemin:dm_nemax), aweight(:nbands,:nbandsx) )
+                 blm(:,dm_nemin:dm_nemaxx)= matmul( blm(:,dm_nemin:dm_nemax), aweight(:nbands,:nbandsx) )
+                 do jlo=1,nloat
+                    clm(:,dm_nemin:dm_nemaxx,jlo)= matmul( clm(:,dm_nemin:dm_nemax,jlo), aweight(:nbands,:nbandsx) )
+                 enddo
                  
                  dh_alm(:,:,is) = transpose( alm(:,:) )
                  dh_blm(:,:,is) = transpose( blm(:,:) )
-                 DO jlo=1,nloat
+                 do jlo=1,nloat
                     dh_clm(:,:,jlo,is) = transpose( clm(:,:,jlo) )
-                 ENDDO
+                 enddo
                  
-              enddo  !!! Mar 27, 2010: loop over spin
+              enddo  !!! mar 27, 2010: loop over spin
    
-              CALL cputim(time2)
-              CALL walltim(time2_w)
+              call cputim(time2)
+              call walltim(time2_w)
               time_reduc=time_reduc+time2-time1
               time_reduc_w=time_reduc_w+time2_w-time1_w
               
-              !.....C(L,M) TO BE CALCULATED                                           
-              CALL cputim(time1)
-              CALL walltim(time1_w)
+              !.....c(l,m) to be calculated                                           
+              call cputim(time1)
+              call walltim(time1_w)
               
-              ilm_loop: DO ILM=1,LMMAX
-                 Li=IABS(LM(1,ILM))                                                
-                 Mi=LM(2,ILM)                                                      
-                 !     SEE KURKI-SUONI  FACTOR FOR  LM+ (1,0), LM-(0,-1), M.NE.2N *(-1)  
-                 IMAG1=(1.0,0.0)                                                   
+              ilm_loop: do ilm=1,lmmax
+                 li=iabs(lm(1,ilm))                                                
+                 mi=lm(2,ilm)                                                      
+                 !     see kurki-suoni  factor for  lm+ (1,0), lm-(0,-1), m.ne.2n *(-1)  
+                 imag1=(1.0,0.0)                                                   
    
-                 IF(LM(1,ILM).LT.0) IMAG1= IMAG
-                 IF(MOD(Mi,2).EQ.1) IMAG1=-IMAG1
+                 if(lm(1,ilm).lt.0) imag1= imag
+                 if(mod(mi,2).eq.1) imag1=-imag1
                  
-                 l_sum: DO L=0,lmx
-                    L1=L+1
-                    MMAX=2*L+1
-                    lp_sum: DO LP=0,lmx
-                       CALL cputim(time3)
-                       LP1=LP+1
-                       IF(NOTRI(Li,L,LP).LT.0) CYCLE
-                       MPMAX=2*LP+1
-                       IMAX=JRI(JATOM)
+                 l_sum: do l=0,lmx
+                    l1=l+1
+                    mmax=2*l+1
+                    lp_sum: do lp=0,lmx
+                       call cputim(time3)
+                       lp1=lp+1
+                       if(notri(li,l,lp).lt.0) cycle
+                       mpmax=2*lp+1
+                       imax=jri(jatom)
                        
-                       ! Radial functions are constructed
-                       DO I=1,IMAX
-                          UA(I) =RRAD1(I,L)*RRAD1(I,LP)+CIN*RRAD2(I,L)*RRAD2(I,LP)    
-                          UB(I) =RADE1(I,L)*RADE1(I,LP)+CIN*RADE2(I,L)*RADE2(I,LP)    
-                          UAB(I)=RRAD1(I,L)*RADE1(I,LP)+CIN*RRAD2(I,L)*RADE2(I,LP)   
-                          UBA(I)=RRAD1(I,LP)*RADE1(I,L)+CIN*RRAD2(I,LP)*RADE2(I,L)   
-                       ENDDO
-                       ! Radial functions as product of local orbitals and u,dot{u}
-                       DO jlo=1,ilo(l)
-                          IF(loor(jlo,l)) THEN
-                             DO I=1,IMAX
-                                U21(I,jlo) =a1lo(I,jlo,L)*RRAD1(I,LP)+CIN*b1lo(I,jlo,L)*RRAD2(I,LP)    
-                                Ue21(I,jlo)=a1lo(I,jlo,L)*RADE1(I,LP)+CIN*b1lo(I,jlo,L)*RADE2(I,LP)    
-                             ENDDO
-                          ENDIF
-                       ENDDO
-                       DO jlop=1,ilo(lp)
-                          IF(loor(jlop,lp)) THEN
-                             DO i=1,imax
-                                u12(i,jlop) =RRAD1(i,l)*a1lo(i,jlop,lp)+CIN*RRAD2(i,l)*b1lo(i,jlop,lp)    
-                                ue12(i,jlop)=RADE1(i,l)*a1lo(i,jlop,lp)+CIN*RADE2(i,l)*b1lo(i,jlop,lp) 
-                             ENDDO
-                          ENDIF
-                       ENDDO
-                       ! Radial functions for local orbitals
-                       DO jlo=1,ilo(l)
-                          DO jlop=1,ilo(lp) 
-                             IF(loor(jlo,l).AND.loor(jlop,lp)) THEN
-                                DO i=1,imax
+                       ! radial functions are constructed
+                       do i=1,imax
+                          ua(i) =rrad1(i,l)*rrad1(i,lp)+cin*rrad2(i,l)*rrad2(i,lp)    
+                          ub(i) =rade1(i,l)*rade1(i,lp)+cin*rade2(i,l)*rade2(i,lp)    
+                          uab(i)=rrad1(i,l)*rade1(i,lp)+cin*rrad2(i,l)*rade2(i,lp)   
+                          uba(i)=rrad1(i,lp)*rade1(i,l)+cin*rrad2(i,lp)*rade2(i,l)   
+                       enddo
+                       ! radial functions as product of local orbitals and u,dot{u}
+                       do jlo=1,ilo(l)
+                          if(loor(jlo,l)) then
+                             do i=1,imax
+                                u21(i,jlo) =a1lo(i,jlo,l)*rrad1(i,lp)+cin*b1lo(i,jlo,l)*rrad2(i,lp)    
+                                ue21(i,jlo)=a1lo(i,jlo,l)*rade1(i,lp)+cin*b1lo(i,jlo,l)*rade2(i,lp)    
+                             enddo
+                          endif
+                       enddo
+                       do jlop=1,ilo(lp)
+                          if(loor(jlop,lp)) then
+                             do i=1,imax
+                                u12(i,jlop) =rrad1(i,l)*a1lo(i,jlop,lp)+cin*rrad2(i,l)*b1lo(i,jlop,lp)    
+                                ue12(i,jlop)=rade1(i,l)*a1lo(i,jlop,lp)+cin*rade2(i,l)*b1lo(i,jlop,lp) 
+                             enddo
+                          endif
+                       enddo
+                       ! radial functions for local orbitals
+                       do jlo=1,ilo(l)
+                          do jlop=1,ilo(lp) 
+                             if(loor(jlo,l).and.loor(jlop,lp)) then
+                                do i=1,imax
                                    u22(i,jlop,jlo)=a1lo(i,jlo,l)*a1lo(i,jlop,lp)+cin*b1lo(i,jlo,l)*b1lo(i,jlop,lp) 
-                                ENDDO
-                             ENDIF
-                          ENDDO
-                       ENDDO
-                       CALL cputim(time4)
+                                enddo
+                             endif
+                          enddo
+                       enddo
+                       call cputim(time4)
                        time_radprod=time_radprod+time4-time3
-                       !.....M SUM                           
+                       !.....m sum                           
    
                        sa=0.0d0; sb=0.0d0; sab=0.0d0; sba=0.0d0; s12=0.0d0; 
                        se12=0.0d0; s21=0.0d0; se21=0.0d0; s22=0.0d0
@@ -753,67 +730,67 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
                        vse12=0.0d0; vs21=0.0d0; vse21=0.0d0; vs22=0.0d0
                        
                        
-                       CALL cputim(time3)
-                       DO num=nemin,DM_nemaxx
+                       call cputim(time3)
+                       do num=nemin,dm_nemaxx
                           tsuma = 0.0; tsumb = 0.0; tsumab= 0.0; tsumba= 0.0
                           tsum21 (:ilo(l))  = 0.0;  tsume21(:ilo(l))  = 0.0
                           tsum12 (:ilo(lp)) = 0.0;  tsume12(:ilo(lp)) = 0.0
                           tsum22 (:ilo(lp),:ilo(l))=0.0
                           
-                          M=-(L+1) 
-                          MP=-(LP+1)
-                          DO MS=1,2*L+1
-                             M=M+1
-                             MP=-LP1
-                             DO MPS=1,2*LP+1
-                                MP=MP+1
-                                MTEST=-M+Mi+MP
-                                IF(MTEST.NE.0) CYCLE
-                                LY  = L*(L+1)+M+1
-                                LPY = LP*(LP+1)+MP+1
-                                GNT=GAUNT(L,Li,LP,M,Mi,MP)
-                                gint = IMAG1*GNT
+                          m=-(l+1) 
+                          mp=-(lp+1)
+                          do ms=1,2*l+1
+                             m=m+1
+                             mp=-lp1
+                             do mps=1,2*lp+1
+                                mp=mp+1
+                                mtest=-m+mi+mp
+                                if(mtest.ne.0) cycle
+                                ly  = l*(l+1)+m+1
+                                lpy = lp*(lp+1)+mp+1
+                                gnt=gaunt(l,li,lp,m,mi,mp)
+                                gint = imag1*gnt
                                 
                                 do is=1,iso
-                                   tSA = dh_ALM(num,LY,is)*dconjg(dh_ALM(num,LPY,is))*gint
-                                   tSB = dh_BLM(num,LY,is)*dconjg(dh_BLM(num,LPY,is))*gint
-                                   tSAB= dh_ALM(num,LY,is)*dconjg(dh_BLM(num,LPY,is))*gint
-                                   tSBA= dh_BLM(num,LY,is)*dconjg(dh_ALM(num,LPY,is))*gint
-                                   DO jlo=1,ilo(l)
-                                      tS21(jlo)  = dh_cLM(num,LY,jlo,is)*dconjg(dh_ALM(num,LPY,is))*gint
-                                      tSe21(jlo) = dh_cLM(num,LY,jlo,is)*dconjg(dh_BLM(num,LPY,is))*gint
-                                   ENDDO
-                                   DO jlop=1,ilo(lp)
-                                      tS12(jlop)  = dh_ALM(num,LY,is)*dconjg(dh_cLM(num,LPY,jlop,is))*gint
-                                      tSe12(jlop) = dh_BLM(num,LY,is)*dconjg(dh_cLM(num,LPY,jlop,is))*gint
-                                   ENDDO
-                                   DO jlo=1,ilo(l)
-                                      DO jlop=1,ilo(lp)
-                                         tS22(jlop,jlo) = dh_CLM(num,LY,jlo,is)*dconjg(dh_CLM(num,LPY,jlop,is))*gint
-                                      ENDDO
-                                   ENDDO
+                                   tsa = dh_alm(num,ly,is)*dconjg(dh_alm(num,lpy,is))*gint
+                                   tsb = dh_blm(num,ly,is)*dconjg(dh_blm(num,lpy,is))*gint
+                                   tsab= dh_alm(num,ly,is)*dconjg(dh_blm(num,lpy,is))*gint
+                                   tsba= dh_blm(num,ly,is)*dconjg(dh_alm(num,lpy,is))*gint
+                                   do jlo=1,ilo(l)
+                                      ts21(jlo)  = dh_clm(num,ly,jlo,is)*dconjg(dh_alm(num,lpy,is))*gint
+                                      tse21(jlo) = dh_clm(num,ly,jlo,is)*dconjg(dh_blm(num,lpy,is))*gint
+                                   enddo
+                                   do jlop=1,ilo(lp)
+                                      ts12(jlop)  = dh_alm(num,ly,is)*dconjg(dh_clm(num,lpy,jlop,is))*gint
+                                      tse12(jlop) = dh_blm(num,ly,is)*dconjg(dh_clm(num,lpy,jlop,is))*gint
+                                   enddo
+                                   do jlo=1,ilo(l)
+                                      do jlop=1,ilo(lp)
+                                         ts22(jlop,jlo) = dh_clm(num,ly,jlo,is)*dconjg(dh_clm(num,lpy,jlop,is))*gint
+                                      enddo
+                                   enddo
                                    
-                                   tSUMA  = tSUMA  + tSA/iso
-                                   tSUMB  = tSUMB  + tSB/iso
-                                   tSUMAB = tSUMAB + tSAB/iso
-                                   tSUMBA = tSUMBA + tSBA/iso
-                                   DO jlo=1,ilo(l)
-                                      tSUM21 (jlo) = tSUM21 (jlo) + tS21 (jlo)/iso
-                                      tSUMe21(jlo) = tSUMe21(jlo) + tSe21(jlo)/iso
-                                   ENDDO
-                                   DO jlop=1,ilo(lp)
-                                      tSUM12 (jlop) = tSUM12 (jlop) + tS12(jlop)/iso
-                                      tSUMe12(jlop) = tSUMe12(jlop) + tSe12(jlop)/iso
-                                   ENDDO
-                                   DO jlo=1,ilo(l)
-                                      DO jlop=1,ilo(lp)
-                                         tSUM22(jlop,jlo) = tSUM22(jlop,jlo) + tS22(jlop,jlo)/iso
-                                      ENDDO
-                                   ENDDO
+                                   tsuma  = tsuma  + tsa/iso
+                                   tsumb  = tsumb  + tsb/iso
+                                   tsumab = tsumab + tsab/iso
+                                   tsumba = tsumba + tsba/iso
+                                   do jlo=1,ilo(l)
+                                      tsum21 (jlo) = tsum21 (jlo) + ts21 (jlo)/iso
+                                      tsume21(jlo) = tsume21(jlo) + tse21(jlo)/iso
+                                   enddo
+                                   do jlop=1,ilo(lp)
+                                      tsum12 (jlop) = tsum12 (jlop) + ts12(jlop)/iso
+                                      tsume12(jlop) = tsume12(jlop) + tse12(jlop)/iso
+                                   enddo
+                                   do jlo=1,ilo(l)
+                                      do jlop=1,ilo(lp)
+                                         tsum22(jlop,jlo) = tsum22(jlop,jlo) + ts22(jlop,jlo)/iso
+                                      enddo
+                                   enddo
                                 enddo
                                 
-                             ENDDO
-                          ENDDO
+                             enddo
+                          enddo
                           
                           wkp = weight(num)
                           facv = (-e(num))*wkp
@@ -825,24 +802,24 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
                           vsb = vsb + tsumb  * facv
                           vsab= vsab+ tsumab * facv
                           vsba= vsba+ tsumba * facv
-                          DO jlo=1,ilo(l)
+                          do jlo=1,ilo(l)
                              s21(jlo)   = s21(jlo)  + tsum21 (jlo) * wkp
                              se21(jlo)  = se21(jlo) + tsume21(jlo) * wkp
                              vs21(jlo)  = vs21(jlo) + tsum21 (jlo) * facv
                              vse21(jlo) = vse21(jlo)+ tsume21(jlo) * facv
-                          ENDDO
-                          DO jlop=1,ilo(lp)
+                          enddo
+                          do jlop=1,ilo(lp)
                              s12  (jlop) = s12  (jlop) + tsum12 (jlop) * wkp
                              se12 (jlop) = se12 (jlop) + tsume12(jlop) * wkp
                              vs12 (jlop) = vs12 (jlop) + tsum12 (jlop) * facv
                              vse12(jlop) = vse12(jlop) + tsume12(jlop) * facv
-                          ENDDO
-                          DO jlo=1,ilo(l)
-                             DO jlop=1,ilo(lp)
+                          enddo
+                          do jlo=1,ilo(l)
+                             do jlop=1,ilo(lp)
                                 s22 (jlop,jlo) = s22 (jlop,jlo) + tsum22(jlop,jlo) * wkp
                                 vs22(jlop,jlo) = vs22(jlop,jlo) + tsum22(jlop,jlo) * facv
-                             ENDDO
-                          ENDDO
+                             enddo
+                          enddo
    
                           suma  (num) = tsuma
                           sumb  (num) = tsumb
@@ -853,430 +830,433 @@ SUBROUTINE L2MAIN(cform,nnlo,coord,zz,nwave,&
                           sum12 (num,:ilo(lp)) = tsum12 (:ilo(lp))
                           sume12(num,:ilo(lp)) = tsume12(:ilo(lp))
                           sum22 (num,:ilo(lp),:ilo(l)) = tsum22 (:ilo(lp),:ilo(l))
-                       ENDDO
-                       CALL cputim(time4)
+                       enddo
+                       call cputim(time4)
                        time_m=time_m+time4-time3
                        
-                       IF(Li.eq.0) then
-                          call csplit(nemin,DM_nemaxx,l,jatom,mu,alm,blm,clm,coord) 
-                       ENDIF
-                       CALL cputim(time3)
-                       IMAX=JRI(JATOM)
-                       DO I=1,IMAX
-                          TC_buf(i)=SA*UA(I)+SB*UB(I)+SAB*UAB(I)+SBA*UBA(I)
-                          vTC_buf(i)=vSA*UA(I)+vSB*UB(I)+vSAB*UAB(I)+vSBA*UBA(I)
-                       ENDDO
-                       DO jlo=1,ilo(l)
-                          DO i=1,imax
-                             tc_buf(i)=tc_buf(i)+S21(jlo)*U21(I,jlo)+Se21(jlo)*Ue21(I,jlo)
-                             vtc_buf(i)=vtc_buf(i)+vS21(jlo)*U21(I,jlo)+vSe21(jlo)*Ue21(I,jlo)
-                          ENDDO
-                       ENDDO
-                       DO jlop=1,ilo(lp)
-                          DO i=1,imax
-                             tc_buf(i)=tc_buf(i)+S12(jlop)*U12(I,jlop)+Se12(jlop)*Ue12(I,jlop)
-                             vtc_buf(i)=vtc_buf(i)+vS12(jlop)*U12(I,jlop)+vSe12(jlop)*Ue12(I,jlop)
-                          ENDDO
-                       ENDDO
-                       DO jlo=1,ilo(l)
-                          DO jlop=1,ilo(lp)
-                             DO i=1,imax
+                       if(li.eq.0) then
+                          call csplit(nemin,dm_nemaxx,l,jatom,mu,alm,blm,clm,coord) 
+                       endif
+                       call cputim(time3)
+                       imax=jri(jatom)
+                       do i=1,imax
+                          tc_buf(i)=sa*ua(i)+sb*ub(i)+sab*uab(i)+sba*uba(i)
+                          vtc_buf(i)=vsa*ua(i)+vsb*ub(i)+vsab*uab(i)+vsba*uba(i)
+                       enddo
+                       do jlo=1,ilo(l)
+                          do i=1,imax
+                             tc_buf(i)=tc_buf(i)+s21(jlo)*u21(i,jlo)+se21(jlo)*ue21(i,jlo)
+                             vtc_buf(i)=vtc_buf(i)+vs21(jlo)*u21(i,jlo)+vse21(jlo)*ue21(i,jlo)
+                          enddo
+                       enddo
+                       do jlop=1,ilo(lp)
+                          do i=1,imax
+                             tc_buf(i)=tc_buf(i)+s12(jlop)*u12(i,jlop)+se12(jlop)*ue12(i,jlop)
+                             vtc_buf(i)=vtc_buf(i)+vs12(jlop)*u12(i,jlop)+vse12(jlop)*ue12(i,jlop)
+                          enddo
+                       enddo
+                       do jlo=1,ilo(l)
+                          do jlop=1,ilo(lp)
+                             do i=1,imax
                                 tc_buf(i)=tc_buf(i)+s22(jlop,jlo)*u22(i,jlop,jlo)
                                 vtc_buf(i)=vtc_buf(i)+vs22(jlop,jlo)*u22(i,jlop,jlo)
-                             ENDDO
-                          ENDDO
-                       ENDDO
-                       DO i=1,imax
-                          w_RHOLM(I,ILM,jatom)=w_RHOLM(I,ILM,jatom)+TC_buf(i)/MULT(JATOM)
-                          w_vRHOLM(I,ILM,jatom)=w_vRHOLM(I,ILM,jatom)+vTC_buf(i)/MULT(JATOM)
-                       ENDDO
-                       CALL cputim(time4)
+                             enddo
+                          enddo
+                       enddo
+                       do i=1,imax
+                          w_rholm(i,ilm,jatom)=w_rholm(i,ilm,jatom)+tc_buf(i)/mult(jatom)
+                          w_vrholm(i,ilm,jatom)=w_vrholm(i,ilm,jatom)+vtc_buf(i)/mult(jatom)
+                       enddo
+                       call cputim(time4)
                        time_rad=time_rad+time4-time3
-                    ENDDO lp_sum
-                 ENDDO l_sum
-              ENDDO ilm_loop
+                    enddo lp_sum
+                 enddo l_sum
+              enddo ilm_loop
               
-              CALL cputim(time2)
-              CALL walltim(time2_w)
+              call cputim(time2)
+              call walltim(time2_w)
               time_ilm=time_ilm+time2-time1
               time_ilm_w=time_ilm_w+time2_w-time1_w
-           ENDDO equiv_atom_loop
+           enddo equiv_atom_loop
    
-           call psplit(w_xwt1(:,jatom),jatom,nemin,DM_nemaxx,test1,EQBAD,jatombad,lbad)
-        ENDDO
+           call psplit(w_xwt1(:,jatom),jatom,nemin,dm_nemaxx,test1,eqbad,jatombad,lbad)
+        enddo
    
-        CALL cputim(time1)
-        CALL walltim(time1_w)
-        ! INTERSTITIAL CHARGE
-        ! FFT eigenvectors and accumulate weighted square in sumfft
+        call cputim(time1)
+        call walltim(time1_w)
+        ! interstitial charge
+        ! fft eigenvectors and accumulate weighted square in sumfft
         keigen(1,:)=kx(:)
         keigen(2,:)=ky(:)
         keigen(3,:)=kz(:)
         isig=-1
    
-        ALLOCATE( Asc(n0-nnlo,1:DM_nemaxx) )
+        allocate( asc(n0-nnlo,1:dm_nemaxx) )
    
-        !!!! Mar 27, 2010: Over spins in interstitals
+        !!!! mar 27, 2010: over spins in interstitals
         do is=1,iso
-           Asc(:,:) = As(:n0-nnlo,:DM_nemaxx,is)
-           Asc(:,DM_nemin:DM_nemaxx) = matmul( As(:n0-nnlo,DM_nemin:DM_nemax,is), Aweight(:nbands,:nbandsx) )
+           asc(:,:) = as(:n0-nnlo,:dm_nemaxx,is)
+           asc(:,dm_nemin:dm_nemaxx) = matmul( as(:n0-nnlo,dm_nemin:dm_nemax,is), aweight(:nbands,:nbandsx) )
    
-           DO num=nemin,DM_nemaxx
-              !  puts eigenvector into fft array for FFT
-              CALL setfft1c(n0-nnlo,iff1,iff2,iff3,Asc(:,num),fft,keigen)
-              !  computes a(k,r) = FFT(a(k,K))
-              CALL c3fft(iff1,iff2,iff3,fft,iff1,iff2,isig,cwork,dwork,ierr)  
+           do num=nemin,dm_nemaxx
+              !  puts eigenvector into fft array for fft
+              call setfft1c(n0-nnlo,iff1,iff2,iff3,asc(:,num),fft,keigen)
+              !  computes a(k,r) = fft(a(k,k))
+              call c3fft(iff1,iff2,iff3,fft,iff1,iff2,isig,cwork,dwork,ierr)  
               !  |a(k,r)|^2 w(k)
-              CALL sumupfft(iff1,iff2,iff3, weight(num)/iso,       fft,sumfft)
+              call sumupfft(iff1,iff2,iff3, weight(num)/iso,       fft,sumfft)
               ! -|a(k,r)|^2 w(k)*e(k)
-              CALL sumupfft(iff1,iff2,iff3,-weight(num)*E(num)/iso,fft,vsumfft)   
-           ENDDO
+              call sumupfft(iff1,iff2,iff3,-weight(num)*e(num)/iso,fft,vsumfft)   
+           enddo
         enddo
    
-        DEALLOCATE( Asc, Aweight )
+        deallocate( asc, aweight )
    
-        CALL cputim(time2)
-        CALL walltim(time2_w)
+        call cputim(time2)
+        call walltim(time2_w)
         time_int =time_int +time2-time1
         time_intw =time_intw +time2_w-time1_w
-     ENDDO     !  kpoint loop end
+     enddo     !  kpoint loop end
      call gh5_close(f_id) 
-     DO is=1,iso    !------ over up/dn ---------------------!
+     do is=1,iso    !------ over up/dn ---------------------!
         itape1=8+is
         if (vector_para) then
            close(itape1)
         else
            rewind(itape1)
         endif
-     ENDDO
-  ENDDO
+     enddo
+     if (vector_para) then
+        close(12)
+     endif
+  enddo
 
-  CALL Reduce_MPI(xwt, w_RHOLM, w_vRHOLM, w_xwt1, sumfft, vsumfft, &
-      &NRAD, LM_MAX, nat, iff1, iff2, iff3)
+  call reduce_mpi(xwt, w_rholm, w_vrholm, w_xwt1, sumfft, vsumfft, &
+      &nrad, lm_max, nat, iff1, iff2, iff3)
 
   if (myrank.eq.master) then
 
-     DO jatom=1,nat
-        lm(1:2,1:NCOM) = w_lm(1:2,1:NCOM,jatom)
-        LMMAX = w_lmmax(jatom)
-        R(:) = w_R(:,jatom)
+     do jatom=1,nat
+        lm(1:2,1:ncom) = w_lm(1:2,1:ncom,jatom)
+        lmmax = w_lmmax(jatom)
+        r(:) = w_r(:,jatom)
         
-        CALL cputim(time1)
-        CALL walltim(time1_w)
+        call cputim(time1)
+        call walltim(time1_w)
         
-        DO ILM=1,LMMAX
-           OVRDIV=1.0
-           Li=LM(1,ILM)
-           Mi=LM(2,ILM)
-           IF(Li.NE.0) THEN
-              IF(Mi.NE.0) THEN
-                 IMAX=JRI(JATOM)
-                 DO I=1,IMAX
-                    w_vRHOLM(I,ILM,jatom)=w_vRHOLM(I,ILM,jatom)*SQRT2
-                    w_RHOLM(I,ILM,jatom)=w_RHOLM(I,ILM,jatom)*SQRT2
+        do ilm=1,lmmax
+           ovrdiv=1.0
+           li=lm(1,ilm)
+           mi=lm(2,ilm)
+           if(li.ne.0) then
+              if(mi.ne.0) then
+                 imax=jri(jatom)
+                 do i=1,imax
+                    w_vrholm(i,ilm,jatom)=w_vrholm(i,ilm,jatom)*sqrt2
+                    w_rholm(i,ilm,jatom)=w_rholm(i,ilm,jatom)*sqrt2
                  enddo
-              ENDIF
-              CYCLE
-           ENDIF
-           CALL CHARGE(R,OVRDIV,SQFP,w_RHOLM(1,ILM,jatom),DX(JATOM),JRI(JATOM),TC)
-           WRITE(6,207)  JATOM,TC
-           WRITE(21,720) jatom,jatom,TC
-           IF(ISPLIT(JATOM).EQ.1) THEN
-              WRITE(6,250) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-              WRITE(21,250) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-           ELSE IF(ISPLIT(JATOM).EQ.2) THEN                               
-              WRITE(6,251) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-              WRITE(21,251) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-           ELSE IF(ISPLIT(JATOM).EQ.3) THEN                               
-              WRITE(6,252) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-              WRITE(21,252)jatom,JATOM, JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-           ELSE IF(ISPLIT(JATOM).EQ.-2) THEN                              
-              WRITE(6,253) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-              WRITE(21,253) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-           ELSE IF(ISPLIT(JATOM).EQ.4) THEN                               
-              WRITE(6,254) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-              WRITE(21,254) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-           ELSE IF(ISPLIT(JATOM).EQ.5) THEN                               
-              WRITE(6,255) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-              WRITE(21,255) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-           ELSE IF(ISPLIT(JATOM).EQ.6) THEN                               
-              WRITE(6,256) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-              WRITE(21,256) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-           ELSE IF(ISPLIT(JATOM).EQ.8) THEN                               
-              WRITE(6,257) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-              WRITE(21,257) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,14)
-           ELSE IF(ISPLIT(JATOM).EQ.15) THEN                               
-              WRITE(6,258) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,21)
-              WRITE(21,258) jatom,JATOM,JATOM,(w_XWT1(I,jatom),I=0,3),(w_XWT1(I,jatom),I=7,21)
-           ENDIF
+              endif
+              cycle
+           endif
+           call charge(r,ovrdiv,sqfp,w_rholm(1,ilm,jatom),dx(jatom),jri(jatom),tc)
+           write(6,207)  jatom,tc
+           write(21,720) jatom,jatom,tc
+           if(isplit(jatom).eq.1) then
+              write(6,250) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+              write(21,250) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+           else if(isplit(jatom).eq.2) then                               
+              write(6,251) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+              write(21,251) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+           else if(isplit(jatom).eq.3) then                               
+              write(6,252) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+              write(21,252)jatom,jatom, jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+           else if(isplit(jatom).eq.-2) then                              
+              write(6,253) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+              write(21,253) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+           else if(isplit(jatom).eq.4) then                               
+              write(6,254) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+              write(21,254) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+           else if(isplit(jatom).eq.5) then                               
+              write(6,255) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+              write(21,255) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+           else if(isplit(jatom).eq.6) then                               
+              write(6,256) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+              write(21,256) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+           else if(isplit(jatom).eq.8) then                               
+              write(6,257) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+              write(21,257) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,14)
+           else if(isplit(jatom).eq.15) then                               
+              write(6,258) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,21)
+              write(21,258) jatom,jatom,jatom,(w_xwt1(i,jatom),i=0,3),(w_xwt1(i,jatom),i=7,21)
+           endif
            !
-           IF(Mi.NE.0) THEN
-              IMAX=JRI(JATOM)                                                   
-              DO I=1,IMAX                                                    
-                 w_vRHOLM(I,ILM,jatom)=w_vRHOLM(I,ILM,jatom)*SQRT2
-                 w_RHOLM(I,ILM,jatom)=w_RHOLM(I,ILM,jatom)*SQRT2
+           if(mi.ne.0) then
+              imax=jri(jatom)                                                   
+              do i=1,imax                                                    
+                 w_vrholm(i,ilm,jatom)=w_vrholm(i,ilm,jatom)*sqrt2
+                 w_rholm(i,ilm,jatom)=w_rholm(i,ilm,jatom)*sqrt2
               enddo
-           ENDIF
+           endif
         enddo
      
         call cputim(time3)
         call walltim(time3_w)
         
-        ! Writting case.clmval
-        WRITE(8,1990) JATOM
-        WRITE(8,2001) LMMAX
-        DO ILM=1,LMMAX
-           Li=LM(1,ILM)
-           Mi=LM(2,ILM)
-           WRITE(8,2011) Li,Mi
-           WRITE(8,2022) ( w_RHOLM(I,ILM,jatom), I=1,IMAX )
-           WRITE(8,2031)
-        end DO
-        WRITE(8,2030)
+        ! writting case.clmval
+        write(8,1990) jatom
+        write(8,2001) lmmax
+        do ilm=1,lmmax
+           li=lm(1,ilm)
+           mi=lm(2,ilm)
+           write(8,2011) li,mi
+           write(8,2022) ( w_rholm(i,ilm,jatom), i=1,imax )
+           write(8,2031)
+        end do
+        write(8,2030)
         
         call cputim(time4)
         call walltim(time4_w)
         time_writeclm=time_writeclm+time4-time3
         time_writeclm_w=time_writeclm_w+time4_w-time3_w
         
-        DO ILM1=1,LMMAX
-           IF (LM(1,ILM1).EQ.2.AND.LM(2,ILM1).EQ.0) THEN
-              DO I=1,IMAX                                                
-                 w_RHOLM(I,ILM1,jatom)=w_RHOLM(I,ILM1,jatom)/R(I)**3
+        do ilm1=1,lmmax
+           if (lm(1,ilm1).eq.2.and.lm(2,ilm1).eq.0) then
+              do i=1,imax                                                
+                 w_rholm(i,ilm1,jatom)=w_rholm(i,ilm1,jatom)/r(i)**3
               enddo
-              LABEL=1
-              DO ILM2=ILM1+1,LMMAX
-                 IF (LM(1,ILM2).EQ.2.AND.LM(2,ILM2).EQ.2) THEN
-                    DO I=1,IMAX
-                       w_RHOLM(I,ILM2,jatom)=w_RHOLM(I,ILM2,jatom)/R(I)**3
+              label=1
+              do ilm2=ilm1+1,lmmax
+                 if (lm(1,ilm2).eq.2.and.lm(2,ilm2).eq.2) then
+                    do i=1,imax
+                       w_rholm(i,ilm2,jatom)=w_rholm(i,ilm2,jatom)/r(i)**3
                     enddo
-                    LABEL=2
-                    DO ILM3=ILM2+1,LMMAX
-                       IF (LM(1,ILM3).EQ.-2.AND.LM(2,ILM3).EQ.2) THEN
-                          DO I=1,IMAX
-                             w_RHOLM(I,ILM3,jatom)=w_RHOLM(I,ILM3,jatom)/R(I)**3
+                    label=2
+                    do ilm3=ilm2+1,lmmax
+                       if (lm(1,ilm3).eq.-2.and.lm(2,ilm3).eq.2) then
+                          do i=1,imax
+                             w_rholm(i,ilm3,jatom)=w_rholm(i,ilm3,jatom)/r(i)**3
                           enddo
-                          LABEL=3
-                          GOTO 7372
-                       ENDIF
-                    ENDDO
-                    GOTO 7372
-                 ENDIF
-              ENDDO
-              GOTO 7372
-           ENDIF
-        ENDDO
+                          label=3
+                          goto 7372
+                       endif
+                    enddo
+                    goto 7372
+                 endif
+              enddo
+              goto 7372
+           endif
+        enddo
      
-        GOTO 7371
+        goto 7371
      
-7372 CONTINUE 
+7372 continue 
      
-        EFGFACT=0.02997925
-        FAC=0.8D0*PI*324.14D0
-        DO I1=0,jri(jatom)-5,1000   ! 7374
-           ! integrates: TC = integrate(R*RHOLM)
-           CALL CHARGE(R,1.D0,1.D0,w_RHOLM(1,ILM1,jatom),DX(JATOM),JRI(JATOM)-I1,TC) 
-           TC=TC*FAC
-           EFG20=TC
-           IF (LABEL.GT.1) THEN
-              CALL CHARGE(R,1.D0,1.D0,w_RHOLM(1,ILM2,jatom),DX(JATOM),JRI(JATOM)-I1,TC) 
-              TC=TC*FAC
-              EFG22=TC
-              IF (LABEL.EQ.3) THEN
-                 CALL CHARGE(R,1.D0,1.D0,w_RHOLM(1,ILM3,jatom),DX(JATOM),JRI(JATOM)-I1,TC)
-                 TC=TC*FAC
-                 EFG2M=TC
-                 QXX=(-EFG20/SQRT(3.D0)+EFG22)*SQRT(15.D0/4.D0/PI)
-                 QYY=(-EFG20/SQRT(3.D0)-EFG22)*SQRT(15.D0/4.D0/PI)
-                 QZZ=(EFG20*2.D0/SQRT(3.D0))*SQRT(15.D0/4.D0/PI)
-                 QXY=EFG2M*SQRT(15.D0/4.D0/PI)
-                 QXX=-QXX*EFGFACT
-                 QXY=-QXY*EFGFACT
-                 QYY=-QYY*EFGFACT
-                 QZZ=-QZZ*EFGFACT
-                 IF (I1.EQ.0) WRITE(6,3019)
-                 IF (I1.EQ.0) WRITE(21,3019)
-                 WRITE(6,3121) jatom,QXX,QXY,QYY,QZZ,R(JRI(JATOM)-I1)
-                 IF (I1.EQ.0) WRITE(21,3121) jatom,QXX,QXY,QYY,QZZ,R(JRI(JATOM)-I1)      
-              ELSE
-                 VXX=(-EFG20/SQRT(3.D0)+EFG22)*SQRT(15.D0/4.D0/PI)
-                 VYY=(-EFG20/SQRT(3.D0)-EFG22)*SQRT(15.D0/4.D0/PI)
-                 VZZ=(EFG20*2.D0/SQRT(3.D0))*SQRT(15.D0/4.D0/PI)
-                 IF (I1.EQ.0) WRITE(6,3017)
-                 VXX=-VXX*EFGFACT
-                 VYY=-VYY*EFGFACT
-                 VZZ=-VZZ*EFGFACT
-                 IF (I1.EQ.0) WRITE(21,3017)
-                 WRITE(6,3021) jatom,VXX,VYY,VZZ,R(JRI(JATOM)-I1)
-                 IF (I1.EQ.0) WRITE(21,3021) jatom,VXX,VYY,VZZ,R(JRI(JATOM)-I1)
-              ENDIF
-           ELSE
-              EFG20=EFG20*2.D0/SQRT(3.D0)*SQRT(15.D0/4.D0/PI)
-              EFG20=-EFG20*EFGFACT
-              WRITE(6,7207)  JATOM,EFG20,R(JRI(JATOM)-I1)
-              IF (I1.EQ.0) WRITE(21,7720) jatom,JATOM,EFG20,R(JRI(JATOM)-I1)
-           ENDIF
-        ENDDO !7374       CONTINUE                                                          
+        efgfact=0.02997925
+        fac=0.8d0*pi*324.14d0
+        do i1=0,jri(jatom)-5,1000   ! 7374
+           ! integrates: tc = integrate(r*rholm)
+           call charge(r,1.d0,1.d0,w_rholm(1,ilm1,jatom),dx(jatom),jri(jatom)-i1,tc) 
+           tc=tc*fac
+           efg20=tc
+           if (label.gt.1) then
+              call charge(r,1.d0,1.d0,w_rholm(1,ilm2,jatom),dx(jatom),jri(jatom)-i1,tc) 
+              tc=tc*fac
+              efg22=tc
+              if (label.eq.3) then
+                 call charge(r,1.d0,1.d0,w_rholm(1,ilm3,jatom),dx(jatom),jri(jatom)-i1,tc)
+                 tc=tc*fac
+                 efg2m=tc
+                 qxx=(-efg20/sqrt(3.d0)+efg22)*sqrt(15.d0/4.d0/pi)
+                 qyy=(-efg20/sqrt(3.d0)-efg22)*sqrt(15.d0/4.d0/pi)
+                 qzz=(efg20*2.d0/sqrt(3.d0))*sqrt(15.d0/4.d0/pi)
+                 qxy=efg2m*sqrt(15.d0/4.d0/pi)
+                 qxx=-qxx*efgfact
+                 qxy=-qxy*efgfact
+                 qyy=-qyy*efgfact
+                 qzz=-qzz*efgfact
+                 if (i1.eq.0) write(6,3019)
+                 if (i1.eq.0) write(21,3019)
+                 write(6,3121) jatom,qxx,qxy,qyy,qzz,r(jri(jatom)-i1)
+                 if (i1.eq.0) write(21,3121) jatom,qxx,qxy,qyy,qzz,r(jri(jatom)-i1)      
+              else
+                 vxx=(-efg20/sqrt(3.d0)+efg22)*sqrt(15.d0/4.d0/pi)
+                 vyy=(-efg20/sqrt(3.d0)-efg22)*sqrt(15.d0/4.d0/pi)
+                 vzz=(efg20*2.d0/sqrt(3.d0))*sqrt(15.d0/4.d0/pi)
+                 if (i1.eq.0) write(6,3017)
+                 vxx=-vxx*efgfact
+                 vyy=-vyy*efgfact
+                 vzz=-vzz*efgfact
+                 if (i1.eq.0) write(21,3017)
+                 write(6,3021) jatom,vxx,vyy,vzz,r(jri(jatom)-i1)
+                 if (i1.eq.0) write(21,3021) jatom,vxx,vyy,vzz,r(jri(jatom)-i1)
+              endif
+           else
+              efg20=efg20*2.d0/sqrt(3.d0)*sqrt(15.d0/4.d0/pi)
+              efg20=-efg20*efgfact
+              write(6,7207)  jatom,efg20,r(jri(jatom)-i1)
+              if (i1.eq.0) write(21,7720) jatom,jatom,efg20,r(jri(jatom)-i1)
+           endif
+        enddo !7374       continue                                                          
      
      
-7371 CONTINUE                                     
+7371 continue                                     
      
-        REWIND fh_vec
+        rewind fh_vec
         
-        CALL cputim(time3) 
+        call cputim(time3) 
         call walltim(time3_w)
         time_writeefg=time_writeefg+time3-time4
         time_writeefg_w=time_writeefg_w+time3_w-time4_w
         
-        CALL cputim(time2)
-        CALL walltim(time2_w)
+        call cputim(time2)
+        call walltim(time2_w)
         time_writescf=time_writescf+time2-time3
         time_write=time_write+time2-time1
         time_writescf_w=time_writescf_w+time2_w-time3_w
         time_write_w=time_write_w+time2_w-time1_w
-     ENDDO
+     enddo
      
      write(6,*)
      write(6,'(a,2f8.1)') '   atpar              (cpu,wall):',time_atpar_c,time_atpar_w
      write(6,'(a,2f8.1)') '   readvec            (cpu,wall):',time_rd_c,time_rd_w
      write(6,'(a,2f8.1)') '   readvec, read only (cpu,wall):',time_r_c,time_r_w
-     WRITE(6,'(a,2f8.1)') '   blocked loop            (cpu):',time_bl,time_bl_w
-     WRITE(6,'(a,2f8.1)') '   reduced                 (cpu):',time_reduc,time_reduc_w
-     WRITE(6,'(a,2f8.1)') '   ilm-tot loop            (cpu):',time_ilm,time_ilm_w
-     WRITE(6,'(a,f8.1)')  '   ilm-1 loop              (cpu):',time_radprod
-     WRITE(6,'(a,f8.1)')  '   ilm-2 loop              (cpu):',time_m
-     WRITE(6,'(a,f8.1)')  '   ilm-3 loop              (cpu):',time_rad
-     WRITE(6,'(a,2f8.1)') '   write-clm          (cpu,wall):',time_writeclm,time_writeclm_w
-     WRITE(6,'(a,2f8.1)') '   write-scf          (cpu,wall):',time_writescf,time_writescf_w
-     WRITE(6,'(a,2f8.1)') '   write-efg          (cpu,wakk):',time_writeefg,time_writeefg_w
-     WRITE(6,'(a,2f8.1)') '   write              (cpu,wall):',time_write,time_write_w
-     WRITE(6,'(a,2f8.1)') '   dmft transformation(cpu,wall):',time_dmf, time_dmfw
-     WRITE(6,'(a,2f8.1)') '   dmft exact-diag    (cpu,wall):',time_ed, time_edw
-     WRITE(6,'(a,2f8.1)') '   interstitial charge(cpu,wall):',time_int, time_intw
+     write(6,'(a,2f8.1)') '   blocked loop            (cpu):',time_bl,time_bl_w
+     write(6,'(a,2f8.1)') '   reduced                 (cpu):',time_reduc,time_reduc_w
+     write(6,'(a,2f8.1)') '   ilm-tot loop            (cpu):',time_ilm,time_ilm_w
+     write(6,'(a,f8.1)')  '   ilm-1 loop              (cpu):',time_radprod
+     write(6,'(a,f8.1)')  '   ilm-2 loop              (cpu):',time_m
+     write(6,'(a,f8.1)')  '   ilm-3 loop              (cpu):',time_rad
+     write(6,'(a,2f8.1)') '   write-clm          (cpu,wall):',time_writeclm,time_writeclm_w
+     write(6,'(a,2f8.1)') '   write-scf          (cpu,wall):',time_writescf,time_writescf_w
+     write(6,'(a,2f8.1)') '   write-efg          (cpu,wakk):',time_writeefg,time_writeefg_w
+     write(6,'(a,2f8.1)') '   write              (cpu,wall):',time_write,time_write_w
+     write(6,'(a,2f8.1)') '   dmft transformation(cpu,wall):',time_dmf, time_dmfw
+     write(6,'(a,2f8.1)') '   dmft exact-diag    (cpu,wall):',time_ed, time_edw
+     write(6,'(a,2f8.1)') '   interstitial charge(cpu,wall):',time_int, time_intw
      
-     WRITE(6,881)  XWT
-     WRITE(21,881) XWT
+     write(6,881)  xwt
+     write(21,881) xwt
   endif
 
-  REWIND fh_vec
+  rewind fh_vec
 
 
   deallocate (e_store,elo_store)
-  DEALLOCATE(alm,blm,clm)
-  DEALLOCATE(dh_alm,dh_blm,dh_clm)
-  CALL fini_charp
-  CALL fini_chard
-  CALL fini_charf
-  CALL fini_lohelp
-  CALL fini_xa
-  CALL fini_xa3
-  CALL w_deallocate
+  deallocate(alm,blm,clm)
+  deallocate(dh_alm,dh_blm,dh_clm)
+  call fini_charp
+  call fini_chard
+  call fini_charf
+  call fini_lohelp
+  call fini_xa
+  call fini_xa3
+  call w_deallocate
 
-  CALL cputim(time2)
-  TCLM = time2
-  CALL walltim(time2_w)
-  TCLM_w = time2
+  call cputim(time2)
+  tclm = time2
+  call walltim(time2_w)
+  tclm_w = time2
   
-  if (myrank.EQ.master) then
+  if (myrank.eq.master) then
      
-     ! ---- Interstitials ---
+     ! ---- interstitials ---
      !
-     ! Back transform cumulative grids
+     ! back transform cumulative grids
      isig=1
-     ! computes rho(K)=FFT(rho(r))
-     CALL c3fft(iff1,iff2,iff3,sumfft,iff1,iff2,isig,cwork,dwork,ierr) 
-     CALL c3fft(iff1,iff2,iff3,vsumfft,iff1,iff2,isig,cwork,dwork,ierr)
+     ! computes rho(k)=fft(rho(r))
+     call c3fft(iff1,iff2,iff3,sumfft,iff1,iff2,isig,cwork,dwork,ierr) 
+     call c3fft(iff1,iff2,iff3,vsumfft,iff1,iff2,isig,cwork,dwork,ierr)
      sumfft(:,:,:)=sumfft(:,:,:)/dble(iff1*iff2*iff3)
      vsumfft(:,:,:)=vsumfft(:,:,:)/dble(iff1*iff2*iff3)
      
-     ALLOCATE( rho1(nwave*nsym),vrho1(nwave*nsym) )
+     allocate( rho1(nwave*nsym),vrho1(nwave*nsym) )
      rho1(:)=0.0 ; vrho1(:)=0.0
      
      call getfft(nwave,iff1,iff2,iff3,rho1,sumfft,kmax)
      call getfft(nwave,iff1,iff2,iff3,vrho1,vsumfft,kmax)
      
-     ALLOCATE( rhok(nwave),vrhok(nwave) )
+     allocate( rhok(nwave),vrhok(nwave) )
      vrhok(:)=0.0;  rhok(:)=0.0
      
-     !.....SUM OVER ALL RECPR. LATTIC VECTORS OF ONE STAR
+     !.....sum over all recpr. lattic vectors of one star
      ia1=1
      volin = 1.0d0/vol
-     DO j=1,nwave
+     do j=1,nwave
         ia2=ia1+inst(j)-1
-        DO jj=ia1,ia2
-           rhok(j)  = rhok(j)  + rho1(jj)*CONJG(tauk(jj))
-           vrhok(j) = vrhok(j) + vrho1(jj)*CONJG(tauk(jj))
-        ENDDO
+        do jj=ia1,ia2
+           rhok(j)  = rhok(j)  + rho1(jj)*conjg(tauk(jj))
+           vrhok(j) = vrhok(j) + vrho1(jj)*conjg(tauk(jj))
+        enddo
         ia1=ia2+1
         vrhok(j) = vrhok(j) * volin
         rhok(j)  = rhok(j)  * volin
-     ENDDO
+     enddo
      
-     WRITE(8,*) '   VALENCE CHARGE DENSITY IN INTERSTITIAL '
-     WRITE(8,*)
-     WRITE(8,2061)  NWAVE
-     WRITE(8,2071)  ( (KZZ(JX,J),JX=1,3),RHOK(J), J=1,NWAVE)
+     write(8,*) '   valence charge density in interstitial '
+     write(8,*)
+     write(8,2061)  nwave
+     write(8,2071)  ( (kzz(jx,j),jx=1,3),rhok(j), j=1,nwave)
      close(8)
 
-     WRITE(6,204) NWAVE,kmax
-     DEALLOCATE(rhok,vrhok)
-     DEALLOCATE(rho1,vrho1)
+     write(6,204) nwave,kmax
+     deallocate(rhok,vrhok)
+     deallocate(rho1,vrho1)
   endif
 
-  DEALLOCATE (fft, tp, sumfft, vsumfft, tloc )
-  DEALLOCATE (dwork, cwork)
-  ! --- Interstitials ---
+  deallocate (fft, tp, sumfft, vsumfft, tloc )
+  deallocate (dwork, cwork)
+  ! --- interstitials ---
 
-  CALL cputim(time2)
-  TFOUR = time2
-  CALL walltim(time2_w)
-  TFOUR_w = time2
+  call cputim(time2)
+  tfour = time2
+  call walltim(time2_w)
+  tfour_w = time2
 
-  RETURN
+  return
   
 
-205 FORMAT(/,1X,' K-POINT:',3F8.4,1X,I5,I4,2X,A10)                      
-207 FORMAT(1H0,' TOTAL CHARGE INSIDE SPHERE',I5,1H:,F12.6)            
-250 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PZ,PXY',/,':QTL',i3.3,':',12F7.4)               
-251 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,      ','D-EG,D-T2G ',/,':QTL',i3.3,':',12F7.4)  
-252 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,      ','D-Z2,D-XY,X2Y2,D-XZ,YZ ',/,':QTL',i3.3,':',12F7.4)
-253 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PZ,PXY,,','D-Z2,D-XY,D-X2Y2,D-XZ,YZ ',/,':QTL',i3.3,':',12F7.4)                          
-254 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PZ,PXY, ','D-Z2,D-XY,X2Y2,D-XZ,YZ ',/,':QTL',i3.3,':',12F7.4)                            
-255 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,      ','D-Z2,D-X2Y2,D-XY,D-XZ,D-YZ ',/,':QTL',i3.3,':',12F7.4)                        
-256 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PX,PY,PZ,',' ',/,':QTL',i3.3,':',12F7.4)
-257 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PX,PY,PZ,','D-Z2,D-X2Y2,D-XY,D-XZ,D-YZ ',/,':QTL',i3.3,':',12F7.4)                        
-258 FORMAT(':PCS',i3.3,':',1X,'PARTIAL CHARGES SPHERE =',I3,' S,P,D,F,PX,PY,PZ,D-Z2,D-X2Y2,D-XY,D-XZ,D-YZ,F00,F11,F22',',F33,','F1M,F2M,F3M ',/,':QTL',i3.3,':',19F7.4)
-720 FORMAT(/,':CHA',i3.3,':',1X,'TOTAL CHARGE INSIDE SPHERE ',I3,' = ',F12.6)         
-787 FORMAT('    VALENCE CHARGE DENSITY   IN  MT SPHERES',5X,I3,' ITERATION')
-800 FORMAT(/,10X,68(1H-),/,11X,'W A V E F U N C T I O N S','   AND   C H A R G E S   IN   S P H E R E S',/,10X,68(1H-))                                         
-881 FORMAT(/,':CHA  :',' TOTAL CHARGE INSIDE UNIT CELL =',F15.6) 
-1003 FORMAT(251(I3,I2))                                                 
-1005 FORMAT(/,7X,'LMMAX',I3,/,7x,'LM= ',17(i3,I2),(/,7x,18(i3,i2)))          
-1990 FORMAT(3X,'ATOMNUMBER   ',I3,5X,10A4)                             
-2001 FORMAT(3X,'NUMBER OF LM',I3//)                                   
-2011 FORMAT(3X,'CLM(R) FOR L',I3,3X,'M=',I2/)                         
-2022 FORMAT(3X,4E19.12)                                                 
-2030 FORMAT(///)                                                       
-2031 FORMAT(/)                                                         
-2032 FORMAT(49X,I3,//)  
-2055 FORMAT(/,1X,' K-POINT:',3F14.10,1X,I5,I4,2X,A10)
-3017 FORMAT(/,22X,'VXX',9X,'VYY',9X,'VZZ',7X,'UP TO R',/)
-3018 FORMAT(/'  EFG COMPONENTS BEFORE TRANSFORMATION [10**21 V/(M*M)]:',/,15X,'QXX (-V20/2. + V22)     =',F10.3,/,15X,'QYY (-V20/2. - V22)     =',F10.3,/,15X,'QZZ ( V20)              =',F10.3,/,15X,'QXY ( V2M/2. * SQRT(3.))=',F10.3)  
-3019 FORMAT(/,22X,'QXX',9X,'QXY',9X,'QYY',9X,'QZZ',7X,'UP TO R',/)
-3020 FORMAT(/'  EFG COMPONENTS AFTER TRANSFORMATION [10**21 V/(M*M)]:',/,15X,'VXX                     =',F10.3,/,15X,'VYY                     =',F10.3,/,15X,'VZZ                     =',F10.3,/)
-3121 FORMAT(':VZZ',i3.3,':',8x,4F12.5,F12.3)
-3021 FORMAT(':VZZ',i3.3,':',8x,3F12.5,F12.3)
-3022 FORMAT(  15X,'QXX=',F10.3,/,15X,'QYY=',F10.3,/,15X,'QZZ=',F10.3,15X,'QXY=',F10.3,' UP TO R= ',F10.5)
-4645 FORMAT(2i4,3f15.10)
-4646 FORMAT(8e20.10)
-4893 FORMAT(3i4,4(2e16.8,2x))  
-13   FORMAT(////,':POS',i3.3,':',1x,'AT.NR.',I4,1X,'POSITION =',3F8.5,2X,'MULTIPLICITY =',I3)
-7207 FORMAT(1H ,' EFG INSIDE SPHERE',I5,1H:,F12.6,5X,' UP TO R = ',F10.7)                                                          
-7720 FORMAT(':VZZ',i3.3,':',1X,'EFG INSIDE SPHERE ',I3,' = ',F12.6,5X,' UP TO R =',F10.5)
+205 format(/,1x,' k-point:',3f8.4,1x,i5,i4,2x,a10)                      
+207 format(1h0,' total charge inside sphere',i5,1h:,f12.6)            
+250 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,pz,pxy',/,':QTL',i3.3,':',12f7.4)               
+251 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,      ','d-eg,d-t2g ',/,':QTL',i3.3,':',12f7.4)  
+252 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,      ','d-z2,d-xy,x2y2,d-xz,yz ',/,':QTL',i3.3,':',12f7.4)
+253 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,pz,pxy,,','d-z2,d-xy,d-x2y2,d-xz,yz ',/,':QTL',i3.3,':',12f7.4)                          
+254 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,pz,pxy, ','d-z2,d-xy,x2y2,d-xz,yz ',/,':QTL',i3.3,':',12f7.4)                            
+255 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,      ','d-z2,d-x2y2,d-xy,d-xz,d-yz ',/,':QTL',i3.3,':',12f7.4)                        
+256 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,px,py,pz,',' ',/,':QTL',i3.3,':',12f7.4)
+257 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,px,py,pz,','d-z2,d-x2y2,d-xy,d-xz,d-yz ',/,':QTL',i3.3,':',12f7.4)                        
+258 format(':PCS',i3.3,':',1x,'partial charges sphere =',i3,' s,p,d,f,px,py,pz,d-z2,d-x2y2,d-xy,d-xz,d-yz,f00,f11,f22',',f33,','f1m,f2m,f3m ',/,':QTL',i3.3,':',19f7.4)
+720 format(/,':CHA',i3.3,':',1x,'total charge inside sphere ',i3,' = ',f12.6)         
+787 format('    valence charge density   in  mt spheres',5x,i3,' iteration')
+800 format(/,10x,68(1h-),/,11x,'w a v e f u n c t i o n s','   and   c h a r g e s   in   s p h e r e s',/,10x,68(1h-))                                         
+881 format(/,':CHA  :',' total charge inside unit cell =',f15.6) 
+1003 format(251(i3,i2))                                                 
+1005 format(/,7x,'lmmax',i3,/,7x,'lm= ',17(i3,i2),(/,7x,18(i3,i2)))          
+1990 format(3x,'atomnumber   ',i3,5x,10a4)                             
+2001 format(3x,'number of lm',i3//)                                   
+2011 format(3x,'clm(r) for l',i3,3x,'m=',i2/)                         
+2022 format(3x,4e19.12)                                                 
+2030 format(///)                                                       
+2031 format(/)                                                         
+2032 format(49x,i3,//)  
+2055 format(/,1x,' k-point:',3f14.10,1x,i5,i4,2x,a10)
+3017 format(/,22x,'vxx',9x,'vyy',9x,'vzz',7x,'up to r',/)
+3018 format(/'  efg components before transformation [10**21 v/(m*m)]:',/,15x,'qxx (-v20/2. + v22)     =',f10.3,/,15x,'qyy (-v20/2. - v22)     =',f10.3,/,15x,'qzz ( v20)              =',f10.3,/,15x,'qxy ( v2m/2. * sqrt(3.))=',f10.3)  
+3019 format(/,22x,'qxx',9x,'qxy',9x,'qyy',9x,'qzz',7x,'up to r',/)
+3020 format(/'  efg components after transformation [10**21 v/(m*m)]:',/,15x,'vxx                     =',f10.3,/,15x,'vyy                     =',f10.3,/,15x,'vzz                     =',f10.3,/)
+3121 format(':VZZ',i3.3,':',8x,4f12.5,f12.3)
+3021 format(':VZZ',i3.3,':',8x,3f12.5,f12.3)
+3022 format(  15x,'qxx=',f10.3,/,15x,'qyy=',f10.3,/,15x,'qzz=',f10.3,15x,'qxy=',f10.3,' up to r= ',f10.5)
+4645 format(2i4,3f15.10)
+4646 format(8e20.10)
+4893 format(3i4,4(2e16.8,2x))  
+13   format(////,':POS',i3.3,':',1x,'at.nr.',i4,1x,'position =',3f8.5,2x,'multiplicity =',i3)
+7207 format(1h ,' efg inside sphere',i5,1h:,f12.6,5x,' up to r = ',f10.7)                                                          
+7720 format(':VZZ',i3.3,':',1x,'efg inside sphere ',i3,' = ',f12.6,5x,' up to r =',f10.5)
 
 
-204 FORMAT(I10,' FOURIER COEFFICIENTS CALCULATED',/' LARGEST COMPONENTS:',3I6)
-2061 FORMAT(1X,'        ',I10,1X,'NUMBER OF PW')
-2071 FORMAT(3X,3I5,2E19.12)
+204 format(i10,' fourier coefficients calculated',/' largest components:',3i6)
+2061 format(1x,'        ',i10,1x,'number of pw')
+2071 format(3x,3i5,2e19.12)
 
-END SUBROUTINE L2MAIN
+end subroutine l2main

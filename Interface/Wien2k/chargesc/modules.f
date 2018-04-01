@@ -411,7 +411,7 @@ END MODULE xa3
 
 MODULE dmf
   REAL*8  :: gammac, gamma, aom_default, bom_default
-  INTEGER :: iso, ispin_pol, iso_orig
+  INTEGER :: iso, ispin_pol, iso_orig, isp_updn=0
   LOGICAL :: Qcomplex
   INTEGER :: projector, nom_default, natom
   INTEGER, ALLOCATABLE :: ll(:,:), qsplit(:,:), cix(:,:), iatom(:), isort(:)

@@ -80,7 +80,6 @@ SUBROUTINE ATPAR (REL,NAT,JATOM,LATOM,cform,ZZ)
   DO i=1,jatom
      e(0:lmax2)=e_store(0:lmax2,i)
      elo(0:lomax,1:nloat)=elo_store(0:lomax,1:nloat,i)
-     
      IF(i.EQ.jatom) THEN
         DO l=0,lmax2
            lapw(l)=.TRUE.

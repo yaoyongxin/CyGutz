@@ -4,7 +4,7 @@
       MODULE GMPI
       USE gprec
       IMPLICIT NONE
-#ifdef MPI
+#ifdef mpi_mode
   include 'mpif.h'
 #endif
       TYPE G_MPI
@@ -40,7 +40,7 @@
       END SUBROUTINE INI_GMPI
 
 
-#ifdef MPI
+#ifdef mpi_mode
 !**************************************************
       SUBROUTINE GMPI_Barrier()
       INTEGER IERR

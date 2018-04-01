@@ -25,10 +25,10 @@ PROGRAM DMFT2
   CHARACTER*80       DEFFN, ERRFN
   CHARACTER*77     RMARGN                                           
   CHARACTER*180     FNAME,FNAME1
-  CHARACTER*200 :: vec_up, vec_dn, ene_up, ene_dn
+  CHARACTER*200 :: vec_up, vec_dn, ene_up, ene_dn, norm_up, norm_dn
   INTEGER :: latom, i, icix, wicix, wndim, size, minsigind
   REAL*8  :: xx(3), xz(3), thetaz, phiz, ddd, check, sw(3)
-  INTEGER :: INDEX, INDEX1, MI, JR, JC
+  INTEGER :: idx, idx1, MI, JR, JC
   REAL*8 :: POST(3)
   DATA             RELA/'RELA'/                           
   save TTOTAL,TCLM,TFOUR,tstart,errfn                          
@@ -66,6 +66,20 @@ PROGRAM DMFT2
         fname1=fname
      else
         OPEN(IUNIT,FILE=FNAME,STATUS=STATUS,FORM=FORM,ERR=920)
+     endif
+
+     if(iunit==12)then
+        i=index(FNAME,"norm",back=.true.)
+        if(i>0)then
+            if(index(fname(i+1:),"up")>0)then
+                isp_updn=1
+            else
+                isp_updn=2
+            endif
+        else
+            write(0,*)"case.norm file error!"
+            stop 11
+        endif
      endif
 
      if(iunit.eq.18) then
@@ -113,22 +127,22 @@ PROGRAM DMFT2
   !
   !  read crystal-structure (atompositions, symmetry-parameters,
   !                                muffin-tin radius, ...)
-  !  'INDEX' counts all atoms in the unit cell,
+  !  'idx' counts all atoms in the unit cell,
   !  'JATOM' counts only the non-equivalent atoms
-  INDEX=0                                                           
+  idx=0                                                           
   DO JATOM = 1,NAT                                               
-     INDEX=INDEX+1
-     READ(20,1030) IATNR(JATOM),( POS(J,INDEX),J=1,3 ),MULT(JATOM),ISPLIT(JATOM)
+     idx=idx+1
+     READ(20,1030) IATNR(JATOM),( POS(J,idx),J=1,3 ),MULT(JATOM),ISPLIT(JATOM)
      if(isplit(jatom).eq.99)    lxdos=   3           
      if(isplit(jatom).eq.88)    lxdos=   3          
      IF (MULT(JATOM) .EQ. 0) THEN
         !...illegal number of equivalent atoms
-        if (myrank.EQ.master .OR. fastFilesystem/=0) WRITE (6,6000) JATOM, INDEX, MULT(JATOM)
+        if (myrank.EQ.master .OR. fastFilesystem/=0) WRITE (6,6000) JATOM, idx, MULT(JATOM)
         GOTO 930
      ENDIF
      DO M=1,MULT(JATOM)-1                                     
-        INDEX=INDEX+1                                            
-        READ(20,1031) IATNR(JATOM),( POS(J,INDEX),J=1,3)         
+        idx=idx+1                                            
+        READ(20,1031) IATNR(JATOM),( POS(J,idx),J=1,3)         
      ENDDO
      READ(20,1050) ANAME(JATOM),JRI(JATOM),R0(JATOM),RMT(JATOM),ZZ(JATOM)
      DX(JATOM)=LOG(RMT(JATOM)/R0(JATOM)) / (JRI(JATOM)-1)           
@@ -137,8 +151,8 @@ PROGRAM DMFT2
   ENDDO
 
   allocate (pu1u1(0:lxdos,0:lxdos),pu1ue(0:lxdos,0:lxdos),pu1u2(0:lxdos,0:lxdos,nloat),pueue(0:lxdos,0:lxdos),pueu2(0:lxdos,0:lxdos,nloat),pu2u2(0:lxdos,nloat,0:lxdos,nloat))
-  ALLOCATE (rotij(3,3,index),tauij(3,index))
-  ndif=index
+  ALLOCATE (rotij(3,3,idx),tauij(3,idx))
+  ndif=idx
   CALL doreallocate(pos, 3, ndif)
   !.....READ INPUT AND POTE                                               
   READ(5,1003)  MODUS,MODUS1,coord                                        
@@ -185,25 +199,36 @@ PROGRAM DMFT2
   
   CALL RECFIL(FNAME1,GMAX,RCFILE,KXMAX,KYMAX,KZMAX,NWAVE)
 
+  vectors=0
   if (vector_para) then
      FNAME = '_processes_'
      CALL FilenameMPI2(FNAME)
      nvector=0
-     vectors=0
      open(999,FILE=FNAME,STATUS='OLD',ERR=88,IOSTAT=ios) ! opens _processes_x
      nkp=0
      DO
-        READ (999,*,END=88,ERR=970) ivector,inkp,ik_start,vec_up,vec_dn,ene_dn,ene_up  ! can jump to 20
+        READ (999,*,END=88,ERR=970) ivector,inkp,ik_start,vec_up,vec_dn,&
+                &ene_dn,ene_up,norm_up,norm_dn
         nvector = nvector+1
         nkp = nkp+inkp
         vectors(nvector,1) = ivector
         vectors(nvector,2) = inkp
         vectors(nvector,3) = ik_start
-        fvectors(nvector,1) = vec_up
-        fvectors(nvector,2) = vec_dn
-        fvectors(nvector,3) = ene_dn
-        fvectors(nvector,4) = ene_up
-        if (myrank.EQ.master .OR. FastFilesystem/=0) WRITE(6,*) 'FNAMES=', fvectors(nvector, :)
+        if(isp_updn==1)then
+            fvectors(nvector,1) = vec_up
+            fvectors(nvector,2) = vec_dn
+            fvectors(nvector,3) = ene_dn
+            fvectors(nvector,4) = ene_up
+            fvectors(nvector,5) = norm_up
+            fvectors(nvector,6) = norm_dn
+        else
+            fvectors(nvector,2) = vec_up
+            fvectors(nvector,1) = vec_dn
+            fvectors(nvector,4) = ene_dn
+            fvectors(nvector,3) = ene_up
+            fvectors(nvector,6) = norm_up
+            fvectors(nvector,5) = norm_dn
+        endif
      ENDDO
 88   CONTINUE
      close(999)
@@ -212,10 +237,9 @@ PROGRAM DMFT2
   endif
 
   call gh5_init()
-#ifdef MPI
+#ifdef mpi_mode
   CALL INI_GMPI(MYRANK,NPROCS,MASTER,VECTOR_PARA,NVECTOR,VECTORS)
 #endif
-
 
   if(myrank.EQ.master)then
       call gh5_open_r('GPARAMBANDS.h5', f_id)
@@ -226,7 +250,7 @@ PROGRAM DMFT2
       call gh5_read(ispin_pol, "/ispin", f_id)
       call gh5_close(f_id)
   endif
-#ifdef MPI
+#ifdef mpi_mode
   call mpi_bcast(nkpt,1,mpi_integer,master,mpi_comm_world,ierr)
   call mpi_bcast(nmat,1,mpi_integer,master,mpi_comm_world,ierr)
   call mpi_bcast(nume,1,mpi_integer,master,mpi_comm_world,ierr)

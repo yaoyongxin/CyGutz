@@ -6,7 +6,7 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     use struct, only: nat
     use com_mpi,only: nvector,vector_para,fvectors,vectors, &
 
-#ifdef MPI
+#ifdef mpi_mode
             &dsum_all_mpi,isum_all_mpi, &
 #endif
 
@@ -19,7 +19,6 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     real(8) ss,t,z,e1
     logical linef
     character*10 kname
-    character*200   fname
     real(8),parameter :: rytoev=13.60569193_8
     integer,parameter :: iu=90
 
@@ -31,9 +30,9 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     do ivector=1,nvector
         if (vector_para) then
             do is=1,isospin    !------ over up/dn ---------------------!
-                fname = fvectors(ivector, is+2)
                 itape=61-is
-                open(itape,file=fname,status='old',form='formatted')
+                open(itape,file=fvectors(ivector, is+2), &
+                       &status='old',form='formatted')
             enddo
         endif
         do is=1,isospin
@@ -67,7 +66,7 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
             endif
         end do
     end do
-#ifdef MPI
+#ifdef mpi_mode
     call dsum_all_mpi(bnd_ek,nume*nkpt*isospin)
     call isum_all_mpi(bnd_ne,3*nkpt*isospin)
 #endif
@@ -121,22 +120,41 @@ end subroutine gutz_set_ef_lda
 subroutine gh5_save_normso(nume,nkpt)
     use ghdf5_base
     use com,only: iso,bnd_ne,ispin_pol
-    use com_mpi,only: myrank,master
+    use com_mpi,only: myrank,master,vector_para, &
+#ifdef mpi_mode
+        &dsum_master_mpi, &
+#endif
+        &vectors,nvector,fvectors
     implicit none
     integer,intent(in)::nume,nkpt
 
-    integer isp,ifile,ikp
+    integer isp,ifile,iks,ikp,ivector
     real(8)normso(nume,2,nkpt)
 
-    if(iso==1.or.myrank/=master.or.ispin_pol==1)return
+    if(iso==1.or.ispin_pol==1)return
     normso=0
-    do isp=1,2
-        ifile=13-isp
-        do ikp=1,nkpt
-            read(ifile,*)normso(1:bnd_ne(1,ikp,1),isp,ikp)
+    
+    DO ivector=1,nvector
+        do isp=1,2
+            ifile=13-isp
+            if(vector_para)then
+                open(ifile,file=fvectors(1,isp+4),status="old",form="formatted")
+            endif
+            do iks=1,vectors(ivector,2)
+                ikp=vectors(ivector,3)+iks
+                read(ifile,*)normso(1:bnd_ne(1,ikp,1),isp,ikp)
+            enddo
+            if(vector_para)then
+                close(ifile)
+            endif
         enddo
     enddo
-    call gh5_write(normso,nume,2,nkpt,"/normso",log_file_id)
+#ifdef mpi_mode
+    call dsum_master_mpi(normso,nume*2*nkpt)
+#endif
+    if(myrank==master)then
+        call gh5_write(normso,nume,2,nkpt,"/normso",log_file_id)
+    endif
     return
 
 end subroutine gh5_save_normso
@@ -460,7 +478,7 @@ subroutine gmpi_wrt()
     use ghdf5_base
     implicit none
       
-    integer i
+    integer i,vecs(nvector,3)
     character*7 str1
     
     if(nprocs==1.or.gfile==2)return
@@ -471,7 +489,8 @@ subroutine gmpi_wrt()
     call gh5_write(master,'/master',f_id)
     call gh5_write(nvector,'/nvec',f_id)
     if(vector_para)then
-        call gh5_write(vectors(1:nvector,1:3),nvector,3,'/KVEC',f_id)
+        vecs=vectors(1:nvector,1:3)
+        call gh5_write(vecs,nvector,3,'/KVEC',f_id)
     else
         stop " Only vector_para is supported!"
     endif

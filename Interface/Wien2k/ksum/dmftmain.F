@@ -23,7 +23,7 @@ PROGRAM DMFTMAIN
   CHARACTER*11    STATUS,FORM                                      
   CHARACTER*67    ERRMSG
   CHARACTER*80    DEFFN, ERRFN
-  CHARACTER*200   FNAME, vec_up, vec_dn, ene_up, ene_dn
+  CHARACTER*200   FNAME, vec_up, vec_dn, ene_up, ene_dn, norm_up, norm_dn
   CHARACTER*161   TEXT
   INTEGER,ALLOCATABLE :: ieband(:)        
   !INTEGER         IPROC
@@ -145,6 +145,10 @@ PROGRAM DMFTMAIN
   NKPT=numkpt
   REWIND(ITAPE)
 
+  if(.not.vector_para)then
+    vectors(1,2)=numkpt
+  endif
+
   if (myrank.EQ.master .OR. fastFilesystem) WRITE(6,*) 'numkpt=', numkpt
  
   CALL allocate_kpts(numkpt)
@@ -179,12 +183,12 @@ PROGRAM DMFTMAIN
   if (vector_para) then
      FNAME = '_processes_'
      CALL FilenameMPI2(FNAME)
-     !WRITE(6,*) 'Trying to open', FNAME
      nvector=0
      vectors=0
-     open(999,FILE=FNAME,STATUS='OLD',ERR=88,IOSTAT=ios) ! opens _processes_x                                                                                 
+     open(999,FILE=FNAME,STATUS='OLD',ERR=88,IOSTAT=ios) ! opens _processes_x
      DO
-        READ (999,*,END=88,ERR=970) ivector,inkp,ik_start,vec_up,vec_dn,ene_dn,ene_up  ! can jump to 20
+        READ (999,*,END=88,ERR=970) ivector,inkp,ik_start,vec_up,vec_dn, &
+            &ene_dn,ene_up,norm_up,norm_dn
         nvector = nvector+1
         nkp = nkp+inkp
         vectors(nvector,1) = ivector
@@ -194,12 +198,15 @@ PROGRAM DMFTMAIN
         fvectors(nvector,2) = vec_dn
         fvectors(nvector,3) = ene_dn
         fvectors(nvector,4) = ene_up
-        if (myrank.EQ.master .OR. FastFilesystem) WRITE(6,*) 'FNAMES=', fvectors(nvector, :)
+        fvectors(nvector,5) = norm_up
+        fvectors(nvector,6) = norm_dn
      ENDDO
 88   CONTINUE
      close(999)
   else
      nvector=1
+     vectors(1,1) = 1
+     vectors(1,3) = 0
   endif
 !     LATGEN GENERATES TWO BRAVAIS MATRICES, DEFINES THE VOLUME OF      
 !     THE UNIT CELL AND CALLS ROTDEF                                    
@@ -409,7 +416,6 @@ PROGRAM DMFTMAIN
   nmat=0
   nume=0
   DO ivector=1,nvector
-
      if (vector_para) then
         DO is=1,iso    !------ over up/dn ---------------------!
            FNAME = fvectors(ivector, is+2)
@@ -451,7 +457,7 @@ PROGRAM DMFTMAIN
      END DO
   END DO
 
-#ifdef MPI
+#ifdef mpi_mode
   call imax1_all_mpi(nume)
   call imax1_all_mpi(nmat)
 #endif
@@ -478,7 +484,7 @@ PROGRAM DMFTMAIN
       endif
   ENDIF
 
-#ifdef MPI
+#ifdef mpi_mode
   call gmpi_wrt()
 #endif
 

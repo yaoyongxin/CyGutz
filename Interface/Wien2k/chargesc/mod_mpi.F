@@ -5,7 +5,7 @@ MODULE com_mpi
 !!! This module should contain everything connected with paralelezation 
 !!! of the code with MPI
 
-#ifdef MPI
+#ifdef mpi_mode
   include 'mpif.h'
 #endif
 
@@ -21,12 +21,12 @@ MODULE com_mpi
   INTEGER      :: vectors(20,3)        ! which vector files should be read
   INTEGER      :: nvector
   CHARACTER*200:: VECFN(4)
-  CHARACTER*200:: fvectors(20,4)
+  CHARACTER*200:: fvectors(20,6)
   INTEGER      :: pr_proc, pr_procr
   INTEGER, ALLOCATABLE :: pr_procs(:)
 CONTAINS
 
-#ifdef MPI
+#ifdef mpi_mode
 ! What needs to be done for parallel job
   SUBROUTINE start_MPI
     IMPLICIT NONE
@@ -102,40 +102,39 @@ CONTAINS
     REAL*8, allocatable :: ww_xwt1(:,:)
     COMPLEX*16, allocatable :: w_sumfft(:,:,:), w_vsumfft(:,:,:)
 
-    CALL MPI_REDUCE(xwt, w_xwt, 1,               MPI_REAL8,          MPI_SUM, master, MPI_COMM_WORLD, ierr)
+    CALL MPI_REDUCE(xwt, w_xwt, 1, MPI_REAL8, MPI_SUM, master, MPI_COMM_WORLD, ierr)
     if (ierr.ne.0) print *, 'ERROR in MPI_REDUCE 1', ierr
-    if (ierr.ne.0) print *, 'ERROR in MPI_REDUCE 2', ierr
     
     if (myrank.eq.master) then
        xwt = w_xwt
     endif
 
     ALLOCATE( ww_RHOLM(1:NRAD,1:LM_MAX,1:nat) )
-    CALL MPI_REDUCE(w_RHOLM, ww_RHOLM, NRAD*LM_MAX*nat, MPI_REAL8,          MPI_SUM, master, MPI_COMM_WORLD, ierr)
+    CALL MPI_REDUCE(w_RHOLM, ww_RHOLM, NRAD*LM_MAX*nat, MPI_REAL8, MPI_SUM, master, MPI_COMM_WORLD, ierr)
     if (ierr.ne.0) print *, 'ERROR in MPI_REDUCE 4', ierr
     if (myrank.eq.master)w_RHOLM(:,:,:) = ww_RHOLM(:,:,:)
     DEALLOCATE( ww_RHOLM )
 
     ALLOCATE( ww_vRHOLM(1:NRAD,1:LM_MAX,1:nat) )
-    CALL MPI_REDUCE(w_vRHOLM, ww_vRHOLM, NRAD*LM_MAX*nat, MPI_REAL8,          MPI_SUM, master, MPI_COMM_WORLD, ierr)
+    CALL MPI_REDUCE(w_vRHOLM, ww_vRHOLM, NRAD*LM_MAX*nat, MPI_REAL8, MPI_SUM, master, MPI_COMM_WORLD, ierr)
     if (ierr.ne.0) print *, 'ERROR in MPI_REDUCE 5', ierr
     if (myrank.eq.master)w_vRHOLM(:,:,:) = ww_vRHOLM(:,:,:)
     DEALLOCATE( ww_vRHOLM )
 
     ALLOCATE( ww_xwt1(0:21,1:nat) )
-    CALL MPI_REDUCE(w_xwt1, ww_xwt1, 22*nat, MPI_REAL8,          MPI_SUM, master, MPI_COMM_WORLD, ierr)
+    CALL MPI_REDUCE(w_xwt1, ww_xwt1, 22*nat, MPI_REAL8, MPI_SUM, master, MPI_COMM_WORLD, ierr)
     if (ierr.ne.0) print *, 'ERROR in MPI_REDUCE 6', ierr
     if (myrank.eq.master)w_xwt1(:,:) = ww_xwt1(:,:)
     DEALLOCATE( ww_xwt1 )
 
     ALLOCATE( w_sumfft(iff1,iff2,iff3) )
-    CALL MPI_REDUCE(sumfft, w_sumfft,   iff1*iff2*iff3, MPI_DOUBLE_COMPLEX, MPI_SUM, master, MPI_COMM_WORLD, ierr)
+    CALL MPI_REDUCE(sumfft, w_sumfft, iff1*iff2*iff3, MPI_DOUBLE_COMPLEX, MPI_SUM, master, MPI_COMM_WORLD, ierr)
     if (ierr.ne.0) print *, 'ERROR in MPI_REDUCE 11', ierr
     if (myrank.eq.master)sumfft(:,:,:) = w_sumfft(:,:,:)
     DEALLOCATE( w_sumfft )
     
     ALLOCATE( w_vsumfft(iff1,iff2,iff3) )
-    CALL MPI_REDUCE(vsumfft, w_vsumfft,   iff1*iff2*iff3, MPI_DOUBLE_COMPLEX, MPI_SUM, master, MPI_COMM_WORLD, ierr)
+    CALL MPI_REDUCE(vsumfft, w_vsumfft, iff1*iff2*iff3, MPI_DOUBLE_COMPLEX, MPI_SUM, master, MPI_COMM_WORLD, ierr)
     if (ierr.ne.0) print *, 'ERROR in MPI_REDUCE 12', ierr
     if (myrank.eq.master)vsumfft(:,:,:) = w_vsumfft(:,:,:)
     DEALLOCATE( w_vsumfft )

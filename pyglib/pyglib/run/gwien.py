@@ -73,11 +73,15 @@ def get_file_info(fname, unit, idmf, case, scratch, so, para, cmplx, _band,
         return [unit, "'{}.scf2{}'".format(case, updn), \
                 "'unknown'", "'formatted'", 0]
     elif 'normupdn' == fname:
-        return [unit, "'{}.norm{}{}'".format(case, so, updn), "'unknown'", \
-                "'formatted'", 0]
+        if so == "so" and updn == "":
+            _updn = "up"
+        else:
+            _updn = updn
+        return [unit, "'{}.norm{}{}{}'".format(case, so, _updn, para), \
+                "'unknown'", "'formatted'", 0]
     elif 'normdnup' == fname:
-        return [unit, "'{}.norm{}{}'".format(case, so, dnup), "'unknown'", \
-                "'formatted'", 0]
+        return [unit, "'{}.norm{}{}{}'".format(case, so, dnup, para), \
+                "'unknown'", "'formatted'", 0]
     else:
         raise ValueError('No matching file name {}!'.format(fname))
 
@@ -272,8 +276,8 @@ def processes_convert(so,updn):
     nkstart = 0
     for line in lines:
         data = line.split(':')
-        if re.match('\s*\d+', data[0]):
-            vecn = [None]*4
+        if data[0].strip().isdigit():
+            vecn = ["emmanuel" for i in range(6)]
             i, nkp, nprc = map(int,data[::2])
             if not so:
                 fdef = open('{}lapw1_{}.def'.format(updn,i), 'r')
@@ -293,10 +297,18 @@ def processes_convert(so,updn):
                 fdef = open('{}lapwso_{}.def'.format(updn,i), 'r')
                 for line in fdef:
                     data = line.split(',')
-                    if int(data[0])==42: vecn[0]=data[1].split("'")[1]
-                    if int(data[0])==41: vecn[1]=data[1].split("'")[1]
-                    if int(data[0])==52: vecn[2]=data[1].split("'")[1]
-                    if int(data[0])==51: vecn[3]=data[1].split("'")[1]
+                    if int(data[0])==42:
+                        vecn[0]=data[1].split("'")[1]
+                    elif int(data[0])==41:
+                        vecn[1]=data[1].split("'")[1]
+                    elif int(data[0])==52:
+                        vecn[2]=data[1].split("'")[1]
+                    elif int(data[0])==51:
+                        vecn[3]=data[1].split("'")[1]
+                    elif int(data[0])==46:
+                        vecn[4]=data[1].split("'")[1]
+                    elif int(data[0])==45:
+                        vecn[5]=data[1].split("'")[1]
                 fdef.close()
 
             if work.has_key(nprc):
@@ -308,7 +320,7 @@ def processes_convert(so,updn):
     for prc in sorted(work.keys()):
         fo = open('_processes_{}'.format(prc-1), 'w')
         for (i, nkp, nkstart, vecn) in work[prc]:
-            fo.write('{} {} {} "{}" "{}" "{}" "{}"\n'.format(\
+            fo.write('{} {} {} "{}" "{}" "{}" "{}" "{}" "{}"\n'.format(\
                     i, nkp, nkstart, *vecn))
 
 

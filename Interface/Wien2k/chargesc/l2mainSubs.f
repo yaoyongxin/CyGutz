@@ -1,173 +1,242 @@
-SUBROUTINE Read_Vec_Spin(ikp, E, As, As_lo, kx, ky, kz, vnorm, &
+subroutine read_vec_spin(ikp, e, as, as_lo, kx, ky, kz, vnorm, &
         &kxlo, kylo, kzlo, bkx, bky, bkz, bkxlo, bkylo, bkzlo, &
         &more_kpoints, n0, emin, nemin, iso, nmat, nume, nnlo)
-  use dmf, ONLY: Qcomplex
-  IMPLICIT NONE
-  INTEGER, intent(in)  :: ikp
-  REAL*8,  intent(out) :: E(nume), vnorm(nume)
-  COMPLEX*16,intent(out) :: As(nmat,nume,iso)
-  COMPLEX*16,intent(out) :: As_lo(nnlo,nume,iso)
-  INTEGER, intent(out) :: kx(nmat), ky(nmat), kz(nmat), kxlo(nnlo), kylo(nnlo), kzlo(nnlo)
-  REAL*8,  intent(out) :: bkx(nmat), bky(nmat), bkz(nmat), bkxlo(nnlo), bkylo(nnlo), bkzlo(nnlo)
-  LOGICAL, intent(out) :: more_kpoints
-  INTEGER, intent(out) :: n0, nemin
-  REAL*8,  intent(in)  :: emin
-  INTEGER, intent(in)  :: iso, nmat, nume, nnlo
+  use dmf, only: qcomplex
+  implicit none
+  integer, intent(in)  :: ikp
+  real*8,  intent(out) :: e(nume), vnorm(nume)
+  complex*16,intent(out) :: as(nmat,nume,iso)
+  complex*16,intent(out) :: as_lo(nnlo,nume,iso)
+  integer, intent(out) :: kx(nmat), ky(nmat), kz(nmat), kxlo(nnlo), kylo(nnlo), kzlo(nnlo)
+  real*8,  intent(out) :: bkx(nmat), bky(nmat), bkz(nmat), bkxlo(nnlo), bkylo(nnlo), bkzlo(nnlo)
+  logical, intent(out) :: more_kpoints
+  integer, intent(out) :: n0, nemin
+  real*8,  intent(in)  :: emin
+  integer, intent(in)  :: iso, nmat, nume, nnlo
   ! locals
-  REAL*8  :: As_tmp(nmat)
-  INTEGER :: i, is, itape, ios, ne, num, nlov
-  REAL*8  :: s,t,z, vnorm1, wgh
-  CHARACTER*10 :: bname
+  real*8  :: as_tmp(nmat)
+  integer :: i, is, itape, ios, ne, num, nlov
+  real*8  :: s,t,z, wgh
+  character*10 :: bname
   
-  DO is=1,iso
+  do is=1,iso
      itape=8+is
-     READ(itape,IOSTAT=ios) s,t,z,bname,n0,ne,wgh
-     more_kpoints=.FALSE.
-     IF (ios /= 0) EXIT
-     more_kpoints=.TRUE.
+     read(itape,iostat=ios) s,t,z,bname,n0,ne,wgh
+     more_kpoints=.false.
+     if (ios /= 0) exit
+     more_kpoints=.true.
      
-     READ(itape) (kx(i),ky(i),kz(i),i=1,n0-nnlo), &
+     read(itape) (kx(i),ky(i),kz(i),i=1,n0-nnlo), &
          &(kxlo(i),kylo(i),kzlo(i),i=1,nnlo)
      
-     DO i=1,n0-nnlo
+     do i=1,n0-nnlo
         bkx(i)=s+kx(i)
         bky(i)=t+ky(i)
         bkz(i)=z+kz(i)
-     ENDDO
-     DO i=1,nnlo
+     enddo
+     do i=1,nnlo
         bkxlo(i)=s+kxlo(i)
         bkylo(i)=t+kylo(i)
         bkzlo(i)=z+kzlo(i)
-     ENDDO
+     enddo
      nemin=1
-     DO
-        READ(itape) num,E(num)
-        if (Qcomplex) then
-           READ(itape) (As(i,num,is),i=1,n0)
+     do
+        read(itape) num,e(num)
+        if (qcomplex) then
+           read(itape) (as(i,num,is),i=1,n0)
         else
-           READ(itape) (As_tmp(i),i=1,n0)
-           As(:n0,num,is) = As_tmp(:n0)
+           read(itape) (as_tmp(i),i=1,n0)
+           as(:n0,num,is) = as_tmp(:n0)
         endif
-        As_lo(:nnlo,num,is) = As(n0-nnlo+1:n0,num,is)
-        IF(e(num).LT.emin) nemin=nemin+1
-        IF(num.EQ.ne) EXIT
-     ENDDO
-  ENDDO    
+        as_lo(:nnlo,num,is) = as(n0-nnlo+1:n0,num,is)
+        if(e(num).lt.emin) nemin=nemin+1
+        if(num.eq.ne) exit
+     enddo
+  enddo    
 
-  READ(12,202,iostat=ios) (vnorm(i),i=1,ne)
-  IF (ios /= 0) THEN
+  read(12,202,iostat=ios) (vnorm(i),i=1,ne)
+  if (ios /= 0) then
       vnorm=1.d0
-  ENDIF
+  endif
 
-  RETURN
+  return
 
-202 FORMAT(4e20.12)
-END SUBROUTINE Read_Vec_Spin
+202 format(4e20.12)
+end subroutine read_vec_spin
 
 
-SUBROUTINE DMFT_WEIGHTS(zw2, Aweight, nbands)
-    IMPLICIT NONE
-    REAL*8,     intent(out)  :: zw2(nbands)
-    COMPLEX*16, intent(inout):: Aweight(nbands,nbands)
-    INTEGER,    intent(in)   :: nbands
+subroutine dmft_weights(zw2, aweight, nbands)
+    implicit none
+    real*8,     intent(out)  :: zw2(nbands)
+    complex*16, intent(inout):: aweight(nbands,nbands)
+    integer,    intent(in)   :: nbands
     ! locals
-    INTEGER    ::  lwork, lrwork
-    INTEGER    :: idxarr(nbands)
+    integer    ::  lwork, lrwork
+    integer    :: idxarr(nbands)
     complex*16, allocatable :: work(:)
     real*8,     allocatable :: rwork(:)
     integer :: info
     
     lwork = nbands+nbands*nbands
     lrwork =  3*nbands
-    ALLOCATE(work(lwork),rwork(lrwork))
+    allocate(work(lwork),rwork(lrwork))
        
-    Aweight = -Aweight
-    call zheev("v","u",nbands,Aweight,nbands,zw2,work,lwork,rwork,info)
+    aweight = -aweight
+    call zheev("v","u",nbands,aweight,nbands,zw2,work,lwork,rwork,info)
     if (info .ne. 0) then
-       write(0,"(A,I0)")'Diagonalization of weights failed. Info-zheevd=',info
+       write(0,"(a,i0)")'diagonalization of weights failed. info-zheevd=',info
        stop
     endif
     ! change sign back
     zw2 = -zw2
-    DEALLOCATE(work, rwork)
-    CALL eig_order_abs_val(zw2, idxarr, nbands)
-    CALL permute_eigensystem1(idxarr, zw2, Aweight, nbands)
+    deallocate(work, rwork)
+    call eig_order_abs_val(zw2, idxarr, nbands)
+    call permute_eigensystem1(idxarr, zw2, aweight, nbands)
     return
   
-END SUBROUTINE DMFT_WEIGHTS
+end subroutine dmft_weights
 
 
-SUBROUTINE eig_order_abs_val(ev, idxarr, ndim)
-  IMPLICIT NONE
+subroutine eig_order_abs_val(ev, idxarr, ndim)
+  implicit none
 !!!-----------------------------------------------------------------!!!
-!!! This routine sorts complex eigenvalues of a matrix according to !!!
+!!! this routine sorts complex eigenvalues of a matrix according to !!!
 !!! its real parts with the smallest in the first slot and reorders !!!
 !!! the matrices of left (row) and right (column) eigenvectors in a !!!
 !!! corresponding manner.                                           !!!
 !!!-----------------------------------------------------------------!!!
-  !---------- Passed variables ----------
-  real*8, intent(in)   :: ev(ndim)         ! Array of eigenvalues
-  INTEGER, intent(out) :: idxarr(ndim)     ! Index array which gives proper     order
-  INTEGER :: ndim                            ! Dimension of matrices
+  !---------- passed variables ----------
+  real*8, intent(in)   :: ev(ndim)         ! array of eigenvalues
+  integer, intent(out) :: idxarr(ndim)     ! index array which gives proper     order
+  integer :: ndim                            ! dimension of matrices
   !f2py integer intent(hide), depend(ev)  :: ndim=shape(ev,0)
-  !---------- Parameters ----------
-  REAL*8, PARAMETER :: maxval = 1000.d0
-  !---------- Local variables ----------
-  LOGICAL, ALLOCATABLE :: sorted(:)
-  REAL*8,  ALLOCATABLE :: sortonr(:)
-  INTEGER :: p
-  INTEGER :: q
-  INTEGER :: idx
-  REAL*8  :: min
-  !---------- Allocate dynamic memory storage ----------
-  ALLOCATE(sortonr(ndim), sorted(ndim))
-  !---------- Initialize arrays ----------
+  !---------- parameters ----------
+  real*8, parameter :: maxval = 1000.d0
+  !---------- local variables ----------
+  logical, allocatable :: sorted(:)
+  real*8,  allocatable :: sortonr(:)
+  integer :: p
+  integer :: q
+  integer :: idx
+  real*8  :: min
+  !---------- allocate dynamic memory storage ----------
+  allocate(sortonr(ndim), sorted(ndim))
+  !---------- initialize arrays ----------
   idxarr = 0
-  sortonr = -DBLE(abs(ev))
-  sorted = .FALSE.
-  !---------- Create index array for real value ----------
-  sorted = .FALSE.
-  DO p = 1,ndim
+  sortonr = -dble(abs(ev))
+  sorted = .false.
+  !---------- create index array for real value ----------
+  sorted = .false.
+  do p = 1,ndim
      min = maxval
-     DO q = 1,ndim
-        IF(.NOT.sorted(q).AND.min.GT.sortonr(q)) THEN
+     do q = 1,ndim
+        if(.not.sorted(q).and.min.gt.sortonr(q)) then
            min = sortonr(q)
            idx = q
-        ENDIF
-     ENDDO
+        endif
+     enddo
      idxarr(p) = idx
-     sorted(idx) = .TRUE.
-  ENDDO
-  DEALLOCATE(sortonr, sorted)
-  RETURN
-END SUBROUTINE eig_order_abs_val
+     sorted(idx) = .true.
+  enddo
+  deallocate(sortonr, sorted)
+  return
+end subroutine eig_order_abs_val
 
 
-SUBROUTINE permute_eigensystem1(idxarr, ev, evr, ndim)
-  IMPLICIT NONE
-  !---------- Passed variables ----------
-  INTEGER, intent(in)       :: idxarr(ndim)     ! Index array which gives       proper order
-  real*8, intent(inout)     :: ev(ndim)         ! Array of eigenvalues
-  COMPLEX*16, intent(inout) :: evr(ndim,ndim)   ! Matrix of right eigenvectors  (column)
-  INTEGER :: ndim                               ! Dimension of matrices
+subroutine permute_eigensystem1(idxarr, ev, evr, ndim)
+  implicit none
+  !---------- passed variables ----------
+  integer, intent(in)       :: idxarr(ndim)     ! index array which gives       proper order
+  real*8, intent(inout)     :: ev(ndim)         ! array of eigenvalues
+  complex*16, intent(inout) :: evr(ndim,ndim)   ! matrix of right eigenvectors  (column)
+  integer :: ndim                               ! dimension of matrices
   !f2py integer intent(hide), depend(ev)  :: ndim=shape(ev,0)
-  !---------- Local variables ------------------
-  INTEGER :: p
-  COMPLEX*16, ALLOCATABLE :: eval(:)
-  COMPLEX*16, ALLOCATABLE :: evec(:,:)
-  ALLOCATE(eval(ndim), evec(ndim,ndim))
-  !---------- Permute the eigenvalues ----------
-  DO p = 1,ndim
+  !---------- local variables ------------------
+  integer :: p
+  complex*16, allocatable :: eval(:)
+  complex*16, allocatable :: evec(:,:)
+  allocate(eval(ndim), evec(ndim,ndim))
+  !---------- permute the eigenvalues ----------
+  do p = 1,ndim
      eval(p) = ev(idxarr(p))
-  ENDDO
+  enddo
   ev = eval
-  !---------- Permute the right eigenvectors ----------
-  DO p = 1,ndim
+  !---------- permute the right eigenvectors ----------
+  do p = 1,ndim
      evec(:,p) = evr(:,idxarr(p))
-  ENDDO
+  enddo
   evr = evec
-  !---------- Deallocate dynamic memory storage ----------
-  DEALLOCATE(eval, evec)
-  RETURN
-END SUBROUTINE permute_eigensystem1
+  !---------- deallocate dynamic memory storage ----------
+  deallocate(eval, evec)
+  return
+end subroutine permute_eigensystem1
 
+
+!find max reciprocal lattice vectors
+subroutine get_kmax(kmax,nat,nnlo)
+    use param,only:fh_vec
+    use com_mpi,only:nvector,vector_para,fvectors,findmaxk_mpi,vectors
+    use dmf,only: qcomplex
+    implicit none
+    integer,intent(in)::nnlo,nat
+    integer,intent(out)::kmax(3)
+
+    integer :: ivector,itmp,n,ne,i,j,iks,ios,num
+    integer,allocatable::keigen(:,:)
+    real(8) :: rtmp
+    complex(8) :: ztmp
+    character :: stmp*10
+
+    kmax=0
+    do ivector=1,nvector
+        if (vector_para) then
+        open(fh_vec,file=fvectors(ivector,1), &
+                &status='old',form='unformatted')
+        else
+            rewind(fh_vec)
+        endif
+        do i=1,nat
+            read(fh_vec) rtmp; read(fh_vec) rtmp
+        enddo
+        num=0
+        do iks=1,vectors(ivector,2) 
+            read(fh_vec,iostat=ios) rtmp,rtmp,rtmp,stmp,n,ne
+            if(ios/=0)exit
+            if(allocated(keigen))then
+                if(num<n)then
+                    num=n+7
+                    deallocate(keigen)
+                    allocate(keigen(3,num))
+                endif
+            else
+                num=n+7
+                allocate(keigen(3,num))
+            endif
+            read(fh_vec) ((keigen(i,j),i=1,3),j=1,n)
+            do i=n-nnlo,1,-1
+                do j=1,3
+                    kmax(j)=max(keigen(j,i),kmax(j))
+                enddo
+            enddo
+            ! skip-read the remaining
+            num=0
+            do while(num/=ne)
+                read(fh_vec)num,rtmp
+                if(qcomplex)then
+                    read(fh_vec)(ztmp, i=1,n)
+                else
+                    read(fh_vec)(rtmp, i=1,n)
+                endif
+            enddo
+        enddo
+        if (vector_para) then
+            close(fh_vec)
+        else
+            rewind(fh_vec)
+        endif
+    enddo
+    deallocate(keigen)
+    call findmaxk_mpi(kmax)
+    return
+
+end subroutine get_kmax

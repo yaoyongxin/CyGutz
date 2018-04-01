@@ -7,7 +7,7 @@ SUBROUTINE abc(l,jlo,jatom)
   USE defs, ONLY: 
   USE struk, ONLY: rmt
   USE lo, ONLY: lapw, plo, dplo, alo, blo, clo, pi12lo, pe12lo
-  USE atspdt, ONLY: e=>el,p,dp,pe,dpe,pei
+  USE atspdt, ONLY: p,dp,pe,dpe,pei
   USE com_mpi
   !USE parallel
   IMPLICIT NONE

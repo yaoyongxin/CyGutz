@@ -142,10 +142,9 @@ module gbroyden
     external :: f
      
     type(broyden_data) :: br_data
-    integer it,iflag,i_inner
+    integer it,iflag,i_inner,nbadmove
     real(q) alpha_mix
-    integer,parameter :: i_inner_max = 7
-    real(q),parameter :: rtol = 1.e-6_q
+    integer,parameter :: i_inner_max = 27
     real(q) f_max, f_max_best, x_best(n)
       
     f_max_best = 1.e4_q; i_inner=0
@@ -158,7 +157,7 @@ module gbroyden
         it=it+1
         call f(n,x,fvec,iflag)
         f_max = maxval(abs(fvec))
-        if(iflag==-1)then
+        if(iflag==-1.or.i_inner>i_inner_max+1.or.alpha_mix<1.e-8_q)then
             if(f_max<f_max_best)then
                 exit
             else
@@ -171,9 +170,9 @@ module gbroyden
             i_inner = 0
             f_max_best = f_max
             x_best = x
-        elseif(mode==1)then ! simple mix
+        else
             i_inner = i_inner + 1
-            if(i_inner>i_inner_max)then
+            if(i_inner>i_inner_max.and.mode==1)then
                 alpha_mix = alpha_mix/2
                 x = x_best
                 i_inner = 0

@@ -17,7 +17,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   USE w_atpar, ONLY: w_alo, w_nlo, w_nlov, w_nlon, w_ilo, w_loor, w_lapw, &
         & w_ri_mat, w_P, w_DP, w_jatom, w_FJ, w_DFJ, w_allocate, w_deallocate
   USE com_mpi, ONLY: nprocs, myrank, master, &
-#ifdef MPI
+#ifdef mpi_mode
         & zsum_master_mpi, &
 #endif
         & cpuID, vector_para,vectors,nvector,fvectors,VECFN
@@ -487,7 +487,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
      call gh5_close(f_id)
   END DO ! over different vector files
 
-#ifdef MPI
+#ifdef mpi_mode
   call zsum_master_mpi(h1e_list,maxdim2*maxdim2*norbitals)
 #endif
 
