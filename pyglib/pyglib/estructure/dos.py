@@ -96,7 +96,7 @@ def get_bands():
     with h5py.File("GPARAMBANDS.h5", 'r') as f:
         # band index list specifying the range of bands used
         # for the construction of correlated orbitals.
-        bnd_ne = f["/NE_LIST"][...]
+        bnd_ne = f["/NE_LIST_SPIN1"][...]
         # number of symmetry operations.
         nsym = f["/symnop"][0]
         # number of k-points

@@ -100,6 +100,9 @@ program cygutz
     call map_wh_bnd_matrix(wh%la1,bnd%la1,.false.)
     call calc_band_all(gp%io)
 
+    ! evaluate fermi energy, possibly more accurate ef for dos calculations.
+    call gutz_fermi(gp%io)
+
     !! Save important data for analysis.
     call postsave_gbands()
 

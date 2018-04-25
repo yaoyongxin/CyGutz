@@ -348,7 +348,8 @@ def create_gomp_file():
 
 
 def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
-        startp='lapw0', endp='', band='', openmp=False, cygutz='CyGutz',
+        startp='lapw0', endp='', band='', dos='',
+        openmp=False, cygutz='CyGutz',
         pa_list=[], recycle_rl=True, avg_dc=True, spinpol=False,
         p_so=False, gskip=False):
     '''Driver for Wien2k + Gutzwiller-Slave-boson job.
@@ -371,7 +372,9 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     if '-amix' in sys.argv:
         mix_dc = float(sys.argv[sys.argv.index('-amix') + 1])
     if '-band' in sys.argv:
-        band='-band'
+        band ='-band'
+    if '-dos' in sys.argv:
+        dos = '-dos'
     if '-nrl' in sys.argv:
         recycle_rl = False
     if '-navg_dc' in sys.argv:
@@ -385,9 +388,10 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
     if band == '-band':
         _band = '_band'
         nmaxiter = 1
-        cygutz = 'CyGutzB'
     else:
         _band = ''
+    if band == '-band' or dos == '-dos':
+        cygutz = 'CyGutzB'
 
     if len(sys.argv) > 1 and sys.argv[1] in ['-h', '--help']:
         help = '''
@@ -587,7 +591,7 @@ def run_gwien(nmaxiter=100, mix_dc=0.2, cc=1.e-3, ec=1.e-5, vc=1.e-2,
 
             if icycle > 0 or (startp in 'lapw0 lapw1 lapwso gwien1 CyGutz'):
                 gonestep(fday, cygutz, _mpi)
-            if band == '-band':
+            if band == '-band' or dos == '-dos':
                 sys.exit(0)
             shutil.copy2('GUTZ.LOG', 'SAVE_GUTZ.LOG')
             if endp == 'CyGutz':

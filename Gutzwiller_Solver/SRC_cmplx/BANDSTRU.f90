@@ -1125,6 +1125,13 @@ module bandstru
 
     allocate(weight_(nemax*jspin*nkpt)); weight_=0
     open(iu_kgen,file=kpt%file_name,status='old')
+    ! consistent check
+    read(iu_kgen,*)n1
+    rewind(iu_kgen)
+    if(n1/=nkpt)then
+        bnd%ef=0
+        return
+    endif
     call dos(nemax*jspin,nkpt,e_,weight_,elecn/2.d0*iso*jspin,ef,iw,nw)
     call eweigh(ef,weight_,nemax,nkpt,jspin,nehelp,eb,nbmax)
     close(iu_kgen)
