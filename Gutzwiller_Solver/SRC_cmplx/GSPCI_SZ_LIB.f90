@@ -569,6 +569,10 @@ subroutine solve_hembed_spci(w,method)
     if(method==0)then
         call lapack_diag_spci(dmem%v,dmem%nstates,w)
     else
+
+#ifdef debug_mode
+        call zprimme_diag_chk(dmem%nstates,10,av_gspci)
+#endif
         call primme_diag(dmem%v,dmem%nstates,w,av_gspci)
     endif
     return

@@ -4,7 +4,7 @@ DCPP =
 
 #FFLAGS = -O0 -check bound -check pointer -check arg_temp_created \
 		-traceback 
-#DCPP = -DDEBUG
+#DCPP = -Ddebug_mode
 
 obj = GPREC.o GTIME.o GCONSTANT.o GHDF5_BASE.o GPRIMME.o \
 	  UTIL.o SPARSE.o GHDF5.o GSPCI.o GSPCI_SZ_LIB.o
