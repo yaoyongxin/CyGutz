@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys, os, numpy, h5py
+from pyglib.mbody.coulomb_matrix import U_J_to_radial_integrals
 
 
 def h5save_usr_qa_setup(material, log=sys.stdout):
@@ -85,10 +86,11 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
         lhub = sys.argv[sys.argv.index('-um') + 1]
     else:
         print("\n Please select the method to parametrize Coulomb U-matrix.\n"+
-                " LHUB = 1: Slater-Condo parametrization.\n" +
+                " LHUB = 1: Slater-Condo parametrization (U,J).\n" +
+                " LHUB = 3: Slater-Condo parametrization (F-integral).\n" +
                 "        2: Kanamori parametrization (useful for models).\n" +
                 "        0: Manual input.")
-        lhub = get_usr_input(" Please select LHUB: ", ['1', '2', '0'])
+        lhub = get_usr_input(" Please select LHUB: ", ['1', '2', "3", '0'])
         usr_input.write(lhub + '\n')
     lhub = int(lhub)
     f['/usrqa/u_matrix_type'] = lhub
@@ -142,91 +144,91 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
     f['/usrqa/idx_equivalent_atoms'] = idx_equivalent_atoms
 
     # asking user list of correlated atoms and relative information:
-    if '-uniql' in sys.argv:
-        ipos = sys.argv.index('-uniql')+1
-        stmp = sys.argv[ipos]
-        unique_corr_symbol_list = [s for s in stmp.split('-')]
-        ipos += 1
-        stmp = sys.argv[ipos]
-        unique_df_list = [s for s in stmp.split('-')]
-        if lhub > 0:
-            ipos += 1
-            stmp = sys.argv[ipos]
-            unique_u_list = [float(s) for s in stmp.split('-')]
-            ipos += 1
-            stmp = sys.argv[ipos]
-            unique_j_list = [float(s) for s in stmp.split('-')]
+    unique_df_list = []
+    unique_corr_symbol_list = []
+    unique_u_list = []
+    unique_j_list = []
+    unique_f_list = []
+    unique_magmom_direction_list = []
+    unique_nf_list = []
+    for i, s in enumerate(material.symbols):
+        if s in material.symbols[:i]:
+            continue
+
+        print('\n ' + '-'*12 + "\n atom {} {}".format(i,s))
+        correlated = get_usr_input("\n Is this atom correlated?",
+                ['y', 'n'])
+        print(correlated, file=usr_input)
+        if 'n' in correlated:
+            continue
+        unique_corr_symbol_list.append(s)
+
+        df = get_usr_input_combo(
+                "\n Enter correlated shells?", ['s', 'p', 'd', 'f'])
+        print(df, file=usr_input)
+        unique_df_list.append(df)
+
+        if lhub in [1, 2]:
+            while True:
+                answer = raw_input(
+                        '\n Please provide interaction parameters U,J ' +
+                        '\n separated by a space (eV): ')
+                try:
+                    answer = answer.split()
+                    UJ = [float(answer[i]) for i in range(2)]
+                    break
+                except:
+                    pass
+            print(answer, file=usr_input)
+            unique_u_list.append(UJ[0])
+            unique_j_list.append(UJ[1])
+            _l = "spdf".index(unique_df_list[-1])
+            f_list = numpy.zeros(4)
+            f_list[:_l+1] = U_J_to_radial_integrals(_l, UJ[0], UJ[1])
+            unique_f_list.append(f_list)
+        elif lhub == 3:
+            while True:
+                answer = raw_input(
+                        '\n Please provide radial integrals F0,F1,F2,F3' +
+                        '\n separated by spaces and padded by 0s (eV): ')
+                try:
+                    answer = answer.split()
+                    f_list = [float(answer[i]) for i in range(4)]
+                    break
+                except:
+                    pass
+            print(answer, file=usr_input)
+            unique_f_list.append(f_list)
+
         if ldc == 2:
-            ipos += 1
-            stmp = sys.argv[ipos]
-            unique_nf_list = [[float(s)/2, float(s)/2] \
-                    for s in stmp.split('-')]
-    else:
-        unique_df_list = []
-        unique_corr_symbol_list = []
-        unique_u_list = []
-        unique_j_list = []
-        unique_magmom_direction_list = []
-        unique_nf_list = []
-        for i, s in enumerate(material.symbols):
-            if s in material.symbols[:i]:
-                continue
+            while True:
+                answer = raw_input(
+                        '\n Please provide the fixed number of' +
+                        '\n localized {}-electrons for Vdc: '.format(df))
+                try:
+                    nf = float(answer)
+                    break
+                except:
+                    continue
+            print(answer, file=usr_input)
+            unique_nf_list.append([nf/2,nf/2])
 
-            print('\n ' + '-'*12 + "\n atom {} {}".format(i,s))
-            correlated = get_usr_input("\n Is this atom correlated?",
-                    ['y', 'n'])
-            print(correlated, file=usr_input)
-            if 'n' in correlated:
-                continue
-            unique_corr_symbol_list.append(s)
-
-            df = get_usr_input_combo(
-                    "\n Enter correlated shells?", ['s', 'p', 'd', 'f'])
-            print(df, file=usr_input)
-            unique_df_list.append(df)
-
-            if lhub > 0:
-                while True:
-                    answer = raw_input(
-                            '\n Please provide interaction parameters U,J ' +
-                            '\n separated by a space (eV): ')
-                    try:
-                        answer = answer.split()
-                        UJ = [float(answer[i]) for i in range(2)]
-                        break
-                    except:
-                        pass
-                print(answer, file=usr_input)
-                unique_u_list.append(UJ[0])
-                unique_j_list.append(UJ[1])
-
-            if ldc == 2:
-                while True:
-                    answer = raw_input(
-                            '\n Please provide the fixed number of' +
-                            '\n localized {}-electrons for Vdc: '.format(df))
-                    try:
-                        nf = float(answer)
-                        break
-                    except:
-                        continue
-                print(answer, file=usr_input)
-                unique_nf_list.append([nf/2,nf/2])
-
-            if 'y' == spin_polarization == spin_orbit_coup:
-                if 'y' == ferromagnetism:
-                    vec = ferro_magmom_direction
-                else:
-                    vec = get_direction(log=usr_input)
+        if 'y' == spin_polarization == spin_orbit_coup:
+            if 'y' == ferromagnetism:
+                vec = ferro_magmom_direction
             else:
-                vec = [1., 0., 0.]
-            unique_magmom_direction_list.append(vec)
+                vec = get_direction(log=usr_input)
+        else:
+            vec = [1., 0., 0.]
+        unique_magmom_direction_list.append(vec)
 
     f['/usrqa/unique_corr_symbol_list'] = unique_corr_symbol_list
     f['/usrqa/unique_df_list'] = unique_df_list
-    if lhub > 0:
+    if len(unique_u_list) > 0:
         f['/usrqa/unique_u_list_ev'] = unique_u_list
         f['/usrqa/unique_j_list_ev'] = unique_j_list
+    if len(unique_f_list) > 0:
+        f["/usrqa/unique_f_list_ev"] = unique_f_list
     if ldc == 2:
         f['/usrqa/unique_nf_list'] = unique_nf_list
     if 'y' == spin_polarization:

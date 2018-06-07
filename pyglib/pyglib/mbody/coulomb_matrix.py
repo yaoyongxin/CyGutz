@@ -3,7 +3,6 @@ from __future__ import print_function
 
 from itertools import product
 import numpy as np
-import h5py
 from scipy.misc import factorial as fact
 from pyglib.math.matrix_util import unitary_transform_coulomb_matrix
 
@@ -334,12 +333,14 @@ def get_average_uj(v2e):
     return u_avg, j_avg
 
 
-def get_v2e_list(lhub, l_list, u_list, j_list, imap_list, utrans_list):
-    mode_list = ['manual', 'slater-condon', 'kanamori']
+def get_v2e_list(lhub, l_list, imap_list, utrans_list, u_list=None,
+        j_list=None, f_list=None):
+    mode_list = ['manual', 'slater-condon', 'kanamori', 'slater-condon']
     if lhub > 0:
         v2e_list = []
         u_avg_list = []
         j_avg_list = []
+        f_list = []
 
         for i, imap in enumerate(imap_list):
             if i > imap:
@@ -351,9 +352,14 @@ def get_v2e_list(lhub, l_list, u_list, j_list, imap_list, utrans_list):
             l_imp = l_list[i][0]
             utrans = utrans_list[i]
 
-            v2e, u_avg, j_avg = U_matrix(mode_list[lhub], l_imp,
-                    U_int=u_list[i],
-                    J_hund=j_list[i], T=utrans)
+            if lhub in [1, 2]:
+                v2e, u_avg, j_avg = U_matrix(mode_list[lhub], l_imp,
+                        U_int=u_list[i],
+                        J_hund=j_list[i], T=utrans)
+            else:
+                v2e, u_avg, j_avg = U_matrix(mode_list[lhub], l_imp,
+                        radial_integrals=f_list[i][:l_imp+1], T=utrans)
+
             v2e_list.append(v2e)
             u_avg_list.append(u_avg)
             j_avg_list.append(j_avg)

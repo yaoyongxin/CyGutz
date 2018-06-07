@@ -71,9 +71,10 @@ class gAtoms(Atoms):
             self.unique_df_list = h5auto_read(f, \
                     '/usrqa/unique_df_list')
             self.unique_nf_list = h5auto_read(f, '/usrqa/unique_nf_list')
+
             if self.unique_nf_list is not None:
                 self.unique_nf_list = np.asfarray(self.unique_nf_list)
-            if self.lhub > 0:
+            if self.lhub in [1, 2]:
                 self.unique_u_list = np.asfarray(h5auto_read(f, \
                         '/usrqa/unique_u_list_ev'))
                 self.unique_j_list = np.asfarray(h5auto_read(f, \
@@ -81,6 +82,9 @@ class gAtoms(Atoms):
                 if 'ryd' in self.unit:
                     self.unique_u_list /= Ryd_eV
                     self.unique_j_list /= Ryd_eV
+            elif self.lhub == 3:
+                self.unique_f_list = np.asfarray(h5auto_read(f, \
+                        '/usrqa/unique_f_list_ev'))
 
             self.set_nval_range_list()
             self.set_CorrAtoms()
@@ -112,6 +116,7 @@ class gAtoms(Atoms):
         nf_list = []
         u_list = []
         j_list = []
+        f_list = []
         for i, s in enumerate(self.symbols):
             if s in self.unique_corr_symbol_list:
                 corr_list.append(i)
@@ -119,9 +124,11 @@ class gAtoms(Atoms):
                 df_list.append(self.unique_df_list[ityp_list[-1]])
                 if self.unique_nf_list is not None:
                     nf_list.append(self.unique_nf_list[ityp_list[-1]])
-                if self.lhub > 0:
+                if self.lhub in [1, 2]:
                     u_list.append(self.unique_u_list[ityp_list[-1]])
                     j_list.append(self.unique_j_list[ityp_list[-1]])
+                elif self.lhub == 3:
+                    f_list.append(self.unique_f_list[ityp_list[-1]])
                 idx_equ = self.idx_equivalent_atoms[i]
                 imap = self.idx_equivalent_atoms.index(idx_equ)
                 imap_list.append(imap)
@@ -131,6 +138,7 @@ class gAtoms(Atoms):
         self.df_list = df_list
         self.u_list = u_list
         self.j_list = j_list
+        self.f_list = f_list
 
         if len(nf_list) == 0:
             nf_list = None
@@ -389,8 +397,10 @@ class gAtoms(Atoms):
         from pyglib.mbody.coulomb_matrix import get_v2e_list
         l_list = self.get_llist()
         self.v2e_list, self.u_avg_list, self.j_avg_list = \
-                get_v2e_list(self.lhub, l_list, self.u_list,
-                self.j_list, self.imap_list, self.utrans_list)
+                get_v2e_list(self.lhub, l_list, \
+                self.imap_list, self.utrans_list, \
+                u_list=self.u_list, j_list=self.j_list, \
+                f_list=self.f_list)
 
 
 def h5calc_save_lrot(gatm):
