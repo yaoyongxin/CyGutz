@@ -135,7 +135,8 @@ def mol_get_rot_list0(mol, tol=1.e-5, log=sys.stdout):
     # Pick rotations only.
     symmops = [o for o in analyzer.symmops
             if abs(det(o.rotation_matrix)-1)<1.e-5]
-    symmops = generate_full_symmops(symmops, tol, max_recursion_depth=50)
+    # symmops = generate_full_symmops(symmops, tol, max_recursion_depth=50)
+    symmops = generate_full_symmops(symmops, tol)
     rot_list=[o.rotation_matrix for o in symmops]
     return rot_list
 

@@ -87,7 +87,7 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
     else:
         print("\n Please select the method to parametrize Coulomb U-matrix.\n"+
                 " LHUB = 1: Slater-Condo parametrization (U,J).\n" +
-                " LHUB = 3: Slater-Condo parametrization (F-integral).\n" +
+                "        3: Slater-Condo parametrization (F-integral).\n" +
                 "        2: Kanamori parametrization (useful for models).\n" +
                 "        0: Manual input.")
         lhub = get_usr_input(" Please select LHUB: ", ['1', '2', "3", '0'])
@@ -189,7 +189,7 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
         elif lhub == 3:
             while True:
                 answer = raw_input(
-                        '\n Please provide radial integrals F0,F1,F2,F3' +
+                        '\n Please provide radial integrals F0,F2,F4,F6' +
                         '\n separated by spaces and padded by 0s (eV): ')
                 try:
                     answer = answer.split()

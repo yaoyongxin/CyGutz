@@ -340,7 +340,6 @@ def get_v2e_list(lhub, l_list, imap_list, utrans_list, u_list=None,
         v2e_list = []
         u_avg_list = []
         j_avg_list = []
-        f_list = []
 
         for i, imap in enumerate(imap_list):
             if i > imap:

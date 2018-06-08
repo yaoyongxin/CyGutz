@@ -1,6 +1,21 @@
 from __future__ import print_function
-import os, h5py
+import os, sys, h5py, glob, pymatgen
 from pyglib.gutz.gatom import gAtoms
+
+
+def read_cif():
+    cif_files = glob.glob("*.cif")
+    if len(cif_files) == 0:
+        raise ValueError("Error: no cif file present!")
+    elif len(cif_files) > 1:
+        raise ValueError("Error: more than one cif files present!")
+    cif_file = cif_files[0].decode('utf-8', 'ignore')
+    struct = pymatgen.Structure.from_file(cif_file, primitive=True)
+    struct = pymatgen.symmetry.analyzer.SpacegroupAnalyzer( \
+            struct).get_primitive_standard_structure()
+    from  pymatgen.io.ase import AseAtomsAdaptor
+    material = AseAtomsAdaptor.get_atoms(struct)
+    return material
 
 
 def read_wien_structure():
@@ -18,11 +33,12 @@ def read_vasp_poscar():
 
 
 def h5save_structure_params():
-    import sys
-    if os.path.isfile('POSCAR'):
+    case = None
+    locrot_list = None
+    if "-cif" in sys.argv:
+        material = read_cif()
+    elif os.path.isfile('POSCAR'):
         material = read_vasp_poscar()
-        case = None
-        locrot_list = None
     else:
         material, case, locrot_list = read_wien_structure()
 
