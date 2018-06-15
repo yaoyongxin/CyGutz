@@ -177,13 +177,23 @@ def create_dir_list(vfrac_min=0.7, vfrac_max=1.3, vfrac_step=0.05, \
         create_dir1(vfrac, dname, dir_template=dir_template)
 
 
+def get_dirvlist():
+    dir_list = glob.glob('V*')
+    for i,v in enumerate(dir_list):
+        dir_list[i] = v.split('V')[1]
+    dir_list.sort()
+    for i,v in enumerate(dir_list):
+        dir_list[i] = 'V' + str(v)
+    return dir_list
+
+
 def batch_init_lapw(args=['-vxc', '5', '-rkmax', '8.5', '-numk', '5000']):
     '''Loop over all the directories to run init_lapw.
     '''
     f = open('binit_lapw.log', 'w')
     cmd = [os.environ['WIENROOT']+'/init_lapw', '-b'] + args
     cwd = os.getcwd()+'/'
-    for dname in glob.glob('V*'):
+    for dname in get_dirvlist():
         os.chdir(dname+'/case')
         subprocess.call(cmd, stdout=f, shell=True)
         os.chdir(cwd)
@@ -206,7 +216,7 @@ def batch_initso_lapw(dir_template='./template', emax=7.5):
     from dir_template and modify the EMAX value to 7.5 in case.in1.
     '''
     cwd = os.getcwd()+'/'
-    for dname in glob.glob('V*'):
+    for dname in get_dirvlist():
         os.chdir(dname+'/case')
         shutil.copy(cwd+'/'+dir_template+'/case.inso', './')
         shutil.copy(cwd+'/'+dir_template+'/case.in2c', './')
@@ -221,7 +231,7 @@ def h2get_energy_volume_list(path='lapw'):
     v_list = []
     e_list = []
     cwd = os.getcwd()+'/'
-    for dname in glob.glob('V*'):
+    for dname in get_dirvlist():
         os.chdir(dname+'/case/'+path)
         v_list.append(get_volume())
         e_list.append(get_scf_energy())
@@ -293,7 +303,7 @@ def batch_save_lapw(sdir='lapw', args=['-f']):
     '''
     cmd = [os.environ['WIENROOT']+'/save_lapw', '-d'] + [sdir] + args
     cwd = os.getcwd()+'/'
-    for dname in glob.glob('V*'):
+    for dname in get_dirvlist():
         os.chdir(dname+'/case')
         subprocess.call(cmd, shell=True)
         os.chdir(cwd)
@@ -307,7 +317,7 @@ def run_lapw(args=['-i', '70'], nproc=1):
     cwd = os.getcwd()+'/'
     if '-p' in sys.argv:
         nproc = int(sys.argv[sys.argv.index('-p')+1])
-    for i,dname in enumerate(glob.glob('V*')):
+    for i,dname in enumerate(get_dirvlist()):
         os.chdir(dname+'/case')
         proc = subprocess.Popen(cmd)
         os.chdir(cwd)
@@ -319,7 +329,7 @@ def batch_copy_dir(src, dst):
     '''Loop over all the directories and copy subfolder src to dst.
     '''
     cwd = os.getcwd()+'/'
-    for dname in glob.glob('V*'):
+    for dname in get_dirvlist():
         os.chdir(dname+'/case')
         if not os.path.lexists(dst):
             os.mkdir(dst)

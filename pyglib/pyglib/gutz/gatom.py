@@ -1,12 +1,26 @@
 import itertools as it
-import numpy as np
-import h5py, os
+import numpy, h5py, os
 from pyglib.gutz.atoms import Atoms
 from pyglib.basic.units import Ryd_eV
 try:
     import spglib
 except:
     import pyspglib.spglib as spglib
+
+
+def cleanup_imap_list(imap_list):
+    '''Clean up imap list in case correlated atoms are not well ordered
+    in the struct file.
+    '''
+    imax = numpy.max(imap_list)+1
+    index_map = numpy.zeros(imax, dtype=numpy.int)-1
+    for i in range(imax):
+        if i in imap_list:
+            index_map[i] = imap_list.index(i)
+    _imap_list = []
+    for imap in imap_list:
+        _imap_list.append(index_map[imap])
+    return _imap_list
 
 
 class gAtoms(Atoms):
@@ -73,17 +87,17 @@ class gAtoms(Atoms):
             self.unique_nf_list = h5auto_read(f, '/usrqa/unique_nf_list')
 
             if self.unique_nf_list is not None:
-                self.unique_nf_list = np.asfarray(self.unique_nf_list)
+                self.unique_nf_list = numpy.asfarray(self.unique_nf_list)
             if self.lhub in [1, 2]:
-                self.unique_u_list = np.asfarray(h5auto_read(f, \
+                self.unique_u_list = numpy.asfarray(h5auto_read(f, \
                         '/usrqa/unique_u_list_ev'))
-                self.unique_j_list = np.asfarray(h5auto_read(f, \
+                self.unique_j_list = numpy.asfarray(h5auto_read(f, \
                         '/usrqa/unique_j_list_ev'))
                 if 'ryd' in self.unit:
                     self.unique_u_list /= Ryd_eV
                     self.unique_j_list /= Ryd_eV
             elif self.lhub == 3:
-                self.unique_f_list = np.asfarray(h5auto_read(f, \
+                self.unique_f_list = numpy.asfarray(h5auto_read(f, \
                         '/usrqa/unique_f_list_ev'))
 
             self.set_nval_range_list()
@@ -134,7 +148,7 @@ class gAtoms(Atoms):
                 imap_list.append(imap)
         self.corr_list = corr_list
         self.ityp_list = ityp_list
-        self.imap_list = imap_list
+        self.imap_list = cleanup_imap_list(imap_list)
         self.df_list = df_list
         self.u_list = u_list
         self.j_list = j_list
@@ -295,7 +309,7 @@ class gAtoms(Atoms):
                             '/rotations'][()])
                     jgenerator_list.append(f['/IMPURITY_'+str(i+1)+ \
                             '/JGENERATOR'][()])
-                    jgenerator_list[-1] = np.swapaxes(jgenerator_list[-1],1,2)
+                    jgenerator_list[-1] = numpy.swapaxes(jgenerator_list[-1],1,2)
             else:
                 if i > 0:
                     idx_equ = idx_equivalent_atoms[i]
@@ -367,7 +381,7 @@ class gAtoms(Atoms):
                 if self.iso == 1:
                     sp_rotations = []
                     for sp_r_ in sp_rotations_:
-                        sp_r = np.zeros_like(J[0])
+                        sp_r = numpy.zeros_like(J[0])
                         sp_r[::2, ::2] = sp_r_
                         sp_r[1::2, 1::2] = sp_r[::2, ::2]
                         sp_rotations.append(sp_r)
@@ -381,7 +395,7 @@ class gAtoms(Atoms):
 
     def set_na2_list(self):
         l_list = self.get_llist()
-        na2_list = [np.sum(2 * (2 * np.array(ls) + 1)) for ls in l_list]
+        na2_list = [numpy.sum(2 * (2 * numpy.array(ls) + 1)) for ls in l_list]
         self.na2_list = na2_list
 
 
