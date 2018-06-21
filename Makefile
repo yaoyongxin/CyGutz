@@ -19,8 +19,11 @@ install:
 	cp -r pygtool/* ${GUTZ_ROOT2}
 	# Install pyglib
 	pip install -e ./pyglib --user
+	# Optionally, install local version of other python libs.
 	# Install simplified version of pymatgen
-	pip install -e ./pyextern/pymatgen --user
+	# pip install -e ./pyextern/pymatgen --user
+	# Install pythtb
+	# pip install -e ./pyextern/pythtb --user
 	# Installation finished gracefully! Enjoy!
 
 gtool:

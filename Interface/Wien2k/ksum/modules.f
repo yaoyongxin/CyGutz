@@ -43,6 +43,7 @@ MODULE struct
   INTEGER,ALLOCATABLE      :: mult(:),jrj(:),iatnr(:),isplit(:)
   INTEGER,ALLOCATABLE      :: iz(:,:,:),inum(:)
   REAL*8,ALLOCATABLE       :: rotij(:,:,:),tauij(:,:) ! ndif
+  real(8),allocatable :: vr(:)
 
  CONTAINS
   SUBROUTINE init_struct
@@ -63,6 +64,7 @@ MODULE struct
     REL=.TRUE.                                     
     IF(IREL.EQ.'NREL') REL=.FALSE.                                    
     ALLOCATE(aname(nato),mult(nato),jrj(nato),r0(nato),dx(nato),rmt(nato))
+    allocate(vr(nrad))
     allocate(zz(nato),rotloc(3,3,nato),iatnr(nato),isplit(nato),v(nato))
     v=0.0d0
     ALLOCATE (pos(3,48*nat))

@@ -126,23 +126,27 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
   call w_allocate(maxucase) !------ contains all variables which depend on atom / which are changed by atpar -----------!
 
   do is=1,iso
-     itape=8+is
      jtape=17+is
-     if(is.eq.2.and.ispin_pol.eq.1) then  ! fix for SO-coupling and non-spinpolarized
-        jtape=18
-        rewind(jtape)
-     endif
+     if(is.eq.2.and.ispin_pol.eq.1) cycle 
      READ(jtape,2032) ISCF
-     DO jatom=1,nat    !------  over all atoms (all sorts) even if we do not require qtl for them ------------------!
-        iucase = csort(jatom) !--- this particular atom is requested in the input under index iucase --!
-        if(iucase.gt.0) then                 !--- requested in the inut ----!
-           if (myrank.EQ.master .OR. fastFilesystem) write(6,'(A,1x,I2,1x,A,1x,I2)')' Calculation for atom', jatom, 'which has iucase=', iucase
-           w_jatom(iucase) = jatom
-        else
-           if (myrank.EQ.master .OR. fastFilesystem) write(6,'(A,1x,I2,1x,A)')' ATOM=', jatom, ' left out ' !-- not requested in the input ----!
+  enddo
+
+  DO jatom=1,nat    !------  over all atoms (all sorts) even if we do not require qtl for them ------------------!
+     iucase = csort(jatom) !--- this particular atom is requested in the input under index iucase --!
+     if(iucase.gt.0) then                 !--- requested in the inut ----!
+        if (myrank.EQ.master .OR. fastFilesystem) write(6,'(A,1x,I2,1x,A,1x,I2)')' Calculation for atom', jatom, 'which has iucase=', iucase
+        w_jatom(iucase) = jatom
+     else
+        if (myrank.EQ.master .OR. fastFilesystem) write(6,'(A,1x,I2,1x,A)')' ATOM=', jatom, ' left out ' !-- not requested in the input ----!
+     endif
+     !----  mult(jatom) stands for multiplicity of each atom -> number of equivalent atoms of this sort --------!
+     !--- Reading radial functions U(R), UE(R), for all atoms including those that are left out ----------------!
+     do is=1,iso
+        itape=8+is
+        jtape=17+is
+        if(is.eq.2.and.ispin_pol.eq.1) then  ! fix for SO-coupling and non-spinpolarized
+           jtape=0 ! a copy of vr has been kept.
         endif
-        !----  mult(jatom) stands for multiplicity of each atom -> number of equivalent atoms of this sort --------!
-        !--- Reading radial functions U(R), UE(R), for all atoms including those that are left out ----------------!
         if (vector_para) then
            if (nvector.ge.1) then
               FNAME = fvectors(1,is)
@@ -157,13 +161,8 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
         CALL ATPAR(jatom,itape,jtape,is,iso,QoffDiag)
         if (vector_para) then
            close(itape)
-        else
-           rewind(itape)
         endif
-     end do
-  enddo 
-  DO jatom=1,nat 
-     iucase = csort(jatom) 
+     enddo
      if (iucase.gt.0) then ! save values of potential parameters
         if (myrank.EQ.master .OR. fastFilesystem) write(6,'(A,I2,A,I2)')'Saving potential parameters for atom',jatom, ' into ', iucase
         w_alo(:,:,:,:,iucase) = alo(:,:,:,:)
@@ -177,7 +176,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
         w_p(:,:,:,iucase) = P(:,:,:)
         w_dp(:,:,:,iucase) = DP(:,:,:)
      endif
-  ENDDO
+  enddo 
 
 !!! ---------- Preparation of arrays for paralel executaion --------------
   if (vector_para) then

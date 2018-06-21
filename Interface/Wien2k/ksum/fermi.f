@@ -15,6 +15,96 @@ subroutine eord(e,eb,nemax,k,isospin)
 
 end subroutine eord
 
+
+subroutine eweigh(ef,weight,nemax,k,jspin,ne,eb,nbmax)       
+  USE param
+  USE com_mpi
+  USE bandm
+  IMPLICIT REAL*8 (A-H,O-Z)                                        
+  dimension eb(nume,nkpt,2)
+  dimension weight(nemax*jspin,k),ne(k)
+  common /correct/ cordeg,icor
+  TEST1=2.D-8                                                      
+  nbmax=0  
+  emax=-10.d0                                                      
+  DO 8 KK=1,K                                                      
+     NNN=NE(KK)             
+     NNN=NEmax    
+     !
+     ! ### 2007-08-31, Clas Persson, Juergen Spitaler, and Claudia Ambrosch-Draxl
+     ! We suggest to change on page 90 in the usersguide.pdf [note, now abs(eval)]:
+     !
+     !                                     ...    abs(eval).gt.100 specifies
+     ! the use of the standard tetrahedron method instead of the modified one
+     ! (see above). Using eval.lt.0 in combination with TETRA forces the
+     ! occupancy of degenerate states to be equal in order to avoid incorrect
+     ! split of these states, which otherwise may occur for partially filled
+     ! states. Degeneracy is here determined by a tolerance of abs(eval) for
+     ! -1.gt.eval.lt.0, and of 1e-6 Ry for eval.le.-1.
+     !
+     if(cordeg.lt.0.d0) then
+        if(kk.eq.1) ifcpt=1
+        do jspin1=1,jspin
+           nn=1
+           do while(nn.le.nnn)
+              ifcp=0
+              ndeg=1
+              wecp=weight(nn+(jspin1-1)*nnn,kk)
+              !
+              ! check degeneracy
+              !        do while((nn+ndeg).le.nnn.and. &
+              !                 abs(eb(nn+ndeg,kk,jspin1)-eb(nn,kk,jspin1)).lt.abs(cordeg))
+              do while((nn+ndeg).le.nnn)
+                 if(abs(eb(nn+ndeg,kk,jspin1)-eb(nn,kk,jspin1)).gt.abs(cordeg)) exit
+                 if(abs(weight(nn+ndeg+(jspin1-1)*nnn,kk)-weight(nn+(jspin1-1)*nnn,kk)).ge.1e-6) ifcp=1
+                 wecp=wecp+weight((nn+ndeg)+(jspin1-1)*nnn,kk)
+                 ndeg=ndeg+1
+              enddo
+              !
+              ! equalizes occupancy and outputs to case.output2
+              if(ifcp.eq.1) then
+                 if(ifcpt.eq.1) then
+                    if (myrank.EQ.master .OR. fastFilesystem) write(6,'("k-pnt spin band  energy          old/new occ.    ")')
+                    ifcpt=0
+                 endif
+                 do icp=0,ndeg-1
+                    if (myrank.EQ.master .OR. fastFilesystem) write(6,50)kk,jspin1,nn,eb(nn+icp,kk,jspin1),weight((nn+icp)+(jspin1-1)*nnn,kk)
+                    weight((nn+icp)+(jspin1-1)*nnn,kk) = wecp/dble(ndeg)
+                    if (myrank.EQ.master .OR. fastFilesystem) write(6,'(f9.6)') weight((nn+icp)+(jspin1-1)*nnn,kk)
+                 enddo
+              endif
+              nn=nn+ndeg
+           enddo
+        enddo
+     endif
+50   format(3i5,f10.6,2x,f9.6,"/",$)
+! ### END equalizes occupancy of degenerate states
+
+!
+     DO 8 NN=1,NNN   
+        do jspin1=1,jspin
+           if(abs(weight(nn+(jspin1-1)*nnn,kk)).gt.test1) then
+              nbmax=max(nbmax,nn)
+              emax=max(emax,eb(nn,kk,jspin1))                      
+           end if
+        enddo
+   8 CONTINUE
+     if (myrank.EQ.master .OR. fastFilesystem) write(6,*) '  number of occupied bands:',nbmax
+     if (myrank.EQ.master .OR. fastFilesystem) write(6,*) '  highest energy:',emax
+     if(ef.gt.emax.and.abs(emax-ebmin(min(nbmax+1,nume))).gt.1.d-3) then
+        if (myrank.EQ.master .OR. fastFilesystem) write(6,*) 'insulator !'
+        if((ef-emax).lt.1.d-4.or.(ef-emax).ge.1.d-4) then
+           if (myrank.EQ.master .OR. fastFilesystem) write(6,*) 'EF-inconsistency corrected'
+           if (myrank.eq.master) write(21,888) 
+888        format('       Insulator, EF-inconsistency corrected')
+           ef=emax
+        endif
+     endif
+     return
+
+end subroutine eweigh
+
+
   !     -----------------------------------------------------------------
   !     -----------------------------------------------------------------
   !     ----                                                         ----
@@ -448,7 +538,7 @@ SUBROUTINE TOTNOS(VOL,E,EMIN,EMAX,NP,NOS,SOS)
       IMPLICIT DOUBLE PRECISION (A-H,P-Z)                              
       DIMENSION E(4),WGHT(4)                                           
       DIMENSION FA(4),FB(4),INDEX(4)                                   
-      integer,parameter::icor=1
+      common /correct/ cordeg,icor
 !     -----------------------------------------------------------------
 !     --  INTEGRATION WITHOUT FERMISURFACE                            -
 !     -----------------------------------------------------------------

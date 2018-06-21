@@ -5,7 +5,7 @@ SUBROUTINE ATPAR (JATOM,itape,jtape,is,ISPIN,QoffDiag)
   IMPLICIT REAL*8 (A-H,O-Z)
   logical  QoffDiag  ! off-diagonal l needed
   LOGICAL    loor(0:lomax),lapw(0:lmax2),rlo(1:nloat,0:lomax)                                       
-  DIMENSION  emist(0:lomax,nloat),E(0:LMAX2),elo(0:LOMAX,nloat),pei(0:lmax2),ilo(0:lomax),vr(nrad) 
+  DIMENSION  emist(0:lomax,nloat),E(0:LMAX2),elo(0:LOMAX,nloat),pei(0:lmax2),ilo(0:lomax)
   ! Output are the following quatities:
   !   /lolog/ , used later in LoMain
   !   /loabc/ , used later in LoMain
@@ -23,16 +23,18 @@ SUBROUTINE ATPAR (JATOM,itape,jtape,is,ISPIN,QoffDiag)
 !---------------------------------------------------------------------  
 !.....READ TOTAL SPHERICAL POTENTIAL V(0,0) OF TAPEjtape=VSP               
 !     NORM OF V(0,0)=V00(R)*R/SQRT(4.D0*PI)     
-! itape points to the vector file, jtape to the potential file                        
-  READ(jtape,1980)
-  READ(jtape,2000)IDUMMY
-  READ(jtape,2031)
-  READ(jtape,2022)(VR(J),J=1,JRJ(JATOM))
-  READ(jtape,2031)
-  READ(jtape,2030)
-  DO J=1,JRJ(JATOM)
-     VR(J)=VR(J)/2.0D0  
-  ENDDO
+! itape points to the vector file, jtape to the potential file 
+  if(jtape>0)then
+     READ(jtape,1980)
+     READ(jtape,2000)IDUMMY
+     READ(jtape,2031)
+     READ(jtape,2022)(VR(J),J=1,JRJ(JATOM))
+     READ(jtape,2031)
+     READ(jtape,2030)
+     DO J=1,JRJ(JATOM)
+        VR(J)=VR(J)/2.0D0  
+     ENDDO
+  endif
   if (ispin.eq.2 .and. (myrank.EQ.master .OR. fastFilesystem)) then
      if(is.eq.1)then
 	write(6,*) 'ATPAR for spin up'

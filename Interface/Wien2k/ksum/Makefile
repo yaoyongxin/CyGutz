@@ -13,7 +13,7 @@ OBJS    = reallocate.o modules.o mod_mpi.o gtfnam2.o w_atpar.o \
           dmftmain.o  latgen.o outerr.o outwin.o rint13.o \
 	      rotate.o sphbes.o symop.o ylm.o cputim.o mknam.o diracout.o \
           dergl.o sym.o radint.o rout.o lomain.o inth.o inouh.o rotdef.o \
-          cmpxqtl.o testxqtldiff.o testtransfo.o printgloc.o  \
+          cmpxqtl.o testxqtldiff.o testtransfo.o \
 	      cmpdmftrans.o findex.o zinv.o fermi.o  \
 	  	  GUTZ_LINK.o spin_rotate.o
 

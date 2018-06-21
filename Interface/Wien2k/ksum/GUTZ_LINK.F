@@ -234,7 +234,27 @@ subroutine gutz_fermi_tetra(iso,isospin)
     parameter (nw=250000)
     integer          :: iw(nw)
     real(8),allocatable :: weight_(:),e_(:,:)
+    integer          nehelp(nkpt)
+    common /correct/ cordeg,icor
+
+    icor=1
+    if(abs(ef).ge.100.d0) icor=0
+    !     cordeg is a switch to correct occupancy of degenerate states
+    cordeg=-1.d-6
+    nspin=max(1,jspin/iso)
+    if(ef.gt.0.d0)  cordeg=-ef
+    if(ef-100.d0.gt.0.d0) cordeg=-ef+100.d0
+    if(ef.lt.0.d0)        cordeg=ef
+    if(ef.lt.-100.d0)     cordeg=ef+100.d0
+    if(abs(cordeg).gt.0.01d0)  cordeg=-1.d-6
       
+    if (myrank.eq.master) write(6,'(" bz-integration with tetra-program. &
+            &  icor=:",i2  )') icor
+    if(cordeg.lt.0.d0 .and. (myrank.eq.master) ) &
+            &write(6,'(" equal occupancy of degenerate states, &
+            &tol=:",e8.1)') -cordeg
+
+    nehelp=bnd_ne(1,:,1)
     nemax=maxval(bnd_ne(1,:,:))
     elecn=elecn-1.d-10
     !para begin
@@ -247,6 +267,7 @@ subroutine gutz_fermi_tetra(iso,isospin)
     allocate(weight_(nemax*isospin*nkpt)); weight_=0
     call dos(nemax*isospin,nkpt,e_,weight_,elecn/2.d0*iso*isospin,d,ef,iw,nw)
     if (myrank.eq.master) write(6,*)'call eweigh...'
+    call eweigh(ef,weight_,nemax,nkpt,isospin,nehelp,bnd_ek,nbmax)
     elecn=elecn+1.d-10
     deallocate(e_,weight_)
     return
