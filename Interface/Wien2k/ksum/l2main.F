@@ -451,6 +451,7 @@ SUBROUTINE L2MAIN(Qcomplex,nsymop,projector)
            call zlowdin_orthogonalization(dmftu2(:,1:nindot),nbands,nindot)
            call zappend_complementary_space(dmftu2,nbands,nindot)
            if(isym==sym_ie)then
+                ! keep the phase of psi_0
                 call gh5_write(dmftu2,nbands,nbands,'/IKP_'// &
                         &TRIM(ADJUSTL(STR))// &
                         &'/T_PSIK0_TO_HK0_BASIS_SPIN'//str_gfile,f_id)

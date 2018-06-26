@@ -9,6 +9,7 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
     '''
     f = h5py.File('ginit.h5', 'a')
     if '/usrqa' in f:
+        f.close()
         return
     usr_input = open("input.slog", 'w')
     print('\n' + " User inputs to initialize the G-RISB job.")
@@ -264,6 +265,7 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
     iembeddiag = int(iembeddiag)
     f['/usrqa/iembeddiag'] = iembeddiag
     usr_input.close()
+    f.close()
     os.rename("input.slog", "init_ga.input")
 
 
