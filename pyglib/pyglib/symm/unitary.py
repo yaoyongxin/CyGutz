@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.linalg import block_diag
 
 
 def jj_to_cubic_relativistic_harmonics(orbital='f'):
@@ -59,18 +58,12 @@ def comp_sph_harm_to_real_harm(orbital='d'):
 
 
 def get_u_csh2rh_all(ncorbs_list):
+    u_csh2rh_list = []
     for i,ncorbs in enumerate(ncorbs_list):
-        if i == 0:
-            if ncorbs == 5:
-                u_csh2rh = comp_sph_harm_to_real_harm(orbital='d')
-            else:
-                raise ValueError("Not implemented for ncorbs ={}!".\
-                        format(ncorbs))
+        if ncorbs == 5:
+            u_csh2rh = comp_sph_harm_to_real_harm(orbital='d')
         else:
-            if ncorbs == 5:
-                u_csh2rh = block_diag(u_csh2rh, \
-                        comp_sph_harm_to_real_harm(orbital='d'))
-            else:
-                raise ValueError("Not implemented for ncorbs ={}!".\
-                        format(ncorbs))
-    return u_csh2rh
+            raise ValueError("Not implemented for ncorbs ={}!".\
+                    format(ncorbs))
+        u_csh2rh_list.append(u_csh2rh)
+    return u_csh2rh_list

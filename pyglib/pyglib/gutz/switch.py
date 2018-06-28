@@ -10,6 +10,7 @@ def modify_gparam():
                 ' -imix n -- change gimix to n \n' +
                 ' -iembeddiag n -- change giembeddiag to n \n' +
                 ' -dc_mode n -- change dc_mode to n \n' +
+                ' -u_type n -- change u-matrix type to n \n' +
                 ' -dc_nelf_list n1-n2-... -- change n_dc to n list \n' +
                 ' -unique_j_ev j1-j2-... -- change unique_j_list_ev \n' +
                 ' -unique_u_ev u1-u2-... -- change unique_u_list_ev \n' +
@@ -69,6 +70,9 @@ def modify_gparam():
             if '-dc_mode' in sys.argv:
                 f['/usrqa/ldc'][()] = int(sys.argv[sys.argv.index( \
                         '-dc_mode') + 1])
+            if '-u_type' in sys.argv:
+                f["/usrqa/u_matrix_type"][()] = int(sys.argv[sys.argv.index( \
+                        '-u_type') + 1])
             if '-unique_j_ev' in sys.argv:
                 stmp = sys.argv[sys.argv.index('-unique_j_ev')+1]
                 f['/usrqa/unique_j_list_ev'][()] = [float(s) for s in

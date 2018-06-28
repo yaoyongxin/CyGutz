@@ -23,7 +23,6 @@ __version__='1.7.2'
 # PythTB is availabe at http://www.physics.rutgers.edu/pythtb/
 
 import numpy as np # numerics for matrices
-import sys # for exiting
 import copy # for deepcopying
 
 class tb_model(object):
@@ -2963,8 +2962,7 @@ def _one_flux_plane(wfs2d):
     nk0=wfs2d.shape[0]
     nk1=wfs2d.shape[1]
     # number of bands (will compute flux of all bands taken together)
-    nbnd=wfs2d.shape[2]
-
+    # nbnd=wfs2d.shape[2]
     # here store flux through each plaquette of the mesh
     all_phases=np.zeros((nk0-1,nk1-1),dtype=float)
 
@@ -3202,8 +3200,8 @@ class w90(object):
         self.kgrid = None
         self.symbols = []
         self.atomic_positions = []
+        read_position = 0
         for i,line in enumerate(ln):
-            read_position = 0
             if "mp_grid" in line:
                 line = line.split()
                 self.kgrid = [int(x) for x in line[2:5]]
@@ -3218,7 +3216,11 @@ class w90(object):
                     pref=1.0
                 else:
                     line = line.split()
-                    self.symbols.append(line[0].split("_")[0])
+                    _symbol = line[0].split("_")[0]
+                    symbol = _symbol[0:1].upper()
+                    if len(_symbol) > 1:
+                        symbol += _symbol[1:].lower()
+                    self.symbols.append(symbol)
                     self.atomic_positions.append(
                             [float(x)*pref for x in line[1:4]])
             elif read_position < 0 and self.kgrid is not None:
@@ -3226,6 +3228,10 @@ class w90(object):
 
         if self.kgrid is None:
             raise Exception("Unable to find mp_grid!")
+
+        # convert to sclae atomic position
+        self.atomic_positions = np.asarray(self.atomic_positions).dot(\
+                np.linalg.inv(self.lat))
         # (yxy end)
 
         # read in hamiltonian matrix, in eV

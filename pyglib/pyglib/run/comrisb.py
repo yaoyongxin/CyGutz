@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import numpy as np
-import os, sys, shutil, subprocess, glob, re
+import os, sys, shutil, subprocess, glob, h5py
 from tabulate import tabulate
 from pyglib.iface.ifwannier import if_gwannier
 
@@ -51,12 +51,12 @@ def read_comdmft_ini():
     check_key_in_string('impurity_problem_equivalence', control)
 
     # g-risb specific
-    control['crystal_field'] = control.get('crystal_field', 'y')
+    control['crystal_field'] = control.get('crystal_field', True)
     control['full_orbital_polarization'] = \
-            control.get('full_orbital_polarization', 'n')
+            control.get('full_orbital_polarization', False)
     control['iembed_diag'] = control.get('iembed_diag', -1)
     control['lnewton'] = control.get('lnewton', 0)
-    control['spin_polarization'] = control.get('spin_polarization', 'n')
+    control['spin_polarization'] = control.get('spin_polarization', False)
     control['unit'] = control.get('unit', 'ev')
 
     control['proj_win_center_interacting'] = 0
@@ -441,13 +441,19 @@ def wannier_run(control,wan_hmat):
     os.chdir(control['top_dir'])
 
 
+def bool2yesno(boolean):
+    if boolean:
+        return "y"
+    else:
+        return "n"
+
 def get_locrot_list(wan_hmat):
     iatm = -1
     lrot_list = []
     for basis in wan_hmat["basis"]:
         if basis["atom"] != iatm:
-            x = np.asarray[float(e) for e in basis["xaxis"]]
-            z = np.asarray[float(e) for e in basis["zaxis"]]
+            x = np.asarray([float(e) for e in basis["xaxis"]])
+            z = np.asarray([float(e) for e in basis["zaxis"]])
             y = np.cross(z, x)
             lrot_list.append(np.asarray([x,y,z]).T)
             iatm = basis["atom"]
@@ -462,6 +468,7 @@ def init_grisb(control, imp):
     unique_f_list_ev = []
     unique_j_list_ev = []
     unique_u_list_ev = []
+    unique_nf_list = []
     corr_atm_list = []
     corr_df_list = []
     for i,impurity in enumerate(control['impurity_problem']):
@@ -472,10 +479,13 @@ def init_grisb(control, imp):
             unique_df_list.append(impurity[1])
             f_list = np.zeros(4)
             for ifs,fs in enumerate(["F0", "F2", "F4", "F6"]):
-                if fs in imp["i+1"]:
-                    f_list[ifs] =  imp["i+1"][fs]
+                if fs in imp[str(i+1)]:
+                    f_list[ifs] = imp[str(i+1)][fs]
             unique_f_list_ev.append(f_list)
             unique_u_list_ev.append(f_list[0])
+            if "nominal_n" in imp[str(i+1)]:
+                nf = imp[str(i+1)]["nominal_n"]
+                unique_nf_list.append([nf/2., nf/2.])
             if corr_df_list[-1].lower() == "d":
                 j_hund = f_list[1]*(1.0 + 0.625)/14.0
             elif corr_df_list[-1].lower() == "f":
@@ -494,6 +504,11 @@ def init_grisb(control, imp):
             # ensure atoms in ascendig order.
             assert corr_atm_list[-1] >= corr_atm_list[-2], \
                     "please specify impurities in asceding order!"
+
+    if len(unique_nf_list) == 0:
+        ldc = 12
+    else:
+        ldc = 2
     # Sanity check
     for i in range(1,len(corr_df_list)):
         if control["impurity_problem_equivalence"][i] == \
@@ -505,15 +520,43 @@ def init_grisb(control, imp):
     for i in corr_atm_list:
         if symbols[i] not in unique_corr_symbol_list:
             unique_corr_symbol_list.append(symbols[i])
+    idx_equivalent_atoms = []
+    for i in range(len(symbols)):
+        if i == 0:
+            idx_equivalent_atoms.append(0)
+            continue
+        elif i in corr_atm_list:
+            idx = corr_atm_list[i]
+            if idx > 0:
+                if control["impurity_problem_equivalence"][idx] \
+                        == control["impurity_problem_equivalence"][idx-1]:
+                    idx_equivalent_atoms.append(idx_equivalent_atoms[-1])
+                    continue
+        idx_equivalent_atoms.append(idx_equivalent_atoms[-1]+1)
 
     with h5py.File("ginit.h5", "a") as f:
-        f["/usrqa/crystal_field"] = control["crystal_field"]
-        f["/usrqa/full_orbital_polarization"] = \
-                control["full_orbital_polarization"]
-        f["/usrqa/idx_equivalent_atoms"]
+        f["/usrqa/crystal_field"] = bool2yesno(\
+                control["crystal_field"])
+        f["/usrqa/full_orbital_polarization"] = bool2yesno(\
+                control["full_orbital_polarization"])
+        f["/usrqa/idx_equivalent_atoms"] = idx_equivalent_atoms
         f["/usrqa/iembeddiag"] = control["iembed_diag"]
-
-
+        f["/usrqa/ldc"] = ldc
+        f["/usrqa/lnewton"] = control['lnewton']
+        f["/usrqa/spin_orbit_coup"] = bool2yesno(\
+                control['spin_orbit'])
+        f["/usrqa/spin_polarization"] = bool2yesno(\
+                control['spin_polarization'])
+        f["/usrqa/u_matrix_type"] = 3
+        f["/usrqa/unique_corr_symbol_list"] = unique_corr_symbol_list
+        f["/usrqa/unique_df_list"] = unique_df_list
+        f["/usrqa/unique_j_list_ev"] = unique_j_list_ev
+        f["/usrqa/unique_u_list_ev"] = unique_u_list_ev
+        f["/usrqa/unique_f_list_ev"] = unique_f_list_ev
+        f["/usrqa/unique_nf_list"] = unique_nf_list
+        f["/usrqa/unit"] =  control['unit']
+    from pyglib.gutz.init import initialize as ginit
+    ginit()
 
 
 def gwannier_run(control, wan_hmat, imp, icycle):
@@ -555,7 +598,7 @@ def dft_risb(control, wan_hmat, imp):
         control['h_log'].write("wannier function construction.\n")
         check_wannier_function_input(control, wan_hmat)
         wannier_run(control, wan_hmat)
-        gwannier_run(control, wan_hmat, control['iter_num_outer'])
+        gwannier_run(control, wan_hmat, imp, control['iter_num_outer'])
         sys.exit()
 
 

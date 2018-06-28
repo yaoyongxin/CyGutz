@@ -5,7 +5,7 @@ from pythtb import w90
 import numpy as np
 import h5py
 from pyglib.symm.unitary import get_u_csh2rh_all
-
+from scipy.linalg import block_diag
 
 def if_gwannier(corbs_list, delta_charge=0., wpath="./",
         prefix="wannier", k_grid=None, lrot_list=None,
@@ -27,6 +27,8 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="./",
     numk = k_mesh.shape[0]
     wk = 1./numk
     nbmax = gmodel.get_num_orbitals()
+    # spin degeneracy
+    spin_deg = 3-max(ispin, iso)
 
     # GMPI_x.h5 file
     comm = MPI.COMM_WORLD
@@ -74,10 +76,14 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="./",
         ubasis[orbs_map[i],i] = 1.
 
     # Unitary transformation from complex Harmonics to real Harmonics.
-    u_csh2rh = get_u_csh2rh_all([len(corbs) for corbs in corbs_list])
+    u_csh2rh_list = get_u_csh2rh_all([len(corbs) for corbs in corbs_list])
+
+    for i,u_csh2rh in enumerate(u_csh2rh_list):
+        h1e_list[i][0] = u_csh2rh.dot(h1e_list[i][0]).dot(u_csh2rh.T.conj())
 
     # get the transformation from wannier basis to correlated
     # orbital-ordered complex spherical Harmonics basis.
+    u_csh2rh = block_diag(*u_csh2rh_list)
     ncorbs = u_csh2rh.shape[0]
     u_wan2csh = ubasis.copy()
     u_wan2csh[:,:ncorbs] = ubasis[:,:ncorbs].dot(u_csh2rh.T.conj())
@@ -89,12 +95,12 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="./",
             hmat = gmodel._gen_ham(kpt)
             # from wannier basis to correlated orbital-ordered csh basis.
             hmat = u_wan2csh.T.conj().dot(hmat).dot(u_wan2csh)
-            f['/IKP_{}/ISYM_1/HK0'.format(ik+1)] = hmat.T
+            f['/IKP_{}/ISYM_1/HK0_SPIN1'.format(ik+1)] = hmat.T
             evals, evecs = gmodel._sol_ham(hmat, eig_vectors=True)
-            nelectron += np.count_nonzero(evals < 0.)*wk
-            f['/IKP_{}/ek0'.format(ik+1)] = evals
+            nelectron += np.count_nonzero(evals < 0.)*wk*spin_deg
+            f['/IKP_{}/ek0_spin1'.format(ik+1)] = evals
             # evec is actually evec.T
-            f['/IKP_{}/T_PSIK0_TO_HK0_BASIS'.format(ik+1)] = \
+            f['/IKP_{}/T_PSIK0_TO_HK0_BASIS_SPIN1'.format(ik+1)] = \
                     evecs.T.conj()
 
     nelectron = comm.reduce(nelectron, op=MPI.SUM)
