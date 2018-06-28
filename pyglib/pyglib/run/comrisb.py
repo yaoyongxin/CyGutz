@@ -1,9 +1,8 @@
 from __future__ import print_function
 
 import numpy as np
-import os, sys, shutil, subprocess, glob, h5py
+import os, sys, shutil, subprocess, glob, h5py, pickle, time
 from tabulate import tabulate
-from pyglib.iface.ifwannier import if_gwannier
 
 
 def open_h_log(control):
@@ -44,8 +43,6 @@ def read_comdmft_ini():
 
     # in control
     control['top_dir'] = os.path.abspath('./')
-    check_key_in_string('mpi_prefix_lowh', control)
-    check_key_in_string('mpi_prefix_impurity', control)
     check_key_in_string('spin_orbit', control)
     check_key_in_string('impurity_problem', control)
     check_key_in_string('impurity_problem_equivalence', control)
@@ -280,20 +277,14 @@ def read_wan_hmat_basis(control):
                     'xaxis': inip[ii, 3:6], 'zaxis': inip[ii, 6:9], \
                     'ind': ii})
     print(basis_info, file=control['h_log'])
-    control['h_log'].write('\nreading wannier.inip to get basis information.')
+    control['h_log'].write(\
+            'reading wannier.inip to get basis information.\n')
     return basis_info
 
 
 def check_key_in_string(key, dictionary):
     if key not in dictionary:
         raise ValueError('missing \''+key+'\' in '+dictionary['name'])
-
-
-def overwrite_key_in_string(key, dictionary, dictionaryname, value, h_log):
-    if (key in dictionary):
-        print >> control['h_log'], '\''+key + \
-            '\' in '+dictionaryname+' is overwritten'
-    return value
 
 
 def labeling_file(filename, iter_string):
@@ -403,9 +394,8 @@ def run_dft(control):
     allfile=control['allfile']
     labeling_file('./'+allfile+'.out',iter_string)
     shutil.move('./dft.out', './dft'+iter_string+'.out')
-    print >> control['h_log'], "dft calculation done"
+    control['h_log'].write("dft calculation done.\n")
     os.chdir(control['top_dir'])
-    return None
 
 
 def prepare_dft_input(control):
@@ -415,16 +405,23 @@ def prepare_dft_input(control):
     os.chdir(control['top_dir'])
 
 
+def hlog_time(f, prestr, endl=""):
+    f.write("{} at {} {}".format(prestr, time.strftime("%d/%m/%Y %H:%M:%S"), \
+            endl))
+
+
 def wannier_run(control,wan_hmat):
     os.chdir(control['wannier_directory'])
     cmd = control['mpi_prefix_wannier']+' '+control['comsuitedir']+"/ComWann"
     control['h_log'].write(cmd+"\n")
 
+    hlog_time(control['h_log'], "comwann start")
     with open(control['wannier_directory']+'/comwann.out', 'w') as logfile:
         ret = subprocess.call(cmd, shell=True, stdout = logfile, \
                 stderr = logfile)
         if ret != 0:
             raise ValueError("Error in comwann. Check comwann.out or OUT.")
+    hlog_time(control['h_log'], "end", endl="\n")
 
     iter_string = '_' + str(control['iter_num_outer'])
     labeling_file('./wannier.dat', iter_string)
@@ -436,7 +433,7 @@ def wannier_run(control,wan_hmat):
     shutil.move('./wannier.wout', './wannier'+iter_string+'.wout')
     wan_hmat['basis'] = read_wan_hmat_basis(control)
     find_impurity_wan(control, wan_hmat)
-    control['h_log'].write("control['impurity_wan'] {}".format(\
+    control['h_log'].write("control['impurity_wan']: {}\n".format(\
             control['impurity_wan']))
     os.chdir(control['top_dir'])
 
@@ -562,11 +559,39 @@ def init_grisb(control, imp):
 def gwannier_run(control, wan_hmat, imp, icycle):
     os.chdir(control['lowh_directory'])
     lrot_list = get_locrot_list(wan_hmat)
-    if_gwannier(control['impurity_wan'], k_grid=wan_hmat['kgrid'],
-            wpath=control['wannier_directory'], lrot_list=lrot_list,
-            icycle=icycle)
+    params = {}
+    params["corbs_list"] = control['impurity_wan']
+    params["k_grid"] = wan_hmat['kgrid']
+    params["wpath"] = control['wannier_directory']
+    params["lrot_list"] = lrot_list
+    params["icycle"] = icycle
+
+    # prepare parameter file for mpirun
+    with open("gwannier_params.pkl", "wb") as f:
+        pickle.dump(params, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    cmd = control['mpi_prefix_wannier'] + ' ' + \
+            control['comsuitedir'] + "/gwannier.py"
+    control['h_log'].write(cmd+"\n")
+    hlog_time(control['h_log'], "gwannier start")
+    with open(control['lowh_directory']+'/gwannier.out', 'w') as f:
+        ret = subprocess.call(cmd, shell=True, stdout = f, \
+                stderr = f)
+    hlog_time(control['h_log'], "end", endl="\n")
+    assert ret == 0, "Error in gwannier. Check gwannier.out."
+
     if icycle <= 1:
         init_grisb(control, imp)
+
+    control['h_log'].write(cmd+"\n")
+    cmd = control['mpi_prefix_wannier'] + ' ' + \
+            control['comsuitedir'] + "/CyGutz"
+    hlog_time(control['h_log'], "cygutz start")
+    with open(control['lowh_directory']+'/grisb.out', 'w') as f:
+        ret = subprocess.call(cmd, shell=True, stdout = f, \
+                stderr = f)
+    hlog_time(control['h_log'], "end", endl="\n")
+    assert ret == 0, "Error in grisb. Check grisb.out."
     os.chdir(control['top_dir'])
 
 
@@ -599,6 +624,8 @@ def dft_risb(control, wan_hmat, imp):
         check_wannier_function_input(control, wan_hmat)
         wannier_run(control, wan_hmat)
         gwannier_run(control, wan_hmat, imp, control['iter_num_outer'])
+
+
         sys.exit()
 
 
@@ -610,7 +637,7 @@ def dft_risb(control, wan_hmat, imp):
 
 if __name__ == '__main__':
 
-    control,wan_hmat,imp=read_comdmft_ini()
+    control,wan_hmat,imp = read_comdmft_ini()
     initial_file_directory_setup(control)
-    dft_risb(control,wan_hmat,imp)
+    dft_risb(control, wan_hmat, imp)
     close_h_log(control)

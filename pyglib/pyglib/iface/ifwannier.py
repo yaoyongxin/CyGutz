@@ -9,7 +9,7 @@ from scipy.linalg import block_diag
 
 def if_gwannier(corbs_list, delta_charge=0., wpath="./",
         prefix="wannier", k_grid=None, lrot_list=None,
-        ncpus=1, iso=1, ispin=1, ismear=0, delta=0.005,
+        iso=1, ispin=1, ismear=0, delta=0.005,
         icycle=0):
     # read output from wannier90.
     gwannier = w90(wpath, prefix)
