@@ -225,9 +225,9 @@ module bandstru
             &wh%nspin))
     allocate(bnd%psi0_b(bnd%nmaxin**2,kpt%diml,bnd%nspin_in))
     bnd%psi0_b=0
-    allocate(bnd%r  (wh%nasotot,wh%nasotot,wh%nspin))
+    allocate(bnd%r(wh%nasotot,wh%nasotot,wh%nspin))
     bnd%r=0
-    forall(i=1:wh%nasotot)bnd%r(i,i,:)=1._q
+    forall(i=1:wh%nasotot) bnd%r(i,i,:)=1._q
     allocate(bnd%d0 (wh%nasotot,wh%nasotot,wh%nspin))
     allocate(bnd%la1(wh%nasotot,wh%nasotot,wh%nspin))
     bnd%la1=0

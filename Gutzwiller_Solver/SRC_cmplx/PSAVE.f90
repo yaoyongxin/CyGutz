@@ -112,6 +112,10 @@ module psave
         call gh5_write(gkmem%etot,'/etot_model',f_id)
         call gh5_write(wh%eu2,wh%num_imp,'/eu2_list',f_id)
         call gh5_write(wh%et1,wh%num_imp,'/et1_list',f_id)
+        call gh5_write(bnd%r,wh%nasotot,wh%nasotot,wh%nspin, &
+                &"/BND_R",f_id)
+        call gh5_write(bnd%la1,wh%nasotot,wh%nasotot,wh%nspin, &
+                &"/BND_LAMBDA",f_id)
     endif
 
     call calc_nks_pp(0)

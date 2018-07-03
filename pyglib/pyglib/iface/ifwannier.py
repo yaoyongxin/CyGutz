@@ -3,7 +3,7 @@ from __future__ import print_function
 from mpi4py import MPI
 from pythtb import w90
 import numpy as np
-import h5py
+import h5py, pickle
 from pyglib.symm.unitary import get_u_csh2rh_all
 from scipy.linalg import block_diag
 
@@ -13,6 +13,9 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="./",
         icycle=0):
     # read output from wannier90.
     gwannier = w90(wpath, prefix)
+    # save wannier90 model.
+    with open("wannier90.pkl", "wb") as f:
+        pickle.dump(gwannier, f, protocol=pickle.HIGHEST_PROTOCOL)
     gmodel = gwannier.model(zero_energy=0.0, min_hopping_norm=1.e-8,
             ignorable_imaginary_part=1.e-8)
     # uniform grid of k-points always contains the origin.
@@ -112,6 +115,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="./",
                 f['/struct/scaled_positions'] = gwannier.atomic_positions
                 if lrot_list is not None:
                     f['/struct/locrot_list'] = lrot_list
+                f["/u_wan2csh"] = u_wan2csh
         with h5py.File('GPARAMBANDS.h5', 'w') as f:
             f['/iso/'] = [iso]
             f['/ispin'] = [ispin]
@@ -121,9 +125,8 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="./",
             f['/kptwt'] = [wk for k in range(numk)]
             f['/ismear'] = [ismear]
             f['/delta'] = [delta]
-            with open("gwannier.log", "w") as flog:
-                flog.write("Est. vs used num. of elecns per unit cell: {} {}".\
-                        format(nelectron, int(nelectron+0.5)+delta_charge))
+            print("Est. vs used num. of elecns per unit cell: {} {}".\
+                    format(nelectron, int(nelectron+0.5)+delta_charge))
             f['/nelectron'] = [int(nelectron+0.5)+delta_charge]
             f['/symnop'] = [1]
             f['/symie'] = [1]

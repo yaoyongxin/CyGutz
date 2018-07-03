@@ -34,3 +34,4 @@ clean:
 
 install:
 	cp CyGutz ${DESTDIR}
+	cp CyGutz ${COMSUITE_BIN}
