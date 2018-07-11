@@ -1,5 +1,6 @@
 import h5py, pickle, numpy, warnings, sys
 from scipy.linalg import block_diag
+from mpi4py import MPI
 from pymatgen.core import Structure
 from pymatgen.symmetry.bandstructure import HighSymmKpath
 from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
@@ -51,8 +52,8 @@ def get_rlambda_in_wannier_basis():
     '''
     # read from cygutz output
     with h5py.File("GLOG.h5", "r") as f:
-        lambda_list = f["/BND_LAMBDA"][()]
-        r_list = f["/BND_R"][()]
+        lambda_list = f["/BND_LAMBDA"][()].swapaxes(1,2)
+        r_list = f["/BND_R"][()].swapaxes(1,2)
 
     # get transformation from wannier basis to cygutz symmetry adapted basis.
     wan2sab = get_wan2sab()
@@ -61,8 +62,6 @@ def get_rlambda_in_wannier_basis():
     r2 = []
     n2 = wan2sab.shape[0]
     for rmat,lam in zip(r_list, lambda_list):
-        rmat = rmat.T
-        lam = lam.T
         n1 = rmat.shape[0]
         if n2 > n1:
             rmat = block_diag(rmat, numpy.eye(n2-n1, dtype=numpy.complex))
@@ -158,20 +157,48 @@ def get_gmodel():
     return gmodel
 
 
+def mpiget_bndev(k_list, gmodel, mode="tb"):
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    ncpu = comm.Get_size()
+    nktot = len(k_list)
+    nk_cpu = nktot//ncpu
+    if nk_cpu*ncpu < nktot:
+        nk_cpu += 1
+    kvec_loc = k_list[rank*nk_cpu: min((rank+1)*nk_cpu, nktot)]
+    bnd_es, bnd_vs = get_bands(kvec_loc, gmodel, mode=mode)
+    if rank != 0:
+        comm.Send(bnd_es, dest=0, tag=rank)
+    else:
+        for icpu in range(1, ncpu):
+            nk_loc = min(nk_cpu, nktot-icpu*nk_cpu)
+            _bnd_es = numpy.zeros((bnd_es.shape[0], nk_loc, bnd_es.shape[2]), \
+                    dtype=numpy.float)
+            comm.Recv(_bnd_es, source=icpu, tag=icpu)
+            bnd_es = numpy.concatenate((bnd_es, _bnd_es), axis=1)
+        assert bnd_es.shape[1] == nktot, "error in merging bnd_es!"
+    return bnd_es, bnd_vs
+
+
 def get_bands_symkpath(efermi=0., mode="tb"):
     gmodel = get_gmodel()
     kpath = get_symkpath()
     nk = (len(kpath.kpath["kpoints"])-1)*7
     k_vec, k_dist, k_node = gmodel.k_path(kpath.kpath["kpoints"].values(), nk)
-    bnd_es, bnd_vs = get_bands(k_vec, gmodel, mode=mode)
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    bnd_es, bnd_vs = mpiget_bndev(k_vec, gmodel, mode=mode)
     # prepare the args for pymatgen bs class.
-    eigenvals = {}
-    eigenvals[Spin.up] = bnd_es[0].T
-    if len(bnd_es) == 2:
-        eigenvals[Spin.down] = bnd_es[1].T
-    bs = BandStructureSymmLine(k_vec, eigenvals, \
-            kpath._structure.lattice.reciprocal_lattice, \
-            efermi, kpath.kpath["kpoints"])
+    if rank == 0:
+        eigenvals = {}
+        eigenvals[Spin.up] = bnd_es[0].T
+        if len(bnd_es) == 2:
+            eigenvals[Spin.down] = bnd_es[1].T
+        bs = BandStructureSymmLine(k_vec, eigenvals, \
+                kpath._structure.lattice.reciprocal_lattice, \
+                efermi, kpath.kpath["kpoints"])
+    else:
+        bs = None
     return bs
 
 
@@ -185,21 +212,25 @@ def plot_bandstructure():
     else:
         mode = "tb"
     bs = get_bands_symkpath(mode=mode)
-    bsplot = BSPlotter(bs)
-
-    if "-f" in sys.argv:
-        fname = sys.argv[sys.argv.index("-f")+1]
-    else:
-        fname = "bndstr.pdf"
-    if "-el" in sys.argv:
-        emin = float(sys.argv[sys.argv.index("-el")+1])
-    else:
-        emin = numpy.min(bs.bands.values())
-    if "-eu" in sys.argv:
-        emax = float(sys.argv[sys.argv.index("-eu")+1])
-    else:
-        emax = numpy.max(bs.bands.values())
-    bsplot.save_plot(fname, img_format="pdf", ylim=(emin, emax))
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    if rank == 0:
+        bsplot = BSPlotter(bs)
+        if "-f" in sys.argv:
+            fname = sys.argv[sys.argv.index("-f")+1]
+            if ".pdf" not in fname:
+                fname += ".pdf"
+        else:
+            fname = "bndstr.pdf"
+        if "-el" in sys.argv:
+            emin = float(sys.argv[sys.argv.index("-el")+1])
+        else:
+            emin = numpy.min(bs.bands.values())
+        if "-eu" in sys.argv:
+            emax = float(sys.argv[sys.argv.index("-eu")+1])
+        else:
+            emax = numpy.max(bs.bands.values())
+        bsplot.save_plot(fname, img_format="pdf", ylim=(emin, emax))
 
 
 

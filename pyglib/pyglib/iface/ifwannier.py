@@ -3,9 +3,12 @@ from __future__ import print_function
 from mpi4py import MPI
 from pythtb import w90
 import numpy as np
-import h5py, pickle
+import h5py, pickle, glob
 from pyglib.symm.unitary import get_u_csh2rh_all
 from scipy.linalg import block_diag
+from scipy.io import FortranFile
+from pyglib.estructure.gwannier import get_gmodel, mpiget_bndev
+
 
 def if_gwannier(corbs_list, delta_charge=0., wpath="./",
         prefix="wannier", k_grid=None, lrot_list=None,
@@ -123,6 +126,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="./",
             f['/nbmax'] = [nbmax]
             f['/NE_LIST'] = [[nbmax, 1, nbmax] for k in range(numk)]
             f['/kptwt'] = [wk for k in range(numk)]
+            f["/kpoints"] = k_mesh
             f['/ismear'] = [ismear]
             f['/delta'] = [delta]
             print("Est. vs used num. of elecns per unit cell: {} {}".\
@@ -135,3 +139,54 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="./",
                     f['/IMPURITY_{}/H1E_SPIN{}'.format(i+1, isp+1)] = h1e.T
 
 
+def get_wannier_dat(path="./"):
+    '''get the contents in wannier.dat Fortran binary file.
+    '''
+    with FortranFile("{}/wannier.dat".format(path), "r") as f:
+        reals_lat = f.read_reals()
+        recip_lat = f.read_reals()
+        num_bands = f.read_ints()[0]
+        num_wann = f.read_ints()[0]
+        ndiv = f.read_ints()
+        nqdiv = ndiv[0]*ndiv[1]*ndiv[2]
+        kpts = f.read_reals().reshape((nqdiv, 3))
+        idx_bands = f.read_ints()
+        wfwannier_list = f.read_reals().view(np.complex).reshape(\
+                (nqdiv, num_wann, num_bands)).swapaxes(1,2)
+        bnd_es = f.read_reals().reshape((1, nqdiv, num_bands))
+    return kpts, wfwannier_list, bnd_es
+
+
+def wannier_den_matrix(wannier_path="./"):
+    '''produce the file `wannier_den_matrix.dat` for the feedback from
+    g-risb to dft.
+    '''
+    kpts, wfwannier_list, bnd_es = get_wannier_dat(path=wannier_path)
+    gmodel = get_gmodel()
+    bnd_es, bnd_vs = mpiget_bndev(kpts, gmodel)
+
+    with h5py.File
+    efermi = get_fermi_level(bnd_es, wklist, num_elec, delta=0.01, ismear=-1)
+
+
+
+
+def get_risb_bndes(path="./"):
+    num_list = [int(x.split("_")[1].split(".")[0]) \
+            for x in glob.glob(path+"/GBANDS_*.h5")]
+    num_list.sort()
+    bnd_es = []
+    for isp in range(2):
+        for i in num_list:
+            fband = "GBANDS_{}.h5".format(i)
+            with h5py.File(fband, "r") as f:
+                if "/ISPIN_{}".format(isp+1) in f:
+                    if len(bnd_es) == isp:
+                        bnd_es.append([])
+                    ik_start = f["/IKP_START"][0]
+                    ik_end = f["/IKP_END"][0]
+                    for ik in range(ik_start, ik_end+1):
+                        bnd_es[isp].append(f["/ISPIN_{}/IKP_{}/ek".format(\
+                                isp+1, ik)][()])
+    bnd_es = np.asarray(bnd_es)
+    return bnd_es

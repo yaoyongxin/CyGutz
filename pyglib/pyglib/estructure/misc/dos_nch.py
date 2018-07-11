@@ -108,29 +108,18 @@ class DOS:
             # k-point
             for e_n1, f_n1, psi_sn1, nb1 in zip(e_kn, f_kn, psi_ksn, bnd_ne):
                 f_k1 = f_n1[0]
-
-                print(f_k1)
-
                 for n1, e1, f1 in zip(count(),
                         e_n1[nb1[1]:nb1[2]+1],
                         f_n1[nb1[1]:nb1[2]+1]):
-
                     if(abs(e1) > 10): continue
-
-
                     for n2, e2, f2 in zip(count(),
                             e_n1[nb1[1]:nb1[2]+1],
                             f_n1[nb1[1]:nb1[2]+1]):
-
                         if(abs(e2) > 10): continue
-
                         for n3, e3, f3 in zip(count(),
                                 e_n1[nb1[1]:nb1[2]+1],
                                 f_n1[nb1[1]:nb1[2]+1]):
-
-
                             if(abs(e3) > 10): continue
-
                             res1 = (f_k1-f1)*(f_k1-f2)*f3 + f1*f2*(f_k1-f3)
                             if(abs(res1)<1.e-16):
                                 continue
@@ -266,9 +255,6 @@ if __name__ == "__main__":
                 e_kn.append(f['/ISPIN_{}/IKP_{}/ek'.format(isp+1,k+1)][...])
             e_skn.append(e_kn)
 
-
-
-
     num_elec = np.sum(f_skn) - 2
     print(fermi.num_electron_diff(0.0, 0.001, e_skn, w_k, bnd_ne[:,0], num_elec))
 
@@ -282,10 +268,7 @@ if __name__ == "__main__":
                 args = (delta, e_skn, w_k, bnd_ne[:,0], num_elec))
         print x0
 
-#    print(f_list); quit()
-
     psi_skn_w_ab = get_all_psi_skn_w_ab(e_skn, psi_sksn, bnd_ne)
-
     window = (-5., 15.)
     dos = DOS(w_k, e_skn,  width=0.05, window=window, npts=1001)
     energies = dos.get_energies()
