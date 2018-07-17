@@ -1,5 +1,4 @@
 from __future__ import print_function
-
 from mpi4py import MPI
 from pythtb import w90
 import numpy as np
@@ -8,6 +7,7 @@ from pyglib.symm.unitary import get_u_csh2rh_all
 from scipy.linalg import block_diag
 from scipy.io import FortranFile
 from pyglib.estructure.gwannier import get_gmodel, mpiget_bndev
+from pyglib.estructure.fermi import get_fermi_weight, get_fermi_level
 
 
 def if_gwannier(corbs_list, delta_charge=0., wpath="./",
@@ -164,9 +164,43 @@ def wannier_den_matrix(wannier_path="./"):
     kpts, wfwannier_list, bnd_es = get_wannier_dat(path=wannier_path)
     gmodel = get_gmodel()
     bnd_es, bnd_vs = mpiget_bndev(kpts, gmodel)
+    nktot = len(kpts)
 
-    with h5py.File
-    efermi = get_fermi_level(bnd_es, wklist, num_elec, delta=0.01, ismear=-1)
+    with h5py.File("GPARAMBANDS.h5", "r") as f:
+        delta = f["/delta"][0]
+        ismear = f["/ismear"][0]
+        iso = f["/iso"][0]
+        num_elec = f["/nelectron"][0]
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    # set wk_list
+    wklist = [1./nktot for i in range(bnd_es.shape[1])]
+
+    if rank == 0:
+        efermi = get_fermi_level(bnd_es, wklist, num_elec, delta=delta, \
+                ismear=ismear, iso=iso)
+    else:
+        efermi = None
+    efermi = comm.bcast(efermi, root=0)
+
+    ncpu = comm.Get_size()
+    nk_cpu = nktot//ncpu
+    if nk_cpu*ncpu < nktot:
+        nk_cpu += 1
+
+    # reduce bnd_es to local part only
+    if rank == 0:
+        bnd_es = bnd_es[:nk_cpu]
+        wklist = wklist[:nk_cpu]
+
+    # set fermi weight
+    ferwes = get_fermi_weight(efermi, bnd_es, wklist, delta=delta,
+            ismear=ismear, iso=iso)
+
+    # calculate wannier_den_matrix
+    wan_den = get_wannier_den_matrix_risb(bnd_vs, ferwes)
 
 
 

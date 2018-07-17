@@ -5,7 +5,7 @@ from scipy.special import erfc
 from scipy.optimize import bisect
 
 
-def get_fermi_level(bnd_es, wklist, num_e, delta, ismear=0, iso=1):
+def get_fermi_level(bnd_es, wklist, num_e, delta=0.01, ismear=0, iso=1):
     emin = numpy.min(bnd_es)
     emax = numpy.max(bnd_es)
     efermi = bisect(err_fun, emin, emax, \
@@ -20,7 +20,7 @@ def err_fun(mu, bnd_es, wklist, num_e, delta, ismear, iso):
     return _nume - num_e
 
 
-def get_fermi_weight(mu, bnd_es, wklist, delta, ismear=0, iso=1):
+def get_fermi_weight(mu, bnd_es, wklist, delta=0.01, ismear=0, iso=1):
     ferwes = []
     for bnd_e in bnd_es:
         ferwes.append([])
