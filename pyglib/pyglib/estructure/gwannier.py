@@ -7,6 +7,7 @@ from pymatgen.electronic_structure.bandstructure import BandStructureSymmLine
 from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.core import Spin
 from builtins import zip,range
+import itertools as it
 
 
 def get_csh2sab():
@@ -47,29 +48,39 @@ def get_wan2sab():
     return wan2sab
 
 
-def get_rlambda_in_wannier_basis():
-    '''get the r-matrix and lambda-matrix from grisb calculation.
+def get_gloc_in_wannier_basis():
+    '''get the gutzwiller local matrices, including r, lambda, nr, and nphy
+    from grisb calculation.
     '''
     # read from cygutz output
     with h5py.File("GLOG.h5", "r") as f:
         lambda_list = f["/BND_LAMBDA"][()].swapaxes(1,2)
         r_list = f["/BND_R"][()].swapaxes(1,2)
+        nr_list = f["/BND_NRL"][()].swapaxes(1,2)
+        nphy_list = f["/BND_NPHY"][()].swapaxes(1,2)
 
     # get transformation from wannier basis to cygutz symmetry adapted basis.
     wan2sab = get_wan2sab()
     # convert to wannier basis in each spin block.
     lam2 = []
     r2 = []
+    nr2 = []
+    nphy2 = []
     n2 = wan2sab.shape[0]
-    for rmat,lam in zip(r_list, lambda_list):
+    for rmat,lam,nr,nphy in zip(r_list, lambda_list, nr_list, nphy_list):
         n1 = rmat.shape[0]
         if n2 > n1:
             rmat = block_diag(rmat, numpy.eye(n2-n1, dtype=numpy.complex))
-            lam = block_diag(lam, numpy.zeros((n2-n1,n2-n1), \
-                    dtype=numpy.complex))
+            zaromat = numpy.zeros((n2-n1,n2-n1))
+            lam = block_diag(lam, zaromat, dtype=numpy.complex)
+            nr = block_diag(nr, zaromat, dtype=numpy.complex)
+            nphy = block_diag(nphy, zaromat, dtype=numpy.complex)
         r2.append(wan2sab.dot(rmat).dot(wan2sab.T.conj()))
         lam2.append(wan2sab.dot(lam).dot(wan2sab.T.conj()))
-    return numpy.asarray(r2), numpy.asarray(lam2)
+        nr2.append(wan2sab.conj().dot(nr).dot(wan2sab.T))
+        nphy2.append(wan2sab.conj().dot(nphy).dot(wan2sab.T))
+    return numpy.asarray(r2), numpy.asarray(lam2), \
+            numpy.asarray(nr2), numpy.asarray(nphy2)
 
 
 def get_h1e_in_wannier_basis():
@@ -108,7 +119,7 @@ def get_structure():
 
 def get_bands(kpoints, gmodel, mode="tb"):
     if mode == "risb":
-        r_mat, lam_mat = get_rlambda_in_wannier_basis()
+        r_mat, lam_mat, _, _ = get_gloc_in_wannier_basis()
         h1_mat = get_h1e_in_wannier_basis()
         ispin = r_mat.shape[0]
     else:
@@ -178,6 +189,69 @@ def mpiget_bndev(k_list, gmodel, mode="tb"):
             bnd_es = numpy.concatenate((bnd_es, _bnd_es), axis=1)
         assert bnd_es.shape[1] == nktot, "error in merging bnd_es!"
     return bnd_es, bnd_vs
+
+
+def get_wannier_den_matrix_risb(bnd_vs, ferwes, wk, nktot):
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    ncpu = comm.Get_size()
+    nk_cpu = nktot//ncpu
+    if nk_cpu*ncpu < nktot:
+        nk_cpu += 1
+    r_mat, _, nr_mat, nphy_mat = get_gloc_in_wannier_basis()
+    with h5py.File("GPARAMBANDS.h5", "r") as f:
+        ispin_dft = f["/ispin"][0]
+        iso = f["/iso"][0]
+    ispin_risb = r_mat.shape[0]
+    # spin factor
+    f_ispin = 3-max(iso, ispin_risb)
+    wan_den = []
+    # total number of electrons to be compared.
+    sum_elec1 = numpy.sum(ferwes)
+    sum_elec2 = 0.
+    for isp in range(ispin_risb):
+        if isp <= ispin_dft:
+            wan_den.append([])
+        else:
+            wan_den = numpy.asarray(wan_den)
+        for ik, bndvk1, ferwek1, wk1 in zip(it.count(),
+                bnd_vs[isp], ferwes[isp], wk):
+            bndvk1h = bndvk1.T.conj()
+            for ibnd,ferw in enumerate(ferwek1):
+                bndvk1h[ibnd] *= ferw/f_ispin/wk1
+            # notice a convention a bit different from cygutz.
+            # <a|psi>f<psi|b>
+            bfa = bndvk1.dot(bndvk1h)
+            # R^\dagger_{A,a} * <a|psi>f<psi|b> * R_{b,B}
+            rdbfar = r_mat[isp].T.conj().dot(bfa).dot(r_mat[isp])
+            dmk = rdbfar
+            dmk += (nphy_mat[isp]-nr_mat[isp]).T
+            sum_elec2 += dmk.trace()*wk1*f_ispin
+            if isp <= ispin_dft:
+                wan_den[-1].append(dmk)
+            else:
+                wan_den[-1][ik] = (dmk+wan_den[-1][ik])/2
+    sum_elec_all1 = 0.
+    sum_elec_all2 = 0.
+    comm.Reduce(sum_elec1, sum_elec_all1)
+    comm.Reduce(sum_elec2, sum_elec_all2)
+    if rank == 0:
+        elec_diff = sum_elec_all2-sum_elec_all1
+        if numpy.abs(elec_diff) > 1.e-4:
+            warnings.warn("too large sum_ferwt-sum_kswt = {}!". \
+                    format(elec_diff))
+    # merge wan_den to master node
+    if rank != 0:
+        comm.Send(wan_den, dest=0, tag=rank)
+    else:
+        for icpu in range(1, ncpu):
+            nk_loc = min(nk_cpu, nktot-icpu*nk_cpu)
+            _wan_den = numpy.zeros((wan_den.shape[0], nk_loc, \
+                    wan_den.shape[2], wan_den.shape[3]), dtype=numpy.complex)
+            comm.Recv(_wan_den, source=icpu, tag=icpu)
+            wan_den = numpy.concatenate((wan_den, _wan_den), axis=1)
+        assert wan_den.shape[1] == nktot, "error in merging wan_den!"
+    return numpy.asarray(wan_den)
 
 
 def get_bands_symkpath(efermi=0., mode="tb"):

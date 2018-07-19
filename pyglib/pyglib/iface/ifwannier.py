@@ -200,7 +200,7 @@ def wannier_den_matrix(wannier_path="./"):
             ismear=ismear, iso=iso)
 
     # calculate wannier_den_matrix
-    wan_den = get_wannier_den_matrix_risb(bnd_vs, ferwes)
+    wan_den = get_wannier_den_matrix_risb(bnd_vs, ferwes, wklist, nktot)
 
 
 

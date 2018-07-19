@@ -116,6 +116,10 @@ module psave
                 &"/BND_R",f_id)
         call gh5_write(bnd%la1,wh%nasotot,wh%nasotot,wh%nspin, &
                 &"/BND_LAMBDA",f_id)
+        call gh5_write(bnd%nrl,wh%nasotot,wh%nasotot,wh%nspin, &
+                &"/BND_NRL",f_id)
+        call gh5_write(bnd%nc_phy,wh%nasotot,wh%nasotot,wh%nspin, &
+                &"/BND_NPHY",f_id)
     endif
 
     call calc_nks_pp(0)
