@@ -71,10 +71,10 @@ def get_gloc_in_wannier_basis():
         n1 = rmat.shape[0]
         if n2 > n1:
             rmat = block_diag(rmat, numpy.eye(n2-n1, dtype=numpy.complex))
-            zaromat = numpy.zeros((n2-n1,n2-n1))
-            lam = block_diag(lam, zaromat, dtype=numpy.complex)
-            nr = block_diag(nr, zaromat, dtype=numpy.complex)
-            nphy = block_diag(nphy, zaromat, dtype=numpy.complex)
+            zeromat = numpy.zeros((n2-n1, n2-n1), numpy.complex)
+            lam = block_diag(lam, zeromat)
+            nr = block_diag(nr, zeromat)
+            nphy = block_diag(nphy, zeromat)
         r2.append(wan2sab.dot(rmat).dot(wan2sab.T.conj()))
         lam2.append(wan2sab.dot(lam).dot(wan2sab.T.conj()))
         nr2.append(wan2sab.conj().dot(nr).dot(wan2sab.T))
@@ -139,7 +139,7 @@ def get_bands(kpoints, gmodel, mode="tb"):
                 hmat += lam_mat[isp]
             evals, evecs = gmodel._sol_ham(hmat, eig_vectors=True)
             bnd_es[isp].append(evals)
-            bnd_vs[isp].append(evecs)
+            bnd_vs[isp].append(evecs.T) # revert to fortran convention.
     return numpy.asarray(bnd_es), numpy.asarray(bnd_vs)
 
 
@@ -216,30 +216,32 @@ def get_wannier_den_matrix_risb(bnd_vs, ferwes, wk, nktot):
             wan_den = numpy.asarray(wan_den)
         for ik, bndvk1, ferwek1, wk1 in zip(it.count(),
                 bnd_vs[isp], ferwes[isp], wk):
-            bndvk1h = bndvk1.T.conj()
-            for ibnd,ferw in enumerate(ferwek1):
-                bndvk1h[ibnd] *= ferw/f_ispin/wk1
-            # notice a convention a bit different from cygutz.
+            # notice the convention a bit different from cygutz.
             # <a|psi>f<psi|b>
-            bfa = bndvk1.dot(bndvk1h)
-            # R^\dagger_{A,a} * <a|psi>f<psi|b> * R_{b,B}
-            rdbfar = r_mat[isp].T.conj().dot(bfa).dot(r_mat[isp])
-            dmk = rdbfar
-            dmk += (nphy_mat[isp]-nr_mat[isp]).T
+            afb = bndvk1.dot(numpy.diag(ferwek1/wk1/f_ispin)).dot(\
+                    bndvk1.T.conj())
+         #   # R^\dagger_{A,a} * <a|psi>f<psi|b> * R_{b,B}
+         #   rdafbr = r_mat[isp].T.conj().dot(afb).dot(r_mat[isp])
+         #   dmk = rdafbr
+         #   dmk += (nphy_mat[isp]-nr_mat[isp]).T
+
+            dmk = afb
+
+
             sum_elec2 += dmk.trace()*wk1*f_ispin
             if isp <= ispin_dft:
                 wan_den[-1].append(dmk)
             else:
-                wan_den[-1][ik] = (dmk+wan_den[-1][ik])/2
-    sum_elec_all1 = 0.
-    sum_elec_all2 = 0.
-    comm.Reduce(sum_elec1, sum_elec_all1)
-    comm.Reduce(sum_elec2, sum_elec_all2)
+                wan_den[-1][ik] += dmk
+                wan_den[-1][ik] *= 0.5
+    sum_elec_all1 = comm.reduce(sum_elec1)
+    sum_elec_all2 = comm.reduce(sum_elec2)
     if rank == 0:
         elec_diff = sum_elec_all2-sum_elec_all1
         if numpy.abs(elec_diff) > 1.e-4:
-            warnings.warn("too large sum_ferwt-sum_kswt = {}!". \
-                    format(elec_diff))
+            warnings.warn("sum_ferwt = {} vs sum_kswt = {}!". \
+                    format(sum_elec1, sum_elec2))
+    wan_den = numpy.asarray(wan_den)
     # merge wan_den to master node
     if rank != 0:
         comm.Send(wan_den, dest=0, tag=rank)
@@ -251,7 +253,7 @@ def get_wannier_den_matrix_risb(bnd_vs, ferwes, wk, nktot):
             comm.Recv(_wan_den, source=icpu, tag=icpu)
             wan_den = numpy.concatenate((wan_den, _wan_den), axis=1)
         assert wan_den.shape[1] == nktot, "error in merging wan_den!"
-    return numpy.asarray(wan_den)
+    return wan_den
 
 
 def get_bands_symkpath(efermi=0., mode="tb"):

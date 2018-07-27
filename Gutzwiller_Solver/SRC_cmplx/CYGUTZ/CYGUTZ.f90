@@ -130,12 +130,12 @@ program cygutz
     call g_newton_solver(gp%io,g_fcn)
 
     !! Save important data for analysis.
+    call calc_rnrl()
+    call map_wh_bnd_matrix(wh%nc_phy,bnd%nc_phy,.false.)
     call postsave()
 
     ! update electron density
     if(g_updaterho>0)then
-        call calc_rnrl()
-        call map_wh_bnd_matrix(wh%nc_phy,bnd%nc_phy,.false.)
         call calc_kswt(gp%io)
         call gh5_wrt_kswt()
     endif

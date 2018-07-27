@@ -6,13 +6,13 @@ from tabulate import tabulate
 
 
 def open_h_log(control):
-    control['h_log'] = open('./cmd.log', 'a', 0)
+    control['h_log'] = open('./cmd.log', 'w', 0)
     control['h_log'].write(
             "\n*********************************\n" +
             "             ComRISB\n" +
             "*********************************\n\n")
 
-    control['h_conv'] = open('./convergence.log', 'a', 0)
+    control['h_conv'] = open('./convergence.log', 'w', 0)
     control['h_conv'].write(
             "\n*********************************\n" +
             "             ComRISB\n" +
@@ -217,7 +217,15 @@ def find_impurity_wan(control, wan_hmat):
 
 
 def initial_file_directory_setup(control):
-    directory_setup(control)
+    tempdir = control['wannier_directory']
+    if not os.path.isdir(tempdir):
+        os.mkdir(tempdir)
+    tempdir=control['lattice_directory']
+    if not os.path.isdir(tempdir):
+        os.mkdir(tempdir)
+    tempdir=control['lowh_directory']
+    if not os.path.isdir(tempdir):
+        os.mkdir(tempdir)
 
 
 def initial_lattice_directory_setup(control):
@@ -276,7 +284,6 @@ def read_wan_hmat_basis(control):
                     'l': int(inip[ii, 1]), 'm': int(inip[ii, 2]), \
                     'xaxis': inip[ii, 3:6], 'zaxis': inip[ii, 6:9], \
                     'ind': ii})
-    print(basis_info, file=control['h_log'])
     control['h_log'].write(\
             'reading wannier.inip to get basis information.\n')
     return basis_info
@@ -293,20 +300,6 @@ def labeling_file(filename, iter_string):
     temp = filenameonly.split('.')
     shutil.copy(dirname+'/'+filenameonly, dirname+"/" +
                 '.'.join(temp[0:-1])+iter_string+'.'+temp[-1])
-
-
-def directory_setup(control):
-    # wannier90 directory
-    tempdir = control['wannier_directory']
-    if not os.path.isdir(tempdir):
-        os.mkdir(tempdir)
-    tempdir=control['lattice_directory']
-    if not os.path.isdir(tempdir):
-        os.mkdir(tempdir)
-    # delta
-    tempdir=control['lowh_directory']
-    if not os.path.isdir(tempdir):
-        os.mkdir(tempdir)
 
 
 def write_transformation_matrix(control, filename):
@@ -358,14 +351,13 @@ def write_conv_dft(control):
                 cnt=cnt+1
                 delta_rho=float(temp[3])
                 control['conv_table'].append(['dft', control['iter_num_outer'],\
-                        cnt,'', '', delta_rho, '','','','','','',''])
+                        cnt, delta_rho, '',''])
     f.close()
 
     with open(control['top_dir']+'/convergence.log', 'w') as outputfile:
         outputfile.write(tabulate(control['conv_table'], \
-                headers=['step','i_outer','i_latt','i_imp','causality',\
-                'delta_rho','w_sp_min','w_sp_max', 'mu', 'std_sig', \
-                'n_imp', 'histo_1', 'histo_2', 'ctqmc_sign'], \
+                headers=['step','i_outer','i_latt',\
+                'delta_rho', 'mu', 'err_risb'], \
                 numalign="right",  floatfmt=".5f"))
 
     os.chdir(control['top_dir'])
@@ -583,15 +575,25 @@ def gwannier_run(control, wan_hmat, imp, icycle):
     if icycle <= 1:
         init_grisb(control, imp)
 
-    control['h_log'].write(cmd+"\n")
     cmd = control['mpi_prefix_wannier'] + ' ' + \
             control['comsuitedir'] + "/CyGutz"
+    control['h_log'].write(cmd+"\n")
     hlog_time(control['h_log'], "cygutz start")
     with open(control['lowh_directory']+'/grisb.out', 'w') as f:
         ret = subprocess.call(cmd, shell=True, stdout = f, \
                 stderr = f)
     hlog_time(control['h_log'], "end", endl="\n")
     assert ret == 0, "Error in grisb. Check grisb.out."
+
+    cmd = control['mpi_prefix_wannier'] + ' ' + \
+            control['comsuitedir'] + "/gwannden.py"
+    control['h_log'].write(cmd+"\n")
+    hlog_time(control['h_log'], "gwannden start")
+    with open(control['lowh_directory']+'/gwannden.out', 'w') as f:
+        ret = subprocess.call(cmd, shell=True, stdout = f, \
+                stderr = f)
+    hlog_time(control['h_log'], "end", endl="\n")
+    assert ret == 0, "Error in gwannden. Check gwannden.out."
     os.chdir(control['top_dir'])
 
 
@@ -606,14 +608,13 @@ def find_allfile(dft_dir):
 
 def dft_risb(control, wan_hmat, imp):
     control['h_log'].write("\n\n")
-
-    control['iter_num_outer']=1
+    control['iter_num_outer'] = 1
     while control['iter_num_outer'] <= control['max_iter_num_outer']:
         control['h_log'].write(\
                 "************************************************\n"+ \
                 "iteration: {}\n".format(control['iter_num_outer'])+ \
                 "************************************************\n")
-        if (control['iter_num_outer']==1):
+        if control['iter_num_outer'] == 1:
             initial_lattice_directory_setup(control)
         else:
             prepare_dft_input(control)
@@ -624,13 +625,6 @@ def dft_risb(control, wan_hmat, imp):
         check_wannier_function_input(control, wan_hmat)
         wannier_run(control, wan_hmat)
         gwannier_run(control, wan_hmat, imp, control['iter_num_outer'])
-
-
-        sys.exit()
-
-
-
-        control['h_log'].write('\n\n\n')
         control['iter_num_outer']=control['iter_num_outer']+1
 
 
