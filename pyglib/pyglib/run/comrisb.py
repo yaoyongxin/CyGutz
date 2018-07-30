@@ -24,7 +24,7 @@ def close_h_log(control):
     control['h_conv'].close()
 
 
-def read_comdmft_ini():
+def read_comrisb_ini():
     vglobl = {}
     vlocal = {}
     execfile('comdmft.ini', vglobl, vlocal)
@@ -79,6 +79,15 @@ def read_comdmft_ini():
                 'impurity_orb_equivalence overwritten to be independent.\n')
 
     control['restart'] = control.get('restart', False)
+    if "-c" in sys.argv:
+        control['restart'] = True
+
+    control['start_prog'] = control.get('start_prog', "initcopy")
+    if "-s" in sys.argv:
+        control['start_prog'] = sys.argv[sys.argv.index("-s")+1]
+    control['end_prog'] = control.get('end_prog', "endconv")
+    if "-e" in sys.argv:
+        control['end_prog'] = sys.argv[sys.argv.index("-e")+1]
 
     if 'lattice_directory' not in control:
         control['lattice_directory'] = './lattice'
@@ -240,6 +249,8 @@ def initial_lattice_directory_setup(control):
         shutil.copy(control['initial_dft_dir']+'/kpath', './')
     if os.path.exists(control['initial_dft_dir']+'/ini'):
         shutil.copy(control['initial_dft_dir']+'/ini', './')
+    else:
+        raise ValueError("ini file not exists!")
 
     iter_string = '_'+str(control['iter_num_outer'])
     shutil.copy(control['initial_dft_dir']+'/'+control['allfile']+'.out',
@@ -302,64 +313,28 @@ def labeling_file(filename, iter_string):
                 '.'.join(temp[0:-1])+iter_string+'.'+temp[-1])
 
 
-def write_transformation_matrix(control, filename):
-
-    os.chdir(control['lowh_directory'])
-    f=open('trans_basis.dat', 'w')
-    g=open(filename, 'r')
-
-    for ii in sorted(set(control['impurity_problem_equivalence'])):
-        prob_ind = control['impurity_problem_equivalence'].index(ii)
-        nimp_orb = len(control['impurity_wan'][prob_ind])
-
-    if (control['additional_unitary_transform_impurity']==0):
-        v=np.identity(nimp_orb)
-    else:
-        tempmat=np.zeros((nimp_orb,nimp_orb))
-        for jj in nimp_orb:
-            tempmat[jj, :] = np.array(map(float, g.readline().split()))
-        if np.trace(tempmat) > control['metal_threshold']:
-            w, v = np.linalg.eigh(tempmat)
-            v = np.transpose(v)
-        else:
-            v = np.identity(nimp_orb)
-    for iorb in range(nimp_orb):
-        for jorb in range(nimp_orb):
-            f.write(str(v[iorb,jorb])+'     0.0     ')
-            f.write("\n")
-
-    f.close()
-    g.close()
-
-    iter_string='_'+str(control['iter_num_outer'])+'_'+str(control['iter_num_impurity'])
-    labeling_file('./trans_basis.dat', iter_string)
-
-    os.chdir(control['top_dir'])
-
-    return None
-
-
-def write_conv_dft(control):
+def write_conv(control):
     os.chdir(control['lattice_directory'])
     iter_string = '_' + str(control['iter_num_outer'])
-    f = open('./dft'+iter_string+'.out')
-    cnt = 0
-    for line in f:
-        temp = line.split()
-        if len(temp) == 4:
-            if temp[2] == 'self-consistency=':
-                cnt=cnt+1
-                delta_rho=float(temp[3])
-                control['conv_table'].append(['dft', control['iter_num_outer'],\
-                        cnt, delta_rho, '',''])
-    f.close()
-
+    with open('./dft'+iter_string+'.out') as f:
+        for line in f:
+            if "charge density" in line:
+                line = line.split()
+                delta_rho=float(line[3])
+            elif "ETOT" in line:
+                line = line.split()
+                etot = float(line[4])
+        control['conv_table'].append([control['iter_num_outer'], \
+                delta_rho, etot])
+    with h5py.File(control['lowh_directory']+"/GLOG.h5", "r") as f:
+        mu = f["/e_fermi"][0]
+        err_risb = f["/rl_maxerr"][0]
+        control['conv_table'][-1].extend([mu, err_risb])
     with open(control['top_dir']+'/convergence.log', 'w') as outputfile:
         outputfile.write(tabulate(control['conv_table'], \
-                headers=['step','i_outer','i_latt',\
-                'delta_rho', 'mu', 'err_risb'], \
-                numalign="right",  floatfmt=".5f"))
-
+                headers=['i_outer', \
+                'delta_rho', 'etot', "mu", 'err_risb'], \
+                numalign="right",  floatfmt=".8f"))
     os.chdir(control['top_dir'])
 
 
@@ -374,6 +349,10 @@ def check_wannier_function_input(control, wan_hmat):
 def run_dft(control):
     os.chdir(control['lattice_directory'])
     iter_string = '_'+str(control['iter_num_outer'])
+
+
+    raw_input("please check dft run before ...")
+
     cmd = control['mpi_prefix_lattice'] + ' ' + \
             control['comsuitedir'] + "/rspflapw.exe"
 
@@ -383,6 +362,9 @@ def run_dft(control):
         if ret != 0:
             raise ValueError("Error in dft. Check dft.out for error message.")
 
+
+    raw_input("please check dft run ...")
+
     allfile=control['allfile']
     labeling_file('./'+allfile+'.out',iter_string)
     shutil.move('./dft.out', './dft'+iter_string+'.out')
@@ -391,10 +373,9 @@ def run_dft(control):
 
 
 def prepare_dft_input(control):
-    os.chdir(control['lattice_directory'])
-    shutil.copy(control['lowh_directory']+"/wannier_den_matrix.dat", './')
+    shutil.copy(control['lowh_directory']+"/wannier_den_matrix.dat",
+            control['lattice_directory'])
     control['h_log'].write("prepare_dft_input done.\n")
-    os.chdir(control['top_dir'])
 
 
 def hlog_time(f, prestr, endl=""):
@@ -553,7 +534,6 @@ def gwannier_run(control, wan_hmat, imp, icycle):
     lrot_list = get_locrot_list(wan_hmat)
     params = {}
     params["corbs_list"] = control['impurity_wan']
-    params["k_grid"] = wan_hmat['kgrid']
     params["wpath"] = control['wannier_directory']
     params["lrot_list"] = lrot_list
     params["icycle"] = icycle
@@ -614,24 +594,32 @@ def dft_risb(control, wan_hmat, imp):
                 "************************************************\n"+ \
                 "iteration: {}\n".format(control['iter_num_outer'])+ \
                 "************************************************\n")
-        if control['iter_num_outer'] == 1:
-            initial_lattice_directory_setup(control)
-        else:
+        if control['iter_num_outer'] == 1 and \
+                control['start_prog'] in ["initcopy"]:
+            if not control['restart']:
+                initial_lattice_directory_setup(control)
+
+        if control['iter_num_outer'] > 1 or \
+                control['start_prog'] in ["initcopy", "wannier"]:
+            check_wannier_function_input(control, wan_hmat)
+            wannier_run(control, wan_hmat)
+        if control['iter_num_outer'] > 1 or \
+                control['start_prog'] in ["initcopy", "wannier", "gwann"]:
+            gwannier_run(control, wan_hmat, imp, control['iter_num_outer'])
+        if control['iter_num_outer'] > 1 or \
+                control['start_prog'] in ["initcopy", "wannier", "gwann", \
+                "dft"]:
             prepare_dft_input(control)
             run_dft(control)
-            write_conv_dft(control)
-
-        control['h_log'].write("wannier function construction.\n")
-        check_wannier_function_input(control, wan_hmat)
-        wannier_run(control, wan_hmat)
-        gwannier_run(control, wan_hmat, imp, control['iter_num_outer'])
+        if control['end_prog'] in ["dft"]:
+            break
+        write_conv(control)
         control['iter_num_outer']=control['iter_num_outer']+1
 
 
 
 if __name__ == '__main__':
-
-    control,wan_hmat,imp = read_comdmft_ini()
+    control,wan_hmat,imp = read_comrisb_ini()
     initial_file_directory_setup(control)
     dft_risb(control, wan_hmat, imp)
     close_h_log(control)

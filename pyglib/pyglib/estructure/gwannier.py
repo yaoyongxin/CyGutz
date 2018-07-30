@@ -117,7 +117,8 @@ def get_structure():
     return Structure(lattice=lattice, species=species, coords=coords)
 
 
-def get_bands(kpoints, gmodel, mode="tb"):
+def get_bands(kpoints, gmodel=None, wfwannier_list=None,
+        bnd_es_in=None, mode="tb"):
     if mode == "risb":
         r_mat, lam_mat, _, _ = get_gloc_in_wannier_basis()
         h1_mat = get_h1e_in_wannier_basis()
@@ -131,15 +132,20 @@ def get_bands(kpoints, gmodel, mode="tb"):
             ispp = min(isp, len(h1_mat))
         bnd_es.append([])
         bnd_vs.append([])
-        for kpt in kpoints:
-            hmat = gmodel._gen_ham(kpt)
+        for ik, kpt in enumerate(kpoints):
+            if gmodel is not None:
+                hmat = gmodel._gen_ham(kpt)
+            else:
+                hmat = wfwannier_list[isp][ik].T.conj().dot(\
+                        numpy.diag(bnd_es_in[isp][ik])).dot(\
+                        wfwannier_list[isp][ik])
             if mode == "risb":
                 hmat -= h1_mat[ispp]
                 hmat = r_mat[isp].dot(hmat).dot(r_mat[isp].T.conj())
                 hmat += lam_mat[isp]
-            evals, evecs = gmodel._sol_ham(hmat, eig_vectors=True)
+            evals, evecs = numpy.linalg.eigh(hmat)
             bnd_es[isp].append(evals)
-            bnd_vs[isp].append(evecs.T) # revert to fortran convention.
+            bnd_vs[isp].append(evecs)
     return numpy.asarray(bnd_es), numpy.asarray(bnd_vs)
 
 
@@ -168,7 +174,8 @@ def get_gmodel():
     return gmodel
 
 
-def mpiget_bndev(k_list, gmodel, mode="tb"):
+def mpiget_bndev(k_list, gmodel=None, wfwannier_list=None, \
+        bnd_es_in=None, mode="tb"):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     ncpu = comm.Get_size()
@@ -176,8 +183,14 @@ def mpiget_bndev(k_list, gmodel, mode="tb"):
     nk_cpu = nktot//ncpu
     if nk_cpu*ncpu < nktot:
         nk_cpu += 1
-    kvec_loc = k_list[rank*nk_cpu: min((rank+1)*nk_cpu, nktot)]
-    bnd_es, bnd_vs = get_bands(kvec_loc, gmodel, mode=mode)
+    iksta = rank*nk_cpu
+    ikend = min((rank+1)*nk_cpu, nktot)
+    kvec_loc = k_list[iksta: ikend]
+    if wfwannier_list is not None:
+        wfwannier_list = wfwannier_list[:, iksta:ikend, :, :]
+        bnd_es_in = bnd_es_in[:, iksta:ikend, :]
+    bnd_es, bnd_vs = get_bands(kvec_loc, gmodel=gmodel, \
+            wfwannier_list=wfwannier_list, bnd_es_in=bnd_es_in, mode=mode)
     if rank != 0:
         comm.Send(bnd_es, dest=0, tag=rank)
     else:
@@ -220,14 +233,10 @@ def get_wannier_den_matrix_risb(bnd_vs, ferwes, wk, nktot):
             # <a|psi>f<psi|b>
             afb = bndvk1.dot(numpy.diag(ferwek1/wk1/f_ispin)).dot(\
                     bndvk1.T.conj())
-         #   # R^\dagger_{A,a} * <a|psi>f<psi|b> * R_{b,B}
-         #   rdafbr = r_mat[isp].T.conj().dot(afb).dot(r_mat[isp])
-         #   dmk = rdafbr
-         #   dmk += (nphy_mat[isp]-nr_mat[isp]).T
-
-            dmk = afb
-
-
+            # R^\dagger_{A,a} * <a|psi>f<psi|b> * R_{b,B}
+            rdafbr = r_mat[isp].T.conj().dot(afb).dot(r_mat[isp])
+            dmk = rdafbr
+            dmk += (nphy_mat[isp]-nr_mat[isp]).T
             sum_elec2 += dmk.trace()*wk1*f_ispin
             if isp <= ispin_dft:
                 wan_den[-1].append(dmk)
@@ -263,7 +272,7 @@ def get_bands_symkpath(efermi=0., mode="tb"):
     k_vec, k_dist, k_node = gmodel.k_path(kpath.kpath["kpoints"].values(), nk)
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    bnd_es, bnd_vs = mpiget_bndev(k_vec, gmodel, mode=mode)
+    bnd_es, bnd_vs = mpiget_bndev(k_vec, gmodel=gmodel, mode=mode)
     # prepare the args for pymatgen bs class.
     if rank == 0:
         eigenvals = {}
