@@ -77,10 +77,12 @@ def modify_gparam():
                 stmp = sys.argv[sys.argv.index('-unique_j_ev')+1]
                 f['/usrqa/unique_j_list_ev'][()] = [float(s) for s in
                         stmp.split('-')]
+                f["/usrqa/u_matrix_type"][()] = [1]
             if '-unique_u_ev' in sys.argv:
                 stmp = sys.argv[sys.argv.index('-unique_u_ev')+1]
                 f['/usrqa/unique_u_list_ev'][()] = [float(s) for s in
                         stmp.split('-')]
+                f["/usrqa/u_matrix_type"][()] = [1]
     else:
         if re_init:
             raise ValueError(' file ginit.h5 does not exist!')
