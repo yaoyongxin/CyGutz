@@ -349,22 +349,13 @@ def check_wannier_function_input(control, wan_hmat):
 def run_dft(control):
     os.chdir(control['lattice_directory'])
     iter_string = '_'+str(control['iter_num_outer'])
-
-
-    raw_input("please check dft run before ...")
-
     cmd = control['mpi_prefix_lattice'] + ' ' + \
             control['comsuitedir'] + "/rspflapw.exe"
-
     with open(control['lattice_directory']+'/dft.out', 'w') as logfile:
         ret = subprocess.call(cmd, shell=True, stdout = logfile, \
                 stderr = logfile)
         if ret != 0:
             raise ValueError("Error in dft. Check dft.out for error message.")
-
-
-    raw_input("please check dft run ...")
-
     allfile=control['allfile']
     labeling_file('./'+allfile+'.out',iter_string)
     shutil.move('./dft.out', './dft'+iter_string+'.out')

@@ -18,8 +18,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
     cell, _, kpts, include_bands, wfwannier_list, bnd_es = get_wannier_dat(
             path=wpath)
     # total number of valence electrons
-    n_elec = get_total_valence_elec("{}/{}_{}.out".format(
-        lpath, lprefix, icycle))
+    n_elec = get_total_valence_elec("{}/{}.out".format(lpath, lprefix))
     n_elec -= max(0, (include_bands[0]-1)*(3-iso))
     symbols, atomic_positions = wget_symbols_positions(path=wpath,
             wprefix=wprefix)
