@@ -39,19 +39,36 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
     u_wan2csh = get_wann2csh(nbmax, corbs_list)
     h1e_all = []
     nelectron = 0.
+    # input file of dft bare band structure information for cygutz
     with h5py.File('BAREHAM_{}.h5'.format(myrank), 'w') as f:
         for isp in range(wfwannier_list.shape[0]):
             h1e_all.append(np.zeros((nbmax, nbmax), dtype=np.complex))
             for ik in range(kvec[0][2],kvec[0][2]+kvec[0][1]):
+                # rescontruct dft hamiltonian matrix
+                # in the wannier basis.
+                # since it involves a downfolding,
+                # some information outside of the frozen energy window
+                # will be lost.
                 hmat = wfwannier_list[isp][ik].T.conj().dot( \
                         np.diag(bnd_es[isp][ik])).dot(
                         wfwannier_list[isp][ik])
-                # from wannier basis to correlated orbital-ordered csh basis.
+                # from wannier basis to correlated orbital-ordered
+                # complex spherical harmonics basis,
+                # which is the convention used in the cygutz
+                # initialization script.
                 hmat = u_wan2csh.T.conj().dot(hmat).dot(u_wan2csh)
+                # record the onsite one-body part
                 h1e_all[isp] += hmat*wk
+                # save the downfolded dft hamiltonian
                 f['/IKP_{}/ISYM_1/HK0_SPIN1'.format(ik+1)] = hmat.T
+                # get the eigen-value and eigen0vectors
                 evals, evecs = np.linalg.eigh(hmat)
+                # another way to evaluate total valence electrons
+                # according to sangkook.
                 nelectron += np.count_nonzero(evals < 0.)*(wk*spin_deg)
+                # yes, here it is redundant here
+                # but for the sake of consistent with wien2k interface.
+                # here it implies the downfolding procedure is not necessary.
                 f['/IKP_{}/ek0_spin1'.format(ik+1)] = evals
                 f['/IKP_{}/T_PSIK0_TO_HK0_BASIS_SPIN{}'.format( \
                         ik+1, isp+1)] = evecs.T
@@ -267,21 +284,36 @@ def wrt_ginit(symbols, cell, scaled_positions, u_wan2csh, lrot_list=None):
 
 def wrt_gparambands(numk, nbmax, ne_list, wk_list, kpoints, nelectron,
         h1e_list, iso=1, ispin=1, ismear=0, delta=0.0258):
+    # single file for the dft band structure information
+    # beyond that included in 'BAREHAM_$myrank.h5' files.
     with h5py.File('GPARAMBANDS.h5', 'w') as f:
+        # spin-orbit coupling
         f['/iso/'] = [iso]
+        # spin
         f['/ispin'] = [ispin]
+        # k-points dimension
         f['/kptdim'] = [numk]
+        # maximal number of bands
         f['/nbmax'] = [nbmax]
+        # band indices associated with local orbital construction.
         f['/NE_LIST'] = ne_list
+        # k-points weight
         f['/kptwt'] = wk_list
+        # k-points
         f["/kpoints"] = kpoints
+        # brillouin zone integration method: fermi or gaussian smearing
         f['/ismear'] = [ismear]
+        # smearing factor
         f['/delta'] = [delta]
+        # number of valence electrons in the wannier manifold
         f['/nelectron'] = [nelectron]
+        # number symmetry operations
         f['/symnop'] = [1]
+        # the index of identity symmetry operation
         f['/symie'] = [1]
         for isp, h1es in enumerate(h1e_list):
             for i, h1e in enumerate(h1es):
+                # local one-body of the dft hamiltonian
                 f['/IMPURITY_{}/H1E_SPIN{}'.format(i+1, isp+1)] = h1e.T
 
 
@@ -291,17 +323,28 @@ def get_wannier_dat(path="./"):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     if rank == 0:
+        # open fortran generated binary file
         with FortranFile("{}/wannier.dat".format(path), "r") as f:
+            # real space lattice vectors
             reals_lat = f.read_reals().reshape((3, 3))
+            # reciprocal space lattice vectors
             recip_lat = f.read_reals().reshape((3, 3))
+            # maximal number of bands
             num_bands = f.read_ints()[0]
+            # number of wannier orbitals
             num_wann = f.read_ints()[0]
+            # k-point mesh
             ndiv = f.read_ints()
+            # total number of k-points
             nqdiv = ndiv[0]*ndiv[1]*ndiv[2]
+            # k-points
             kpts = f.read_reals().reshape((nqdiv, 3))
+            # low energy band indices included in the wannier construction
             include_bands = f.read_ints()
+            # list of overlap between band wavefunctions and wannier orbitals
             wfwannier_list = f.read_reals().view(np.complex).reshape(\
                     (1, nqdiv, num_wann, num_bands)).swapaxes(2, 3)
+            # list of band energies
             bnd_es = f.read_reals().reshape((1, nqdiv, num_bands))
     else:
         reals_lat = recip_lat = kpts = include_bands = wfwannier_list = \

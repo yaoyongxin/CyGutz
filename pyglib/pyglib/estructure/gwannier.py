@@ -54,9 +54,13 @@ def get_gloc_in_wannier_basis():
     '''
     # read from cygutz output
     with h5py.File("GLOG.h5", "r") as f:
+        # renormalized local one-body part of the quasiparticle hamiltonian
         lambda_list = f["/BND_LAMBDA"][()].swapaxes(1,2)
+        # quasiparticle renormalization matrix
         r_list = f["/BND_R"][()].swapaxes(1,2)
+        # local density part to be subtracted in density calculations
         nr_list = f["/BND_NRL"][()].swapaxes(1,2)
+        # physical density matrix to be added in density calculations
         nphy_list = f["/BND_NPHY"][()].swapaxes(1,2)
 
     # get transformation from wannier basis to cygutz symmetry adapted basis.
@@ -236,6 +240,8 @@ def get_wannier_den_matrix_risb(bnd_vs, ferwes, wk, nktot):
             # R^\dagger_{A,a} * <a|psi>f<psi|b> * R_{b,B}
             rdafbr = r_mat[isp].T.conj().dot(afb).dot(r_mat[isp])
             dmk = rdafbr
+            # \rho_{A,B} = R^\dagger_{A,a} * <a|psi>f<psi|b> * R_{b,B}
+            #            +(n_phys.^{A,B} - n_{sub.}^{A,B})
             dmk += (nphy_mat[isp]-nr_mat[isp]).T
             sum_elec2 += dmk.trace()*wk1*f_ispin
             if isp <= ispin_dft:
