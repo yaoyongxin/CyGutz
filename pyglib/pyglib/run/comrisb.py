@@ -605,7 +605,8 @@ def dft_risb(control, wan_hmat, imp):
                 control['start_prog'] in ["initcopy", "wannier", "gwann"]:
             gwannier_run(control, wan_hmat, imp, control['iter_num_outer'])
         if control['iter_num_outer'] > 1 or \
-                control['start_prog'] in ["initcopy", "wannier", "dft"]:
+                control['start_prog'] in ["initcopy", "wannier", \
+                "gwann", "dft"]:
             prepare_dft_input(control)
             run_dft(control)
         if control['end_prog'] in ["dft"]:
