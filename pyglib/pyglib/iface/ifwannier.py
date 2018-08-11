@@ -18,7 +18,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
     cell, _, kpts, include_bands, wfwannier_list, bnd_es = get_wannier_dat(
             path=wpath)
     # total number of valence electrons
-    n_elec = get_total_valence_elec("{}/{}.out".format(lpath, lprefix))
+    n_elec = get_total_valence_elec("{}/{}_1.out".format(lpath, lprefix))
     n_elec -= max(0, (include_bands[0]-1)*(3-iso))
     symbols, atomic_positions = wget_symbols_positions(path=wpath,
             wprefix=wprefix)
@@ -88,6 +88,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
         if np.abs(nelectron - n_elec) > 0.1:
             warnings.warn(" wannier valence electrons: {} vs {}!".format( \
                     nelectron, n_elec))
+            n_elec = nelectron
         if icycle <= 1:
             wrt_ginit(symbols, cell, atomic_positions, u_wan2csh,
                     lrot_list=lrot_list)
@@ -135,6 +136,10 @@ def wget_symbols_positions(path="./", wprefix="wannier"):
                     symbol = _symbol[0:1].upper()
                     if len(_symbol) > 1:
                         symbol += _symbol[1:].lower()
+                    # remove possible digit
+                    for s in symbol:
+                        if s.isdigit():
+                            symbol = symbol.replace(s,"")
                     symbols.append(symbol)
                     atomic_positions.append(
                             [float(x)*pref for x in line[1:4]])

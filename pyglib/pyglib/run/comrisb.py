@@ -316,7 +316,7 @@ def labeling_file(filename, iter_string):
 def write_conv(control):
     os.chdir(control['lattice_directory'])
     iter_string = '_' + str(control['iter_num_outer'])
-    with open('./dft'+iter_string+'.out') as f:
+    with open('./dft'+iter_string+'.out', "r") as f:
         for line in f:
             if "charge density" in line:
                 line = line.split()
@@ -374,27 +374,32 @@ def hlog_time(f, prestr, endl=""):
             endl))
 
 
-def wannier_run(control,wan_hmat):
+def wannier_run(control,wan_hmat,fullrun=True):
     os.chdir(control['wannier_directory'])
-    cmd = control['mpi_prefix_wannier']+' '+control['comsuitedir']+"/ComWann"
-    control['h_log'].write(cmd+"\n")
+    if fullrun:
+        cmd = control['mpi_prefix_wannier']+' '+\
+                control['comsuitedir']+"/ComWann"
+        control['h_log'].write(cmd+"\n")
 
-    hlog_time(control['h_log'], "comwann start")
-    with open(control['wannier_directory']+'/comwann.out', 'w') as logfile:
-        ret = subprocess.call(cmd, shell=True, stdout = logfile, \
-                stderr = logfile)
-        if ret != 0:
-            raise ValueError("Error in comwann. Check comwann.out or OUT.")
-    hlog_time(control['h_log'], "end", endl="\n")
+        hlog_time(control['h_log'], "comwann start")
+        with open(control['wannier_directory']+'/comwann.out', 'w') \
+                as logfile:
+            ret = subprocess.call(cmd, shell=True, stdout = logfile, \
+                    stderr = logfile)
+            if ret != 0:
+                raise ValueError(
+                        "Error in comwann. Check comwann.out or OUT.")
+        hlog_time(control['h_log'], "end", endl="\n")
 
-    iter_string = '_' + str(control['iter_num_outer'])
-    labeling_file('./wannier.dat', iter_string)
-    labeling_file('./wannier.chk', iter_string)
-    labeling_file('./wannier.inip', iter_string)
-    labeling_file('./wannier.eig', iter_string)
-    labeling_file('./wannier.win', iter_string)
-    labeling_file('./orb_for_froz_win.dat', iter_string)
-    shutil.move('./wannier.wout', './wannier'+iter_string+'.wout')
+        iter_string = '_' + str(control['iter_num_outer'])
+        labeling_file('./wannier.dat', iter_string)
+        labeling_file('./wannier.chk', iter_string)
+        labeling_file('./wannier.inip', iter_string)
+        labeling_file('./wannier.eig', iter_string)
+        labeling_file('./wannier.win', iter_string)
+        labeling_file('./orb_for_froz_win.dat', iter_string)
+        shutil.move('./wannier.wout', './wannier'+iter_string+'.wout')
+
     wan_hmat['basis'] = read_wan_hmat_basis(control)
     find_impurity_wan(control, wan_hmat)
     control['h_log'].write("control['impurity_wan']: {}\n".format(\
@@ -482,12 +487,13 @@ def init_grisb(control, imp):
         if symbols[i] not in unique_corr_symbol_list:
             unique_corr_symbol_list.append(symbols[i])
     idx_equivalent_atoms = []
+
     for i in range(len(symbols)):
         if i == 0:
             idx_equivalent_atoms.append(0)
             continue
         elif i in corr_atm_list:
-            idx = corr_atm_list[i]
+            idx = corr_atm_list.index(i)
             if idx > 0:
                 if control["impurity_problem_equivalence"][idx] \
                         == control["impurity_problem_equivalence"][idx-1]:
@@ -528,6 +534,7 @@ def gwannier_run(control, wan_hmat, imp, icycle):
     params["wpath"] = control['wannier_directory']
     params["lrot_list"] = lrot_list
     params["icycle"] = icycle
+    params["lprefix"] = control['allfile']
 
     # prepare parameter file for mpirun
     with open("gwannier_params.pkl", "wb") as f:
@@ -590,16 +597,15 @@ def dft_risb(control, wan_hmat, imp):
             if not control['restart']:
                 initial_lattice_directory_setup(control)
 
-        if control['iter_num_outer'] > 1 or \
-                control['start_prog'] in ["initcopy", "wannier"]:
-            check_wannier_function_input(control, wan_hmat)
-            wannier_run(control, wan_hmat)
+        fullrun = control['iter_num_outer'] > 1 or \
+                control['start_prog'] in ["initcopy", "wannier"]
+        check_wannier_function_input(control, wan_hmat)
+        wannier_run(control, wan_hmat, fullrun)
         if control['iter_num_outer'] > 1 or \
                 control['start_prog'] in ["initcopy", "wannier", "gwann"]:
             gwannier_run(control, wan_hmat, imp, control['iter_num_outer'])
         if control['iter_num_outer'] > 1 or \
-                control['start_prog'] in ["initcopy", "wannier", "gwann", \
-                "dft"]:
+                control['start_prog'] in ["initcopy", "wannier", "dft"]:
             prepare_dft_input(control)
             run_dft(control)
         if control['end_prog'] in ["dft"]:
