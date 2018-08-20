@@ -130,8 +130,11 @@ def get_bands(kpoints, gmodel=None, wfwannier_list=None,
         r_mat, lam_mat, _, _ = get_gloc_in_wannier_basis()
         h1_mat = get_h1e_in_wannier_basis()
         ispin = r_mat.shape[0]
+        with h5py.File("GLOG.h5", "r") as f:
+            efermi = f["/e_fermi"][0]
     else:
         ispin = 1
+        efermi = 0.
     bnd_es = []
     bnd_vs = []
     for isp in range(ispin):
@@ -151,7 +154,7 @@ def get_bands(kpoints, gmodel=None, wfwannier_list=None,
                 hmat = r_mat[isp].dot(hmat).dot(r_mat[isp].T.conj())
                 hmat += lam_mat[isp]
             evals, evecs = numpy.linalg.eigh(hmat)
-            bnd_es[isp].append(evals)
+            bnd_es[isp].append(evals-efermi)
             bnd_vs[isp].append(evecs)
     return numpy.asarray(bnd_es), numpy.asarray(bnd_vs)
 
@@ -278,12 +281,17 @@ def get_bands_symkpath(efermi=0., mode="tb"):
     if rank == 0:
         gmodel = get_gmodel()
         kpath = get_symkpath()
+        nk = (len(kpath.kpath["kpoints"])-1)*7
+        k_vec, k_dist, k_node = gmodel.k_path(kpath.kpath["kpoints"]. \
+                values(), nk)
     else:
-        gmodel = kpath = None
+        gmodel = kpath = k_vec = k_dist = k_node = None
     gmodel = comm.bcast(gmodel, root=0)
     kpath = comm.bcast(kpath, root=0)
-    nk = (len(kpath.kpath["kpoints"])-1)*7
-    k_vec, k_dist, k_node = gmodel.k_path(kpath.kpath["kpoints"].values(), nk)
+    k_vec = comm.bcast(k_vec, root=0)
+    k_dist = comm.bcast(k_dist, root=0)
+    k_node = comm.bcast(k_node, root=0)
+
     bnd_es, bnd_vs = mpiget_bndev(k_vec, gmodel=gmodel, mode=mode)
     # prepare the args for pymatgen bs class.
     if rank == 0:
