@@ -73,7 +73,7 @@ module gspci
         type(zcsr_matrix)::ucsr
         type(dcsr_matrix)::s2op
         type(dcsr_matrix),pointer::ncabop(:,:),nfabop(:,:)
-        real(q)::lambda_j2=0.2_q,etot
+        real(q)::lambda_j2=2.2_q,etot
     end type gspci_mem
 
     type(gspci_mem)::dmem

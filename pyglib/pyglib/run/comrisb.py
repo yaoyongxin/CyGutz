@@ -43,7 +43,7 @@ def read_comrisb_ini():
 
     # in control
     control['top_dir'] = os.path.abspath('./')
-    check_key_in_string('spin_orbit', control)
+    control["spin_orbit"] = control.get("spin_orbit", False)
     check_key_in_string('impurity_problem', control)
     check_key_in_string('impurity_problem_equivalence', control)
 
@@ -51,7 +51,7 @@ def read_comrisb_ini():
     control['crystal_field'] = control.get('crystal_field', True)
     control['full_orbital_polarization'] = \
             control.get('full_orbital_polarization', False)
-    control['iembed_diag'] = control.get('iembed_diag', -1)
+    control['iembed_diag'] = control.get('iembed_diag', -3)
     control['lnewton'] = control.get('lnewton', 0)
     control['spin_polarization'] = control.get('spin_polarization', False)
     control['unit'] = control.get('unit', 'ev')
@@ -59,13 +59,15 @@ def read_comrisb_ini():
     control['proj_win_center_interacting'] = 0
     control['max_iter_num_impurity'] = control.get('max_iter_num_impurity', 1)
     control['max_iter_num_outer'] = control.get('max_iter_num_outer', 50)
-    check_key_in_string('initial_dft_dir', control)
+    control["initial_dft_dir"] = control.get('initial_dft_dir', "../dft/")
     control['initial_dft_dir'] = os.path.abspath(control['initial_dft_dir'])
     control['allfile'] = find_allfile(control['initial_dft_dir'])
     control['h_conv'].write('allfile = {}\n'.format(control['allfile']))
-
-    check_key_in_string('mpi_prefix_wannier', control)
-    check_key_in_string('mpi_prefix_lattice', control)
+    control["mpi_prefix"] = control.get('mpi_prefix', "")
+    control["mpi_prefix_wannier"] = control.get('mpi_prefix_wannier', \
+            control["mpi_prefix"])
+    control["mpi_prefix_lattice"] = control.get('mpi_prefix_lattice', \
+            control["mpi_prefix"])
 
     if 'dc_mat_to_read' in control:
         control['dc_mat_to_read'] = os.path.abspath(control['dc_mat_to_read'])
@@ -112,7 +114,7 @@ def read_comrisb_ini():
         check_key_in_string('initial_trans_basis', control)
 
     # in wan_hmat
-    check_key_in_string('kgrid', wan_hmat)
+    wan_hmat["kgrid"] = wan_hmat.get("kgrid", None)
     check_key_in_string('froz_win_min', wan_hmat)
     check_key_in_string('froz_win_max', wan_hmat)
     wan_hmat['dis_win_min'] = wan_hmat.get('dis_win_min',
@@ -330,10 +332,18 @@ def write_conv(control):
         mu = f["/e_fermi"][0]
         err_risb = f["/rl_maxerr"][0]
         control['conv_table'][-1].extend([mu, err_risb])
+        rmat2 = f["/BND_R"][()].swapaxes(1,2)
+    # check quasiparticle weight
+    zmin = 100.
+    for rmat in rmat2:
+        zmat = rmat.T.conj().dot(rmat)
+        w = np.linalg.eigvalsh(zmat)
+        zmin = min(zmin, np.amin(w))
+    control['conv_table'][-1].append(zmin)
     with open(control['top_dir']+'/convergence.log', 'w') as outputfile:
         outputfile.write(tabulate(control['conv_table'], \
                 headers=['i_outer', \
-                'delta_rho', 'etot', "mu", 'err_risb'], \
+                'delta_rho', 'etot', "mu", 'err_risb', "min_z"], \
                 numalign="right",  floatfmt=".8f"))
     os.chdir(control['top_dir'])
 
@@ -392,12 +402,6 @@ def wannier_run(control,wan_hmat,fullrun=True):
         hlog_time(control['h_log'], "end", endl="\n")
 
         iter_string = '_' + str(control['iter_num_outer'])
-        labeling_file('./wannier.dat', iter_string)
-        labeling_file('./wannier.chk', iter_string)
-        labeling_file('./wannier.inip', iter_string)
-        labeling_file('./wannier.eig', iter_string)
-        labeling_file('./wannier.win', iter_string)
-        labeling_file('./orb_for_froz_win.dat', iter_string)
         shutil.move('./wannier.wout', './wannier'+iter_string+'.wout')
 
     wan_hmat['basis'] = read_wan_hmat_basis(control)
@@ -444,9 +448,11 @@ def init_grisb(control, imp):
                 symbols[corr_atm_list[-1]] != symbols[corr_atm_list[-2]]:
             unique_df_list.append(impurity[1])
             f_list = np.zeros(4)
-            for ifs,fs in enumerate(["F0", "F2", "F4", "F6"]):
+            for ifs,fs in enumerate(["f0", "f2", "f4", "f6"]):
                 if fs in imp[str(i+1)]:
                     f_list[ifs] = imp[str(i+1)][fs]
+                elif fs.upper() in imp[str(i+1)]:
+                    f_list[ifs] = imp[str(i+1)][fs.upper()]
             unique_f_list_ev.append(f_list)
             unique_u_list_ev.append(f_list[0])
             if "nominal_n" in imp[str(i+1)]:
@@ -562,6 +568,8 @@ def gwannier_run(control, wan_hmat, imp, icycle):
                 stderr = f)
     hlog_time(control['h_log'], "end", endl="\n")
     assert ret == 0, "Error in grisb. Check grisb.out."
+    shutil.copy("./WH_RL_OUT.h5", "./WH_RL_INP.h5")
+    shutil.copy("./GUTZ.LOG", "SAVE_GUTZ.LOG")
 
     cmd = control['mpi_prefix_wannier'] + ' ' + \
             control['comsuitedir'] + "/gwannden.py"
@@ -578,10 +586,14 @@ def gwannier_run(control, wan_hmat, imp, icycle):
 def find_allfile(dft_dir):
     files = glob.iglob(dft_dir+"/*.rst")
     for filename in files:
-        temp=filename[:-4].split('/')[-1].split('_')
+        temp = filename[:-4].split('/')[-1].split('_')
         if len(temp)==1 and temp[0]!='info':
-            allfile=temp[0]
-    return allfile
+            allfile = temp[0]
+    try:
+        return allfile
+    except:
+        raise ValueError("failed to locate *.rst files in {}!".format(\
+                dft_dir))
 
 
 def dft_risb(control, wan_hmat, imp):

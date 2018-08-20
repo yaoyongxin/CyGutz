@@ -90,19 +90,27 @@ class DOS:
         return np.array(dos_list)
 
 
-def get_bands():
+def get_bands(coherentonly=False):
     '''get band anergies and the correlated orbital characters.
     '''
     with h5py.File("GPARAMBANDS.h5", 'r') as f:
-        # band index list specifying the range of bands used
-        # for the construction of correlated orbitals.
-        bnd_ne = f["/NE_LIST_SPIN1"][...]
         # number of symmetry operations.
         nsym = f["/symnop"][0]
         # number of k-points
         nkp = f["/kptdim"][0]
         # maximal number of bands calculated over the k-points.
         nbmax = f["/nbmax"][0]
+        # band index list specifying the range of bands used
+        # for the construction of correlated orbitals.
+        bnd_ne = []
+        if "/NE_LIST_SPIN1" in f:
+            bnd_ne.append(f["/NE_LIST_SPIN1"][()])
+        elif "/NE_LIST" in f:
+            bnd_ne.append(f["/NE_LIST"][()])
+        else:
+            bnd_ne.append([[nbmax, 1, nbmax] for k in range(nkp)])
+        if "/NE_LIST_SPIN2" in f:
+            bnd_ne.append(f["/NE_LIST_SPIN2"][()])
 
     with h5py.File("GLOG.h5", 'r') as f:
         # Gutzwiller fermi level
@@ -112,6 +120,8 @@ def get_bands():
         # total number of correlated orbitals with spin included
         # for cases with spin-orbit interaction.
         nasotot = f["/nasotot"][0]
+        if coherentonly:
+            rmat = f["/BND_R"][()].swapaxes(1,2)
 
     if os.path.isfile('ginit.h5'):
         with h5py.File('ginit.h5', 'r') as f:
@@ -125,8 +135,12 @@ def get_bands():
     # expansion coefficients of the correlated orbitals in terms of the
     # band wavefunctions, i.e., <\psi_{sks, n}|\phi_{sks, \alpha}>
     # with sks := ispin, ikpt, isym.
-    psi_sksna = np.zeros((nspin,nkp,nsym,nbmax,nasotot),
-            dtype=np.complex)
+    if not coherentonly:
+        psi_sksna = np.zeros((nspin,nkp,nsym,nbmax,nasotot),
+                dtype=np.complex)
+    else:
+        psi_sksna = np.zeros((nspin,nkp,nsym,nbmax,nbmax),
+                dtype=np.complex)
 
     # including the case with MPI run.
     for fname in glob.glob('GBANDS_*h5'):
@@ -144,32 +158,53 @@ def get_bands():
                     # irrelevant value.
                     e_skn[isp,k,nbands:] = 100.
                     for isym in range(nsym):
-                        v = f['/ISPIN_{}/IKP_{}/ISYM_{}/EVEC'.format( \
-                                isp+1,k+1,isym+1)][:,:nasotot]
-                        psi_sksna[isp,k,isym,bnd_ne[k,1]-1: \
-                                bnd_ne[k,1]+v.shape[0]-1,:] = v
+                        if not coherentonly:
+                            v = f['/ISPIN_{}/IKP_{}/ISYM_{}/EVEC'.format( \
+                                    isp+1,k+1,isym+1)][:,:nasotot]
+                            psi_sksna[isp,k,isym,bnd_ne[isp][k,1]-1: \
+                                    bnd_ne[isp][k,1]+v.shape[0]-1,:] = v
+                        else:
+                            v = f['/ISPIN_{}/IKP_{}/ISYM_{}/EVEC'.format( \
+                                    isp+1,k+1,isym+1)][()].T
+                            v[:nasotot,:] = rmat[isp].T.conj().dot(
+                                    v[:nasotot,:])
+                            psi_sksna[isp,k,isym,bnd_ne[isp][k,1]-1: \
+                                    bnd_ne[isp][k,1]+v.shape[1]-1, \
+                                    bnd_ne[isp][k,1]-1: \
+                                    bnd_ne[isp][k,1]+v.shape[1]-1] = v.T
+
     return e_skn, psi_sksna
 
 
-def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001):
+def h5get_dos(ewin=(-3., 5.), delta=0.05, npts=1001, coherentonly=False):
     '''
     get total dos and the total correlated orbital component.
     '''
     with h5py.File("GPARAMBANDS.h5", 'r') as f:
         # list of k-point weight.
         w_k = f["/kptwt"][...]
+    with h5py.File("GLOG.h5", 'r') as f:
+        # total number of correlated orbitals with spin included
+        # for cases with spin-orbit interaction.
+        nasotot = f["/nasotot"][0]
 
     # get band energies and the orbital characters.
-    e_skn, psi_sksna = get_bands()
+    e_skn, psi_sksna = get_bands(coherentonly=coherentonly)
 
     # get total dos
     dos = DOS(w_k, e_skn,  width=delta, window=ewin, npts=npts)
     energies = dos.get_energies()
-    dos_t = dos.get_dos_t()
+    if not coherentonly:
+        dos_t = dos.get_dos_t()
+    else:
+        # get coherent weight
+        psi_skn_coh = np.einsum('...ijk,...ijk->...j', psi_sksna[...,:,:,:], \
+                psi_sksna.conj()[...,:,:,:])/psi_sksna.shape[2]
+        dos_t = dos.get_dos_component(psi_skn_coh)
 
     # get total correlated orbital component.
-    psi_skn_f = np.einsum('...ijk,...ijk->...j', psi_sksna[...,:,:,:], \
-            psi_sksna.conj()[...,:,:,:])/psi_sksna.shape[2]
+    psi_skn_f = np.einsum('...ijk,...ijk->...j', psi_sksna[...,:,:,:nasotot], \
+            psi_sksna.conj()[...,:,:,:nasotot])/psi_sksna.shape[2]
     dos_f = dos.get_dos_component(psi_skn_f)
 
     return energies, dos_t, dos_f
@@ -237,10 +272,14 @@ def driver_plot_dos():
             delta = float(sys.argv[sys.argv.index('-d')+1])
         if '-n' in sys.argv:
             npts = int(sys.argv[sys.argv.index('-n')+1])
+        if "-ch" in sys.argv:
+            coherentonly = True
+        else:
+            coherentonly = False
 
     # get dos
     energies, dos_t, dos_f = h5get_dos(ewin=(emin, emax), delta=delta, \
-            npts=npts)
+            npts=npts, coherentonly=coherentonly)
 
     # pick up-component to plot
     plot_dos_tf(energies, dos_t, dos_f)

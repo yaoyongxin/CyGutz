@@ -80,10 +80,10 @@ program cygutz
     if(gp%io>0)then
         open(gp%io,file='GUTZ.LOG',status='replace')
 #ifdef with_compile_date
-        write(gp%io,'(" cygutz (atomic rydberg units) vmpi_5.0 built on", &
+        write(gp%io,'(" cygutz vmpi_5.0 built on", &
                 &a12)')__DATE__
 #else
-        write(gp%io,'(" cygutz (atomic rydberg units) vmpi_5.0")')
+        write(gp%io,'(" cygutz vmpi_5.0")')
 #endif
     endif
 

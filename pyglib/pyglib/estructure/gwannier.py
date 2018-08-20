@@ -1,4 +1,6 @@
-import h5py, pickle, numpy, warnings, sys
+from __future__ import print_function
+
+import h5py, pickle, numpy, warnings, sys, os
 from scipy.linalg import block_diag
 from mpi4py import MPI
 from pymatgen.core import Structure
@@ -8,6 +10,7 @@ from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.core import Spin
 from builtins import zip,range
 import itertools as it
+from pythtb import w90
 
 
 def get_csh2sab():
@@ -170,11 +173,9 @@ def get_symkpath(atol=1.e-6):
     return kpath
 
 
-def get_gmodel():
-    with open("wannier90.pkl", "rb") as f:
-        wannier90 = pickle.load(f)
-    gmodel = wannier90.model(zero_energy=0.0, min_hopping_norm=1.e-8,
-            ignorable_imaginary_part=1.e-8)
+def get_gmodel(wpath="../wannier", wprefix="wannier"):
+    wannier90 = w90(wpath, wprefix)
+    gmodel = wannier90.model()
     return gmodel
 
 
@@ -272,12 +273,17 @@ def get_wannier_den_matrix_risb(bnd_vs, ferwes, wk, nktot):
 
 
 def get_bands_symkpath(efermi=0., mode="tb"):
-    gmodel = get_gmodel()
-    kpath = get_symkpath()
-    nk = (len(kpath.kpath["kpoints"])-1)*7
-    k_vec, k_dist, k_node = gmodel.k_path(kpath.kpath["kpoints"].values(), nk)
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
+    if rank == 0:
+        gmodel = get_gmodel()
+        kpath = get_symkpath()
+    else:
+        gmodel = kpath = None
+    gmodel = comm.bcast(gmodel, root=0)
+    kpath = comm.bcast(kpath, root=0)
+    nk = (len(kpath.kpath["kpoints"])-1)*7
+    k_vec, k_dist, k_node = gmodel.k_path(kpath.kpath["kpoints"].values(), nk)
     bnd_es, bnd_vs = mpiget_bndev(k_vec, gmodel=gmodel, mode=mode)
     # prepare the args for pymatgen bs class.
     if rank == 0:

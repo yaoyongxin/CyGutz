@@ -92,6 +92,9 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
         if icycle <= 1:
             wrt_ginit(symbols, cell, atomic_positions, u_wan2csh,
                     lrot_list=lrot_list)
+        else:
+            update_ginit(u_wan2csh)
+
         ne_list = [[nbmax, 1, nbmax] for k in range(numk)]
         wk_list = [wk for k in range(numk)]
         nelectron = n_elec + delta_charge
@@ -199,6 +202,8 @@ def if_gwannier90(corbs_list, delta_charge=0., wpath="./",
         if icycle <= 1:
             wrt_ginit(gwannier.symbols, gwannier.lat,
                     gwannier.atomic_positions, u_wan2csh, lrot_list=lrot_list)
+        else:
+            update_ginit(u_wan2csh)
 
         ne_list = [[nbmax, 1, nbmax] for k in range(numk)]
         wk_list = [wk for k in range(numk)]
@@ -287,6 +292,14 @@ def wrt_ginit(symbols, cell, scaled_positions, u_wan2csh, lrot_list=None):
         f["/u_wan2csh"] = u_wan2csh
 
 
+def update_ginit(u_wan2csh):
+    with h5py.File("ginit.h5", "a") as f:
+        u = f["/u_wan2csh"][()]
+        if u.shape != u_wan2csh.shape:
+            del f["/u_wan2csh"]
+            f["/u_wan2csh"] = u_wan2csh
+
+
 def wrt_gparambands(numk, nbmax, ne_list, wk_list, kpoints, nelectron,
         h1e_list, iso=1, ispin=1, ismear=0, delta=0.0258):
     # single file for the dft band structure information
@@ -301,7 +314,7 @@ def wrt_gparambands(numk, nbmax, ne_list, wk_list, kpoints, nelectron,
         # maximal number of bands
         f['/nbmax'] = [nbmax]
         # band indices associated with local orbital construction.
-        f['/NE_LIST'] = ne_list
+        f['/NE_LIST_SPIN1'] = ne_list
         # k-points weight
         f['/kptwt'] = wk_list
         # k-points
