@@ -768,8 +768,9 @@ module warehouse
     !*************************************************************************
     !< post processing: print and symmetizations.
     !*************************************************************************
-    subroutine calc_nks_pp(io)
+    subroutine calc_nks_pp(io,lchk)
     integer,intent(in)::io
+    logical,optional,intent(in)::lchk
 
     real(q) maxerr
 
@@ -793,7 +794,9 @@ module warehouse
     call chk_eigens_matrix_list('nks',wh%nks,wh%na2112,wh%num_imp, &
             &wh%na2_imp,io,0)
     call calc_nks_tot(io)
-    call chk_nks_tiny()
+    if(.not.present(lchk))then
+        call chk_nks_tiny()
+    endif
     return
 
     end subroutine calc_nks_pp

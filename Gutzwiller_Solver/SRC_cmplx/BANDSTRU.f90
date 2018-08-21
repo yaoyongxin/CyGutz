@@ -1089,10 +1089,38 @@ module bandstru
         write(0,'(" ismear=",i2)')kpt%ismear
         stop ' error: unsupported ismear!'
     endif
+    call adjust_efermi_bandgap(io)
     if(io>0)write(io,'(" gutz fermi level=",f16.8)')bnd%ef
     return
       
     end subroutine gutz_fermi
+
+    subroutine adjust_efermi_bandgap(io)
+    integer,intent(in)::io
+
+    integer ihomo,i
+    real(q) ecmin,evmax
+
+    ! check band gap
+    ihomo=0
+    do i=1,bnd%ne(3,1,1)
+        if(bnd%ek(i,1,1)<bnd%ef)then
+            ihomo=i
+        else
+            exit
+        endif
+    enddo
+    ! conduction band minimum
+    ecmin=minval(bnd%ek(ihomo+1,:,:))
+    ! valence band maximum
+    evmax=maxval(bnd%ek(ihomo,:,:))
+    if(evmax<bnd%ef.and.ecmin>bnd%ef)then
+        if(io>0)write(io,'(" band gap identified!")')
+        bnd%ef=(evmax+ecmin)/2
+    endif
+    return
+
+    end subroutine adjust_efermi_bandgap
       
     !*************************************************************************
     subroutine gutz_fermi_tetra_w2k()

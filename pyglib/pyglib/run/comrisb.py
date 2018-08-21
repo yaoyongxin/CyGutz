@@ -560,7 +560,7 @@ def gwannier_run(control, wan_hmat, imp, icycle):
         init_grisb(control, imp)
 
     cmd = control['mpi_prefix_wannier'] + ' ' + \
-            control['comsuitedir'] + "/CyGutz"
+            control['comsuitedir'] + "/CyGutz -r 0"
     control['h_log'].write(cmd+"\n")
     hlog_time(control['h_log'], "cygutz start")
     with open(control['lowh_directory']+'/grisb.out', 'w') as f:

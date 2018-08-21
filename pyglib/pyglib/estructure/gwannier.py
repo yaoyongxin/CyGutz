@@ -281,7 +281,7 @@ def get_bands_symkpath(efermi=0., mode="tb"):
     if rank == 0:
         gmodel = get_gmodel()
         kpath = get_symkpath()
-        nk = (len(kpath.kpath["kpoints"])-1)*7
+        nk = (len(kpath.kpath["kpoints"])-1)*12
         k_vec, k_dist, k_node = gmodel.k_path(kpath.kpath["kpoints"]. \
                 values(), nk)
     else:

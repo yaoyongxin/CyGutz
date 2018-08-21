@@ -85,7 +85,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
                 h1e_list[isp].append(h1e_all[isp][base:base+norbs, \
                         base:base+norbs])
                 base += norbs
-        if np.abs(nelectron - n_elec) > 0.1:
+        if np.abs(nelectron - n_elec) > 0.01:
             warnings.warn(" wannier valence electrons: {} vs {}!".format( \
                     nelectron, n_elec))
             n_elec = nelectron
@@ -97,7 +97,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
 
         ne_list = [[nbmax, 1, nbmax] for k in range(numk)]
         wk_list = [wk for k in range(numk)]
-        nelectron = n_elec + delta_charge
+        nelectron = int(n_elec+0.5) + delta_charge
         wrt_gparambands(numk, nbmax, ne_list, wk_list, kpts, nelectron,
                 h1e_list, iso=iso, ispin=ispin, ismear=ismear, delta=delta)
 

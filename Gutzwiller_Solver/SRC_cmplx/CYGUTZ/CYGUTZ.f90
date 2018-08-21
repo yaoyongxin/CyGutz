@@ -106,7 +106,7 @@ program cygutz
     call calc_band_all(gp%io)
     call gutz_fermi(gp%io)
     call calc_nks()
-    call calc_nks_pp(gp%io)
+    call calc_nks_pp(gp%io,lchk=.false.)
 
     ! single out the local one-body part.
     call rm_h1e_from_bare_hamiltonian()
@@ -123,7 +123,7 @@ program cygutz
     call calc_band_all(gp%io)
     call gutz_fermi(gp%io)
     call calc_nks()
-    call calc_nks_pp(gp%io)
+    call calc_nks_pp(gp%io,lchk=.false.)
     call eval_sl_vec_all(1,gp%io)
 
     !! Solve the set of Gutzwiller nonlinear equations.
