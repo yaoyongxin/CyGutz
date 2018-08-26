@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import numpy as np
 from builtins import range, zip
-from pyglib.iface.ifwannier import get_wannier_dat
+from pyglib.iface.wannierio import get_wannier_dat
 
 
 

@@ -23,8 +23,6 @@ install:
 	# Install simplified version of pymatgen
 	# pip install -e ./pyextern/pymatgen --user
 	# Install pythtb
-	# pip install -e ./pyextern/pythtb --user
-	# Installation finished gracefully! Enjoy!
 
 gtool:
 	cp -r pygtool/* ${GUTZ_ROOT2}

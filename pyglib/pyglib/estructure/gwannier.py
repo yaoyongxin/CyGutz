@@ -10,7 +10,7 @@ from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.core import Spin
 from builtins import zip,range
 import itertools as it
-#from pyglib.iface.wanniertb import w90
+from pyglib.iface.wanniertb import w90
 
 
 def get_csh2sab():
