@@ -2,7 +2,7 @@ from __future__ import print_function
 from mpi4py import MPI
 from pythtb import w90
 import numpy as np
-import h5py, pickle, glob, scipy, warnings
+import h5py, glob, scipy, warnings
 from pyglib.symm.unitary import get_u_csh2rh_all
 from scipy.linalg import block_diag
 from scipy.io import FortranFile
@@ -155,9 +155,6 @@ def if_gwannier90(corbs_list, delta_charge=0., wpath="./",
         icycle=0):
     # read output from wannier90.
     gwannier = w90(wpath, wprefix)
-    # save wannier90 model.
-    with open("wannier90.pkl", "wb") as f:
-        pickle.dump(gwannier, f, protocol=pickle.HIGHEST_PROTOCOL)
     gmodel = gwannier.model(zero_energy=0.0, min_hopping_norm=1.e-8,
             ignorable_imaginary_part=1.e-8)
     # uniform grid of k-points always contains the origin.

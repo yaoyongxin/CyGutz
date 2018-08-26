@@ -4,6 +4,8 @@ from __future__ import print_function
 
 import numpy as np
 from builtins import range, zip
+from pyglib.iface.ifwannier import get_wannier_dat
+
 
 
 def tb_wigner_seitz(ngrid,lat):
@@ -29,6 +31,7 @@ def tb_wigner_seitz(ngrid,lat):
                     rvec_ws.append(np.array([n0,n1,n2]))
     # sum-rule check
     deg_ws = np.array(deg_ws)
+    rvec_ws = np.asarray(rvec_ws)
     tot1 = np.sum(1./deg_ws)
     tot2 = np.prod(ngrid)
     if np.abs(tot1 - tot2) > 1.e-7:
@@ -36,6 +39,16 @@ def tb_wigner_seitz(ngrid,lat):
                 format(tot1, tot2))
     return deg_ws, rvec_ws
 
+
+def get_tb_hr(kpoints,rpoints,wfwans,evals):
+    phase_mat = np.exp(-2.j*np.pi*np.asarray(kpoints).dot(rpoints.T)) \
+            /len(kpoints)
+    hk_list = [[wfwansk1.T.conj().dot(np.diag(evalsk1)).dot(wfwansk1) \
+            for wfwansk1, evalsk1 in zip(wfwans1,evals1)]\
+            for wfwans1, evals1 in zip(wfwans,evals)]
+    hk_list = np.array(hk_list).swapaxes(1,2).swapaxes(2,3)
+    hr_list = np.tensordot(hk_list, phase_mat, axes=(3,0))
+    return hr_list
 
 
 class tb_model(object):
@@ -48,70 +61,35 @@ class tb_model(object):
       lattice vector has coordinates [1.0,0.5] while the second
       one has coordinates [0.0,2.0].  By default, lattice vectors
       are an identity matrix.
-
-    :param orb: Array containing reduced coordinates of all
-      tight-binding orbitals. In the example below, the first
-      orbital is defined with reduced coordinates [0.2,0.3]. Its
-      Cartesian coordinates are therefore 0.2 times the first
-      lattice vector plus 0.3 times the second lattice vector.
-      If *orb* is an integer code will assume that there are these many
-      orbitals all at the origin of the unit cell.  By default
-      the code will assume a single orbital at the origin.
-
     """
 
-    def __init__(self,lat,orb,deg_ws,Rvec_list,Hmat_list,nspin=1):
+    def __init__(self,lat,deg_ws,rpoints,hr_list):
         self._dim_k = 3
         self._dim_r = 3
-
         self._lat=np.array(lat,dtype=float)
         if self._lat.shape != (self._dim_r,self._dim_r):
             raise Exception("\nWrong lat array dimensions")
         # check that volume is not zero and that have right handed system
         if np.abs(np.linalg.det(self._lat))<1.0E-6:
-            raise Exception("\n\nLattice vectors length/area/volume too close to zero, or zero.")
+            raise Exception(\
+                    "\nLattice vectors length/area/volume too"+\
+                    " close to zero, or zero.")
         if np.linalg.det(self._lat)<0.0:
-            raise Exception("\n\nLattice vectors need to form right handed system.")
+            raise Exception(\
+                    "\n\nLattice vectors need to form right handed system.")
+        self.deg_ws = np.asarray(deg_ws)
+        self.rpoints = np.asarray(rpoints)
+        self.hr_list = np.asarray(hr_list)
+        self._norb = self.hr_list.shape[2]
 
-        # initialize _norb = number of basis orbitals per cell
-        #   and       _orb = orbital locations, in reduced coordinates
-        #   format is _orb(orb_index,lat_vec_index)
-        self._orb = np.array(orb, dtype=float)
-        if len(self._orb.shape) != 2:
-            raise Exception("\nWrong orb array rank")
-        self._norb=self._orb.shape[0] # number of orbitals
-        if self._orb.shape[1] != self._dim_r:
-            raise Exception("\nWrong orb array dimensions")
-        # remember number of spin components
-        if nspin not in [1,2]:
-            raise Exception("\nWrong value of nspin, must be 1 or 2!")
-        self._nspin = nspin
-        self.deg_ws = deg_ws
-        self.Rvec_list = Rvec_list
-        self.Hmat_list = Hmat_list
 
-    def _gen_ham(self,k_input=None):
+    def _gen_ham(self,kpt,isp):
         """Generate Hamiltonian for a certain k-point,
-        K-point is given in reduced coordinates!"""
-        kpnt=np.array(k_input)
-        if k_input is not None:
-            # if kpnt is just a number then convert it to an array
-            if len(kpnt.shape)==0:
-                kpnt=np.array([kpnt])
-        else:
-            raise Exception("\n\nHave to provide a k-vector!")
-        # zero the Hamiltonian matrix
-        ham = np.zeros((self._norb,self._norb),dtype=complex)
-        for deg,vecR,ham1 in zip(self.deg_ws, self.Rvec_list, self.Hmat_list):
-            for ham12 in ham1:
-                i,j,amp = ham12
-                # vector from one site to another
-                rv = -self._orb[i,:]+self._orb[j,:]+vecR
-                # Calculate the hopping, see details in info/tb/tb.pdf
-                phase=np.exp((2.0j)*np.pi*kpnt.dot(rv))
-                amp *= phase/deg
-                ham[i,j] += amp
+        which is given in reduced coordinates!"""
+        phase_mat = np.exp(-2.j*np.pi*self.rpoints.dot(kpt))/self.deg_ws
+        ham = np.tensordot(self.hr_list[isp],phase_mat,axes=(2,0))
         return ham
+
 
     def _sol_ham(self,ham,eig_vectors=False):
         """Solves Hamiltonian and returns eigenvectors, eigenvalues"""
@@ -201,6 +179,7 @@ class tb_model(object):
             raise Exception("\n\nUnsupported dim_k!")
 
         return k_vec
+
 
     def k_path(self,kpts,nk,report=True):
         r"""
@@ -377,11 +356,16 @@ def _nicefy_eig(eval,eig=None):
         return (eval,eig)
     return eval
 
+
 # for nice justified printout
 def _nice_float(x,just,rnd):
     return str(round(x,rnd)).rjust(just)
+
+
 def _nice_int(x,just):
     return str(x).rjust(just)
+
+
 def _nice_complex(x,just,rnd):
     ret=""
     ret+=_nice_float(complex(x).real,just,rnd)
@@ -416,8 +400,6 @@ class w90(object):
     - *prefix*.win
     - *prefix*\_hr.dat
     - *prefix*\_centres.xyz
-    - *prefix*\_band.kpt (optional)
-    - *prefix*\_band.dat (optional)
 
     The first file (*prefix*.win) is an input file to Wannier90 itself. This
     file is needed so that PythTB can read in the unit cell vectors.
@@ -515,7 +497,7 @@ class w90(object):
 
     """
 
-    def __init__(self,path,prefix):
+    def __init__(self,path="./",prefix="wannier"):
         # store path and prefix
         self.path=path
         self.prefix=prefix
@@ -580,77 +562,25 @@ class w90(object):
                             [float(x)*pref for x in line[1:4]])
             elif read_position < 0 and self.kgrid is not None:
                 break
-
         if self.kgrid is None:
             raise Exception("Unable to find mp_grid!")
-
         # convert to scaled atomic position
         self.atomic_positions = np.asarray(self.atomic_positions).dot(\
                 np.linalg.inv(self.lat))
 
-        # read in hamiltonian matrix, in eV
-        f=open(self.path+"/"+self.prefix+"_hr.dat","r")
-        ln=f.readlines()
-        f.close()
-        #
-        # get number of wannier functions
-        self.num_wan=int(ln[1])
-        # get number of Wigner-Seitz points
-        num_ws=int(ln[2])
-        ln = ln[3:]
-        # get degenereacies of Wigner-Seitz points
-        deg_ws=[]
-        for j,ln1 in enumerate(ln):
-            deg_ws.extend(map(int, ln1.split()))
-            if len(deg_ws)==num_ws:
-                ln = ln[j+1:]
-                break
-            if len(deg_ws)>num_ws:
-                raise Exception("Too many degeneracies for WS points!")
-        deg_ws = np.array(deg_ws,dtype=int)
-        # now read in matrix elements
-        # Convention used in w90 is to write out:
-        # R1, R2, R3, i, j, ham_r(i,j,R)
-        # where ham_r(i,j,R) corresponds to matrix element < i | H | j+R >
-        Rvec_list = []
-        Hmat_list = []
-        for j,ln1 in enumerate(ln):
-            ln1 = ln1.split()
-            vecR = np.asarray(map(int, ln1[:3]))
-            if j == 0 or not np.allclose(vecR, Rvec_list[-1]):
-                Rvec_list.append(vecR)
-                Hmat_list.append([])
-            ia1, ia2 = map(int, ln1[3:5])
-            val = float(ln1[5]) + 1.0j*float(ln1[6])
-            Hmat_list[-1].append([ia1-1, ia2-1, val])
-        if len(deg_ws) != len(Rvec_list):
-            raise ValueError(" len(deg_ws) = {} vs len(Rvec_list) = {}". \
-                    format(len(deg_ws), len(Rvec_list)))
-        if len(deg_ws) != len(Hmat_list):
-            raise ValueError(" len(deg_ws) = {} vs len(Hmat_list) = {}". \
-                    format(len(deg_ws), len(Hmat_list)))
-        self.Hmat_list = Hmat_list
+        # get k-space data
+        reals_lat, _, kpts, include_bands, wfwannier_list, bnd_es = \
+                get_wannier_dat(path=path)
+        if not np.allclose(self.lat, reals_lat):
+            raise ValueError("lattice vector inconsistent: {} vs {}"\
+                    .format(self.lat, reals_lat))
+        deg_ws, rpts = tb_wigner_seitz(self.kgrid, self.lat)
+        hr_list = get_tb_hr(kpts, rpts, wfwannier_list, bnd_es)
+        self.kpoints = kpts
+        self.bnd_es = bnd_es
+        self.hr_list = hr_list
         self.deg_ws = deg_ws
-        self.Rvec_list = Rvec_list
-        # read in wannier centers
-        f=open(self.path+"/"+self.prefix+"_centres.xyz","r")
-        ln=f.readlines()
-        f.close()
-        # Wannier centers in Cartesian, Angstroms
-        xyz_cen=[]
-        for i in range(2,2+self.num_wan):
-            sp=ln[i].split()
-            if sp[0]=="X":
-                tmp=[]
-                for j in range(3):
-                    tmp.append(float(sp[j+1]))
-                xyz_cen.append(tmp)
-            else:
-                raise Exception("Inconsistency in the centres file.")
-        self.xyz_cen=np.array(xyz_cen,dtype=float)
-        # get orbital positions in reduced coordinates
-        self.red_cen = _cart_to_red((self.lat[0], self.lat[1], self.lat[2]), \
-                self.xyz_cen)
+        self.rpoints = rpts
 
 
     def model(self):
@@ -660,8 +590,7 @@ class w90(object):
         k-point, analyze the wavefunction character, etc.
         """
         # make the model object
-        return tb_model(self.lat,self.red_cen,self.deg_ws,self.Rvec_list, \
-                self.Hmat_list)
+        return tb_model(self.lat,self.deg_ws,self.rpoints,self.hr_list)
 
 
 def _cart_to_red(tmp,cart):
@@ -691,8 +620,11 @@ def _red_to_cart(tmp,red):
 
 
 if __name__ == "__main__":
-    ngrid = [10,10,10]
-    lat = np.eye(3)
-    deg_ws, rvec_list = tb_wigner_seitz(ngrid,lat)
-    print(deg_ws[0],rvec_list[0])
-    print(len(deg_ws))
+    wannier90 = w90()
+    wmodel = wannier90.model()
+    kpt = wannier90.kpoints[25]
+    print(kpt)
+    print(wannier90.bnd_es[0][25])
+    ham = wmodel._gen_ham(kpt,isp=0)
+    evals = wmodel._sol_ham(ham)
+    print(evals)

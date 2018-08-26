@@ -56,7 +56,6 @@ def read_comrisb_ini():
     control['spin_polarization'] = control.get('spin_polarization', False)
     control['unit'] = control.get('unit', 'ev')
 
-    control['proj_win_center_interacting'] = 0
     control['max_iter_num_impurity'] = control.get('max_iter_num_impurity', 1)
     control['max_iter_num_outer'] = control.get('max_iter_num_outer', 50)
     control["initial_dft_dir"] = control.get('initial_dft_dir', "../dft/")
@@ -118,7 +117,7 @@ def read_comrisb_ini():
     check_key_in_string('froz_win_min', wan_hmat)
     check_key_in_string('froz_win_max', wan_hmat)
     wan_hmat['dis_win_min'] = wan_hmat.get('dis_win_min',
-            wan_hmat['froz_win_min']-40.0)
+            wan_hmat['froz_win_min'])
     wan_hmat['dis_win_max'] = wan_hmat.get('dis_win_max',
             wan_hmat['froz_win_max']+40.0)
     control['proj_win_min'] = control.get('proj_win_min',
@@ -127,6 +126,10 @@ def read_comrisb_ini():
             wan_hmat['froz_win_max'])
     wan_hmat['num_iter'] = wan_hmat.get('num_iter', 0)
     wan_hmat['dis_num_iter'] = wan_hmat.get('dis_num_iter', 100)
+
+    wan_hmat['cut_low']=wan_hmat.get('cut_low', 0.4)
+    wan_hmat['cut_froz']=wan_hmat.get('cut_froz', 0.15)
+    wan_hmat['cut_total']=wan_hmat.get('cut_total', 0.0)
 
     control['h_log'].write('top_dir {}\n'.format(control['top_dir']))
     control['h_log'].write('lattice_directory {}\n'.
@@ -266,18 +269,16 @@ def create_comwann_ini(control, wan_hmat):
     with open('comwann.ini', 'w') as f:
         f.write(control['lattice_directory']+'\n')
         f.write('dft\n')
-        if control['proj_win_center_interacting'] == 1:
-            control['trunc_center'] = np.loadtxt(control['lowh_directory'] + \
-                    '/Ef.out')
-        else:
-            control['trunc_center']=0.0
         f.write(str(wan_hmat['dis_win_max'])+'\n')
         f.write(str(wan_hmat['dis_win_min'])+'\n')
-        f.write(str(wan_hmat['froz_win_max']+control['trunc_center'])+'\n')
-        f.write(str(wan_hmat['froz_win_min']+control['trunc_center'])+'\n')
+        f.write(str(wan_hmat['froz_win_max'])+'\n')
+        f.write(str(wan_hmat['froz_win_min'])+'\n')
         f.write(str(wan_hmat['num_iter'])+'\n')
         f.write(str(wan_hmat['dis_num_iter'])+'\n')
         f.write('0\n')
+        f.write(str(wan_hmat['cut_low'])+'\n')
+        f.write(str(wan_hmat['cut_froz'])+'\n')
+        f.write(str(wan_hmat['cut_total'])+'\n')
 
 
 def read_wan_hmat_basis(control):
@@ -526,7 +527,8 @@ def init_grisb(control, imp):
         f["/usrqa/unique_j_list_ev"] = unique_j_list_ev
         f["/usrqa/unique_u_list_ev"] = unique_u_list_ev
         f["/usrqa/unique_f_list_ev"] = unique_f_list_ev
-        f["/usrqa/unique_nf_list"] = unique_nf_list
+        if len(unique_nf_list) > 0:
+            f["/usrqa/unique_nf_list"] = unique_nf_list
         f["/usrqa/unit"] =  control['unit']
     from pyglib.gutz.init import initialize as ginit
     ginit()

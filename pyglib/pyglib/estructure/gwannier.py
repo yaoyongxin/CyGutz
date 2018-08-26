@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import h5py, pickle, numpy, warnings, sys, os
+import h5py, numpy, warnings, sys
 from scipy.linalg import block_diag
 from mpi4py import MPI
 from pymatgen.core import Structure
@@ -10,7 +10,7 @@ from pymatgen.electronic_structure.plotter import BSPlotter
 from pymatgen.electronic_structure.core import Spin
 from builtins import zip,range
 import itertools as it
-from pythtb import w90
+#from pyglib.iface.wanniertb import w90
 
 
 def get_csh2sab():
@@ -144,7 +144,7 @@ def get_bands(kpoints, gmodel=None, wfwannier_list=None,
         bnd_vs.append([])
         for ik, kpt in enumerate(kpoints):
             if gmodel is not None:
-                hmat = gmodel._gen_ham(kpt)
+                hmat = gmodel._gen_ham(kpt,isp)
             else:
                 hmat = wfwannier_list[isp][ik].T.conj().dot(\
                         numpy.diag(bnd_es_in[isp][ik])).dot(\
@@ -154,7 +154,8 @@ def get_bands(kpoints, gmodel=None, wfwannier_list=None,
                 hmat = r_mat[isp].dot(hmat).dot(r_mat[isp].T.conj())
                 hmat += lam_mat[isp]
             evals, evecs = numpy.linalg.eigh(hmat)
-            bnd_es[isp].append(evals-efermi)
+            evals -= efermi
+            bnd_es[isp].append(evals)
             bnd_vs[isp].append(evecs)
     return numpy.asarray(bnd_es), numpy.asarray(bnd_vs)
 
@@ -291,7 +292,6 @@ def get_bands_symkpath(efermi=0., mode="tb"):
     k_vec = comm.bcast(k_vec, root=0)
     k_dist = comm.bcast(k_dist, root=0)
     k_node = comm.bcast(k_node, root=0)
-
     bnd_es, bnd_vs = mpiget_bndev(k_vec, gmodel=gmodel, mode=mode)
     # prepare the args for pymatgen bs class.
     if rank == 0:
@@ -335,7 +335,9 @@ def plot_bandstructure():
             emax = float(sys.argv[sys.argv.index("-eu")+1])
         else:
             emax = numpy.max(bs.bands.values())
-        bsplot.save_plot(fname, img_format="pdf", ylim=(emin, emax))
+        bsplot.save_plot(fname, img_format="pdf", ylim=(emin, emax), \
+                zero_to_efermi=False)
+        # better align by yourself, setting zero_to_efermi=False.
 
 
 
