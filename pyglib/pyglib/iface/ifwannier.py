@@ -9,15 +9,15 @@ from scipy.io import FortranFile
 from pyglib.estructure.gwannier import mpiget_bndev, \
         get_wannier_den_matrix_risb
 from pyglib.estructure.fermi import get_fermi_weight, get_fermi_level
-from pyglib.iface.wannierio import get_wannier_dat
+from pyglib.iface.wannierio import mpiget_wannier_data
 
 
 def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
         lpath="../lattice", wprefix="wannier", lprefix="mdl",
         lrot_list=None, iso=1, ispin=1, ismear=0, delta=0.0258,
         icycle=0):
-    cell, _, kpts, include_bands, wfwannier_list, bnd_es = get_wannier_dat(
-            path=wpath)
+    cell, _, kpts, include_bands, wfwannier_list, bnd_es = \
+            mpiget_wannier_data(path=wpath)
     # total number of valence electrons
     n_elec = get_total_valence_elec("{}/{}_1.out".format(lpath, lprefix))
     n_elec -= max(0, (include_bands[0]-1)*(3-iso))
@@ -86,7 +86,8 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
                 h1e_list[isp].append(h1e_all[isp][base:base+norbs, \
                         base:base+norbs])
                 base += norbs
-        if np.abs(nelectron - n_elec) > 0.01:
+        nelectron = int(nelectron+0.5)
+        if np.abs(nelectron - n_elec) > 1.e-6:
             warnings.warn(" wannier valence electrons: {} vs {}!".format( \
                     nelectron, n_elec))
             n_elec = nelectron
@@ -98,7 +99,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
 
         ne_list = [[nbmax, 1, nbmax] for k in range(numk)]
         wk_list = [wk for k in range(numk)]
-        nelectron = int(n_elec+0.5) + delta_charge
+        nelectron = n_elec + delta_charge
         wrt_gparambands(numk, nbmax, ne_list, wk_list, kpts, nelectron,
                 h1e_list, iso=iso, ispin=ispin, ismear=ismear, delta=delta)
 
@@ -338,7 +339,7 @@ def wannier_den_matrix(wannier_path="./"):
     g-risb to dft.
     '''
     _, _, kpts, include_bands, wfwannier_list, bnd_es_in = \
-            get_wannier_dat(path=wannier_path)
+            mpiget_wannier_data(path=wannier_path)
     bnd_es, bnd_vs = mpiget_bndev(kpts, wfwannier_list=wfwannier_list,
             bnd_es_in=bnd_es_in, mode="risb")
     nktot = len(kpts)
@@ -378,7 +379,7 @@ def wannier_den_matrix_lda_chk(wannier_path="./"):
     '''produce the file `wannier_den_matrix.dat` for the feedback from
     g-risb to dft.
     '''
-    _, _, kpts, include_bands, _, bnd_es = get_wannier_dat(
+    _, _, kpts, include_bands, _, bnd_es = mpiget_wannier_data(
             path=wannier_path)
     nktot = len(kpts)
     with h5py.File("GPARAMBANDS.h5", "r") as f:
@@ -410,7 +411,7 @@ def wannier_den_matrix_lda_chk2(wannier_path="./"):
     '''produce the file `wannier_den_matrix.dat` for the feedback from
     g-risb to dft.
     '''
-    _, _, kpts, include_bands, wfwannier_list, bnd_es = get_wannier_dat(
+    _, _, kpts, include_bands, wfwannier_list, bnd_es = mpiget_wannier_data(
             path=wannier_path)
     nktot = len(kpts)
     with h5py.File("GPARAMBANDS.h5", "r") as f:
@@ -434,7 +435,7 @@ def wannier_den_matrix_lda_chk3(wannier_path="./"):
     '''produce the file `wannier_den_matrix.dat` for the feedback from
     g-risb to dft.
     '''
-    _, _, kpts, include_bands, wfwannier_list, bnd_es = get_wannier_dat(
+    _, _, kpts, include_bands, wfwannier_list, bnd_es = mpiget_wannier_data(
             path=wannier_path)
     nktot = len(kpts)
     with h5py.File("GPARAMBANDS.h5", "r") as f:

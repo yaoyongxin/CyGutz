@@ -309,7 +309,7 @@ def get_bands_symkpath(efermi=0., mode="tb"):
 
 def plot_bandstructure():
     if "-h" in sys.argv:
-        print("usage: complot_bands.py [-g] [-f fname] [-el emin] [-eu emax]")
+        print("usage: complot_bands.py [-g] [-f fname] [-el emin] [-eh emax]")
         sys.exit()
 
     if "-g" in sys.argv:
@@ -331,8 +331,8 @@ def plot_bandstructure():
             emin = float(sys.argv[sys.argv.index("-el")+1])
         else:
             emin = numpy.min(bs.bands.values())
-        if "-eu" in sys.argv:
-            emax = float(sys.argv[sys.argv.index("-eu")+1])
+        if "-eh" in sys.argv:
+            emax = float(sys.argv[sys.argv.index("-eh")+1])
         else:
             emax = numpy.max(bs.bands.values())
         bsplot.save_plot(fname, img_format="pdf", ylim=(emin, emax), \

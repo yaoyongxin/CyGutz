@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import numpy as np
 from builtins import range, zip
-from pyglib.iface.wannierio import get_wannier_dat
+from pyglib.iface.wannierio import get_wannier_data
 
 
 
@@ -567,10 +567,9 @@ class w90(object):
         # convert to scaled atomic position
         self.atomic_positions = np.asarray(self.atomic_positions).dot(\
                 np.linalg.inv(self.lat))
-
         # get k-space data
         reals_lat, _, kpts, include_bands, wfwannier_list, bnd_es = \
-                get_wannier_dat(path=path)
+                get_wannier_data(path=path)
         if not np.allclose(self.lat, reals_lat):
             raise ValueError("lattice vector inconsistent: {} vs {}"\
                     .format(self.lat, reals_lat))
