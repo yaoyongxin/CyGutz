@@ -41,7 +41,7 @@ OBJSMOD = abc.o atpar.o charge.o csplit.o d5splt.o dergl.o diracout.o \
 all : ${exec}
 
 ${exec}: $(OBJS)
-	$(PF90) ${FREE_FORM} $(WLDFLAGS) -o ${exec} $(OBJS) $(MKL_LIB) ${HDF5_LIB}
+	$(PF90) ${FREE_FORM} $(WLDFLAGS) -o ${exec} $(OBJS) $(MKL_LIB) 
 
 #  All routines depend upon an include file (contains common PARAMETERS)
 #
@@ -56,11 +56,11 @@ clean:
 	rm -f *.o *_tmp_.* *.P .real .complex .sequential .parallel *.mod ${exec}
 
 .f.o:
-	$(PF90) ${FREE_FORM} $(FFLAGS) -c $< ${HDF5_INCLUDE}
+	$(PF90) ${FREE_FORM} $(FFLAGS) -c $< 
 
 .c.o:
 	$(CC) -c $<
 
 .F.o:
-	$(PF90) ${FREE_FORM} $(FFLAGS) -cpp $(Fmpi_define) -c $< ${HDF5_INCLUDE}
+	$(PF90) ${FREE_FORM} $(FFLAGS) -cpp $(Fmpi_define) -c $< 
 

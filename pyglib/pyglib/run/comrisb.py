@@ -542,6 +542,8 @@ def gwannier_run(control, wan_hmat, imp, icycle):
     params["wpath"] = control['wannier_directory']
     params["lrot_list"] = lrot_list
     params["icycle"] = icycle
+    if control['spin_orbit']:
+        params["iso"] = 2
     params["lprefix"] = control['allfile']
 
     # prepare parameter file for mpirun

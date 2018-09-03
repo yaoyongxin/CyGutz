@@ -1,4 +1,5 @@
 import numpy as np
+from sympy.physics.quantum.cg import CG
 
 
 def jj_to_cubic_relativistic_harmonics(orbital='f'):
@@ -41,29 +42,69 @@ def jj_to_cubic_relativistic_harmonics(orbital='f'):
     return jj_to_cubic
 
 
-def comp_sph_harm_to_real_harm(orbital='d'):
-    if 'd' == orbital:
-        # Unitary transformation from complex spherical harmonics to
-        # real harmonics {xy, yz, z2, zx, x2-y2}
-        # i.e., matrix < cmp_sph_harm | real_harm >
-        csh2rh = np.zeros((5, 5), dtype=complex)
-        csh2rh[0, 0] =  1.j/np.sqrt(2.); csh2rh[4, 0] = -1.j/np.sqrt(2.)
-        csh2rh[1, 1] =  1.j/np.sqrt(2.); csh2rh[3, 1] =  1.j/np.sqrt(2.)
-        csh2rh[2, 2] = 1.0
-        csh2rh[1, 3] = 1./np.sqrt(2); csh2rh[3, 3] = -1./np.sqrt(2.)
-        csh2rh[0, 4] = 1./np.sqrt(2.); csh2rh[4, 4] = 1./np.sqrt(2.)
-    else:
-        raise ValueError('UndefinedFunction')
+def comp_sph_harm_to_real_harm(dim_m):
+    csh2rh = np.zeros((dim_m, dim_m), dtype=complex)
+    # qunatum number l
+    l = dim_m//2
+    # set the orbital index
+    iy = range(dim_m)
+    for i in range(l):
+        iy += [iy.pop(0)]
+    for m in range(-l,l+1):
+        if m < 0:
+            csh2rh[iy[m], iy[m]] = 1.j/np.sqrt(2.)
+            csh2rh[iy[-m], iy[m]] = -1.j/np.sqrt(2.)*(-1)**m
+        elif m == 0:
+            csh2rh[iy[m], iy[m]] = 1.
+        else:
+            csh2rh[iy[-m], iy[m]] = 1./np.sqrt(2)
+            csh2rh[iy[m], iy[m]] = 1./np.sqrt(2)*(-1)**m
     return csh2rh
 
 
 def get_u_csh2rh_all(ncorbs_list):
-    u_csh2rh_list = []
-    for i,ncorbs in enumerate(ncorbs_list):
-        if ncorbs == 5:
-            u_csh2rh = comp_sph_harm_to_real_harm(orbital='d')
-        else:
-            raise ValueError("Not implemented for ncorbs ={}!".\
-                    format(ncorbs))
-        u_csh2rh_list.append(u_csh2rh)
+    u_csh2rh_list = [comp_sph_harm_to_real_harm(ncorbs) for \
+            ncorbs in ncorbs_list]
     return u_csh2rh_list
+
+
+def comp_sph_harm_to_relativistic_harm(dim_ms):
+    '''transformation matrix from spin-complex spherical harmonics
+    (orbital fast) to relativistic harmonics
+    '''
+    csh2relh = np.zeros((dim_ms, dim_ms), dtype=complex)
+    dim_m = dim_ms//2
+    l = dim_m//2
+    # set the orbital index
+    iy = range(dim_m)
+    for i in range(l):
+        iy += [iy.pop(0)]
+    # add slow spin index
+    # for spin: up, then dn
+    iys = {0.5:iy, -0.5:[iy[i]+dim_m for i in range(dim_m)]}
+    # j=l-1/2 block
+    # relativistic_harmonics index
+    i_jm = -1
+    for i in [-0.5,0.5]:
+        _j = l+i
+        for mj in np.arange(-_j, _j+1):
+            i_jm += 1
+            for s in [-0.5,0.5]:
+                csh2relh[iys[s][int(round(mj-s))], i_jm] = \
+                        CG(l,mj-s,0.5,s,_j,mj).doit()
+    return csh2relh
+
+
+def get_u_csh2relh_all(ncorbs_list):
+    u_csh2relh_list = [comp_sph_harm_to_relativistic_harm(ncorbs) for \
+            ncorbs in ncorbs_list]
+    return u_csh2relh_list
+
+
+def get_u_csh2wan_all(ncorbs_list):
+    ncorbs = ncorbs_list[0]
+    if ncorbs%2 == 0: #with spin-orbit interaction
+        u_csh2wan_list = get_u_csh2relh_all(ncorbs_list)
+    else:
+        u_csh2wan_list = get_u_csh2rh_all(ncorbs_list)
+    return u_csh2wan_list

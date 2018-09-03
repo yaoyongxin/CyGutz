@@ -1,6 +1,7 @@
 from __future__ import print_function
 import sys, os, numpy, h5py
-from pyglib.mbody.coulomb_matrix import U_J_to_radial_integrals
+from pyglib.mbody.coulomb_matrix import U_J_to_radial_integrals, \
+        radial_integrals_to_U_J
 
 
 def h5save_usr_qa_setup(material, log=sys.stdout):
@@ -200,7 +201,10 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
                     pass
             print(answer, file=usr_input)
             unique_f_list.append(f_list)
-
+            _l = "spdf".index(unique_df_list[-1])
+            U,J = radial_integrals_to_U_J(_l, f_list)
+            unique_u_list.append(U)
+            unique_j_list.append(J)
         if ldc == 2:
             while True:
                 answer = raw_input(

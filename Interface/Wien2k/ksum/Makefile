@@ -22,7 +22,7 @@ OBJS    = reallocate.o modules.o mod_mpi.o gtfnam2.o w_atpar.o \
 all : $(EXEC) 
 
 $(EXEC): $(OBJS)
-	$(PF90) ${FREE_FORM} -o $(EXEC) $(OBJS) $(MKL_LIB) ${HDF5_LIB}
+	$(PF90) ${FREE_FORM} -o $(EXEC) $(OBJS) $(MKL_LIB)
 
 #  remove unnecessary files (executable(s) are not removed)
 clean:
@@ -33,7 +33,7 @@ clean:
 #  define inference rules to generate object files from source files
 #
 .f.o:
-	$(PF90) ${FREE_FORM} $(FFLAGS) -c $< ${HDF5_INCLUDE}
+	$(PF90) ${FREE_FORM} $(FFLAGS) -c $< 
 
 .c.o:
 	$(CC)  -c $<
@@ -41,5 +41,5 @@ clean:
 
 #.SUFFIXES : .F
 .F.o:
-	$(PF90) ${FREE_FORM} $(FFLAGS) -cpp $(Fmpi_define) -c $< ${HDF5_INCLUDE} 
+	$(PF90) ${FREE_FORM} $(FFLAGS) -cpp $(Fmpi_define) -c $< 
 

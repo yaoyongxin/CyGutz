@@ -142,6 +142,16 @@ def U_matrix_kanamori(n_orb, U_int, J_hund):
     return U_matrix
 
 
+def U_J_to_radial_integrals4(l,U,J):
+    label_to_l = {'s':0, 'p':1, 'd':2, 'f':3}
+    if isinstance(l,basestring):
+        l = label_to_l[l_label]
+    f_list = U_J_to_radial_integrals(l, U, J)
+    for i in range(len(f_list),4):
+        f_list.append(0.)
+    return f_list
+
+
 # Convert U,J -> radial integrals F_k
 def U_J_to_radial_integrals(l, U_int, J_hund):
     r"""
@@ -204,13 +214,15 @@ def radial_integrals_to_U_J(l, F):
 
     """
 
-    if l == 2:
-        U_int = F[0]
-        J_hund = F[1] * (1.0 + 0.63) / 14.0
+    U_int = F[0]
+    if l == 0:
+        J_Hund = 0.
+    elif l == 1:
+        J_hund = F[1]/5.0
+    elif l == 2:
+        J_hund = F[1]*(1.0 + 0.625)/14.0
     elif l == 3:
-        U_int = F[0]
-        J_hund = F[1] * (286.0 + 195.0 * 451.0 / 675.0
-                + 250.0 * 1001.0 / 2025.0) / 6435.0
+        J_hund = F[1] * (286.0 + 195.0*0.668 + 250.0*0.494)/6435.0
     else: raise ValueError("radial_integrals_to_U_J:"+
             " implemented only for l=2,3")
 

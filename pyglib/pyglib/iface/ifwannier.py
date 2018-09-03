@@ -3,7 +3,7 @@ from mpi4py import MPI
 from pyglib.iface.wanniertb import w90
 import numpy as np
 import h5py, glob, scipy, warnings
-from pyglib.symm.unitary import get_u_csh2rh_all
+from pyglib.symm.unitary import get_u_csh2wan_all
 from scipy.linalg import block_diag
 from scipy.io import FortranFile
 from pyglib.estructure.gwannier import mpiget_bndev, \
@@ -241,11 +241,11 @@ def get_h1e_list_wannier(gwannier, corbs_list):
                 _j2 = corbs[j2]
                 h1e_list[0][-1][j1,j2] = gwannier.ham_r[(0,0,0)]["h"][_j1,_j2]\
                         /float(gwannier.ham_r[(0,0,0)]["deg"])
-    # Unitary transformation from complex Harmonics to real Harmonics.
-    u_csh2rh_list = get_u_csh2rh_all([len(corbs) for corbs in corbs_list])
+    # Unitary transformation from complex Harmonics to wannier.
+    u_csh2wan_list = get_u_csh2wan_all([len(corbs) for corbs in corbs_list])
 
-    for i, u_csh2rh in enumerate(u_csh2rh_list):
-        h1e_list[0][i] = u_csh2rh.dot(h1e_list[0][i]).dot(u_csh2rh.T.conj())
+    for i, u_csh2wan in enumerate(u_csh2wan_list):
+        h1e_list[0][i] = u_csh2wan.dot(h1e_list[0][i]).dot(u_csh2wan.T.conj())
     return h1e_list
 
 
@@ -270,14 +270,14 @@ def get_wann2csh(nbmax, corbs_list):
     for i in range(nbmax):
         ubasis[orbs_map[i],i] = 1.
 
-    # Unitary transformation from complex Harmonics to real Harmonics.
-    u_csh2rh_list = get_u_csh2rh_all([len(corbs) for corbs in corbs_list])
+    # Unitary transformation from complex Harmonics to wannier.
+    u_csh2wan_list = get_u_csh2wan_all([len(corbs) for corbs in corbs_list])
     # get the transformation from wannier basis to correlated
     # orbital-ordered complex spherical Harmonics basis.
-    u_csh2rh = block_diag(*u_csh2rh_list)
-    ncorbs = u_csh2rh.shape[0]
+    u_csh2wan = block_diag(*u_csh2wan_list)
+    ncorbs = u_csh2wan.shape[0]
     u_wan2csh = ubasis.copy()
-    u_wan2csh[:,:ncorbs] = ubasis[:,:ncorbs].dot(u_csh2rh.T.conj())
+    u_wan2csh[:,:ncorbs] = ubasis[:,:ncorbs].dot(u_csh2wan.T.conj())
     return u_wan2csh
 
 

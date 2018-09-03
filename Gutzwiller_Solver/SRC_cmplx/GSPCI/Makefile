@@ -14,18 +14,18 @@ INCLUDE=-I../../include
 
 all: ${obj} MAIN.o
 	${PF90} ${FFLAGS} -o exe_spci MAIN.o \
-			${obj} ${HDF5_LIB} ${MKL_LIB} ${LIB}
+			${obj} ${MKL_LIB} ${LIB}
 
 GPRIMME.o: ../GPRIMME.f90
-	${F90} ${FIX_FORM} ${FFLAGS} -cpp -c $< ${HDF5_INCLUDE} $(INCLUDE)
+	${F90} ${FIX_FORM} ${FFLAGS} -cpp -c $< $(INCLUDE)
 
 %.o: ./%.f90
 	${PF90} ${FREE_FORM} ${FFLAGS} -cpp ${DCPP} \
-			-c $< ${HDF5_INCLUDE} $(INCLUDE)
+			-c $< $(INCLUDE)
 
 %.o: ../%.f90
 	${PF90} ${FREE_FORM} ${FFLAGS} -cpp  \
-			-c $< ${HDF5_INCLUDE} $(INCLUDE)
+			-c $< $(INCLUDE)
 
 clean:
 	rm -f *o *mod *out exe_spci
