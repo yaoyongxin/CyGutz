@@ -80,7 +80,7 @@ def comp_sph_harm_to_relativistic_harm(dim_ms):
     for i in range(l):
         iy += [iy.pop(0)]
     # add slow spin index
-    # for spin: up, then dn
+    # for spin: up, then dn. wien2k convention.
     iys = {0.5:iy, -0.5:[iy[i]+dim_m for i in range(dim_m)]}
     # j=l-1/2 block
     # relativistic_harmonics index

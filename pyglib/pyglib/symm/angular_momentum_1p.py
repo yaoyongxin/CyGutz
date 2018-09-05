@@ -36,6 +36,36 @@ def get_J_vector(l_list):
     return [Lx + Sx, Ly + Sy, Lz + Sz]
 
 
+def get_JU_relat_sph_harm_cg(l_list):
+    '''get J vector in relativisitic spherical harmonics (RSH) basis,
+    and the unitary transformation U from complex spherical harmonics
+    (CSH) to RSH using clebsch-gordan coefficients.
+    '''
+    for i, _l in enumerate(l_list):
+        _Jx, _Jy, _Jz =  get_J_vector(_l)
+        v = comp_sph_harm_to_relativistic_harm(dim_ms)
+        _Jx, _Jy, _Jz = v.T.conj().dot(_Jx).dot(v), \
+                v.T.conj().dot(_Jy).dot(v), v.T.conj().dot(_Jz).dot(v)
+        # check Jz
+        for j in range(2*_l):
+            jz = j-(_l-0.5)
+            if abs(jz-_Jz[j]) > 1.e-6:
+                raise ValueError("jz = {} vs expected {}!".format(\
+                        _Jz[j], jz))
+        for j in range(2*_l+2):
+            jz = j-(_l+0.5)
+            if abs(jz-_Jz[j+2*_l]) > 1.e-6:
+                raise ValueError("jz = {} vs expected {}!".format(\
+                        _Jz[j+2*_l], jz))
+        if i == 0:
+            Jx, Jy, Jz = _Jx, _Jy, _Jz
+            u_trans = v
+        else:
+            Jx, Jy, Jz, u_trans = block_diag(Jx, _Jx), block_diag(Jy, _Jy), \
+                    block_diag(Jz, _Jz), block_diag(u_trans, v)
+    return [Jx, Jy, Jz], u_trans
+
+
 def get_JU_relat_sph_harm_random_phase(l_list):
     '''get J vector in relativisitic spherical harmonics (RSH) basis,
     and the unitary transformation U from complex spherical harmonics
