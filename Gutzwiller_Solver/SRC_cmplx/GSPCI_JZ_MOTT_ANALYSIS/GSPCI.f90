@@ -176,6 +176,10 @@ module gspci
         call gh5_close(f_id)
     endif
 
+    ! write n_ij sparse matrices
+    ! call calc_save_n_blks(dmem%imp)
+
+    ! write \rho
     call calc_save_rho_cp_blks(dmem%imp)
 
     return

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
+from pyglib.symm.unitary import comp_sph_harm_to_relativistic_harm
 
 '''
 Get the matrix representation of angular momentum operator
@@ -43,20 +43,20 @@ def get_JU_relat_sph_harm_cg(l_list):
     '''
     for i, _l in enumerate(l_list):
         _Jx, _Jy, _Jz =  get_J_vector(_l)
-        v = comp_sph_harm_to_relativistic_harm(dim_ms)
+        v = comp_sph_harm_to_relativistic_harm((2*_l+1)*2)
         _Jx, _Jy, _Jz = v.T.conj().dot(_Jx).dot(v), \
                 v.T.conj().dot(_Jy).dot(v), v.T.conj().dot(_Jz).dot(v)
         # check Jz
         for j in range(2*_l):
             jz = j-(_l-0.5)
-            if abs(jz-_Jz[j]) > 1.e-6:
+            if abs(jz-_Jz[j,j]) > 1.e-6:
                 raise ValueError("jz = {} vs expected {}!".format(\
                         _Jz[j], jz))
         for j in range(2*_l+2):
             jz = j-(_l+0.5)
-            if abs(jz-_Jz[j+2*_l]) > 1.e-6:
+            if abs(jz-_Jz[j+2*_l,j+2*_l]) > 1.e-6:
                 raise ValueError("jz = {} vs expected {}!".format(\
-                        _Jz[j+2*_l], jz))
+                        _Jz[j+2*_l,j+2*_l], jz))
         if i == 0:
             Jx, Jy, Jz = _Jx, _Jy, _Jz
             u_trans = v

@@ -37,7 +37,8 @@ def get_linear_operators(nij, uij):
     return res
 
 
-def get_am_op_from_nij(svec=None, lvec=None, nij=None, op_list=None):
+def get_am_op_from_nij(svec=None, lvec=None, jvec=None,
+        nij=None, op_list=None):
     '''
     Get angular momentum operators given the {n_ij} operators and
     coiefficient matrice of spin and orbital momentum operators.
@@ -53,6 +54,10 @@ def get_am_op_from_nij(svec=None, lvec=None, nij=None, op_list=None):
         l_p = get_linear_operators(nij, lvec[0]+1.j*lvec[1])
     if svec is not None and lvec is not None:
         j_z, j_p = s_z + l_z, s_p + l_p
+    elif jvec is not None:
+        j_z = get_linear_operators(nij, jvec[2])
+        j_p = get_linear_operators(nij, jvec[0]+1.j*jvec[1])
+
     res = {}
 
     if "Sx" in op_list:

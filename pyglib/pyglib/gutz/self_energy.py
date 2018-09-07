@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 from scipy.linalg import block_diag
 from pyglib.math.matrix_util import trans_orbital_fast_to_spin_fast

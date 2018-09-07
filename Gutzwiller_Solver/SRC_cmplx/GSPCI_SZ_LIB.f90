@@ -1195,6 +1195,38 @@ subroutine calc_eval_gspci_j2op(cm,v1,zes)
 end subroutine calc_eval_gspci_j2op
 
 
+subroutine calc_save_n_blks(imp)
+    use gprec
+    use sparse
+    use gutil
+    use ghdf5_base
+    use ghdf5
+    use gspci
+    implicit none
+    integer,intent(in)::imp
+
+    integer ival,i,j
+    type(dcoo_matrix)::npcoo(dmem%norb,dmem%norb)
+
+    call gh5_open_w('EMBED_HAMIL_nij_'//trim(int_to_str(imp))//'.h5',f_id)
+    do ival=dmem%nval_bot,dmem%nval_top
+        call gh5_create_group('/valence_block_'// &
+                &trim(int_to_str(ival)),f_id)
+        call calc_npcoo_nblk(npcoo,ival)
+        do i=1,dmem%norb; do j=1,i
+            if(npcoo(i,j)%nnz==0)cycle
+            call gh5_write_compound(npcoo(i,j),'/valence_block_'// &
+                    &trim(int_to_str(ival))//'/n_'//trim(int_to_str(i-1))// &
+                    &'_'//trim(int_to_str(j-1)),f_id)
+            call dealloc_dcoo(npcoo(i,j))
+        enddo; enddo
+    enddo
+    call gh5_close(f_id)
+    return
+
+end subroutine calc_save_n_blks
+
+
 subroutine calc_save_rho_cp_blks(imp)
     use gprec
     use sparse
@@ -1231,7 +1263,7 @@ subroutine calc_save_rho_cp_blks(imp)
         deallocate(rho)
     enddo
     call gh5_close(f_id)
-
+    return
 
 end subroutine calc_save_rho_cp_blks
 
