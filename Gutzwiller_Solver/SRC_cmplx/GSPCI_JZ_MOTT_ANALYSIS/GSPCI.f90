@@ -89,7 +89,7 @@ module gspci
 
 
     subroutine gspci_gh5exe()
-    integer j,ierr,nv,idx
+    integer j,ierr,nv,idx,mode
     character*32 str
     real(q) etot,de
     complex(q) zes
@@ -113,6 +113,13 @@ module gspci
     else
         write(0,'(" with Jz contraints. ")')
     endif
+    idx=index(cmd,'-m ')
+    if(idx>0)then
+        read(cmd(idx+2:),*)mode
+    else
+        mode=0
+    endif
+
    
     call gh5_init()
     call gh5_open_r('EMBED_HAMIL_'//trim(int_to_str(dmem%imp))//'.h5',f_id)
@@ -176,12 +183,16 @@ module gspci
         call gh5_close(f_id)
     endif
 
-    ! write n_ij sparse matrices
-    ! call calc_save_n_blks(dmem%imp)
-
-    ! write \rho
-    call calc_save_rho_cp_blks(dmem%imp)
-
+    if(mode==-1)then
+        ! write n_ij sparse matrices
+        call calc_save_n_blks(dmem%imp)
+    elseif (mode==0)then
+        ! write \rho or \Phi^\dagger \Phi
+        call calc_save_rho_cp_blks(dmem%imp)
+    else
+        ! write varaitional \ron or \Phi \Phi^\dagger
+        call calc_save_varrho_blks(dmem%imp)
+    endif
     return
 
     end subroutine gspci_gh5exe

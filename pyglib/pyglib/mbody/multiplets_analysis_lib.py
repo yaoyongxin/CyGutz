@@ -61,7 +61,6 @@ def get_rho_histogram(rho, S=None, L=None, J=None, num_ev=0, Rpr_list=None):
         from scipy.sparse.linalg import eigsh
         vals, vecs = eigsh(rho, num_ev, which='LM')
         vecs = vecs.T
-
     # Make sure eigen-values properly ordered.
     idx = vals.argsort()[::-1]
     vals = vals[idx]

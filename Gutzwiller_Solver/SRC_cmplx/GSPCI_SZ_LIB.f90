@@ -1268,6 +1268,75 @@ subroutine calc_save_rho_cp_blks(imp)
 end subroutine calc_save_rho_cp_blks
 
 
+subroutine calc_save_varrho_blks(imp)
+    use gprec
+    use sparse
+    use gutil
+    use ghdf5_base
+    use ghdf5
+    use gspci
+    implicit none
+    integer,intent(in)::imp
+
+    integer ival,nstates,i,j
+    complex(q),allocatable::rho(:,:)
+    type(dcoo_matrix)::npcoo(dmem%norb,dmem%norb)
+
+    call gh5_open_w('EMBED_HAMIL_VARRHO_'//trim(int_to_str(imp))//'.h5',f_id)
+    do ival=dmem%nval_bot,dmem%nval_top
+        nstates=dmem%idx(ival+1)-dmem%idx(ival)
+        allocate(rho(nstates,nstates))
+        call calc_variational_reduced_rho_nblk(rho,nstates,ival)
+        if(maxval(abs(rho))>1.d-16)then
+            call gh5_create_group('/valence_block_'// &
+                    &trim(int_to_str(dmem%norb-ival)),f_id)
+            call gh5_write(rho,nstates,nstates,'/valence_block_'// &
+                    &trim(int_to_str(dmem%norb-ival))//'/VRHO',f_id)
+        endif
+        deallocate(rho)
+    enddo
+    call gh5_close(f_id)
+    return
+
+end subroutine calc_save_varrho_blks
+
+
+subroutine calc_save_varrho_blks_slow(imp)
+    use gprec
+    use sparse
+    use gutil
+    use ghdf5_base
+    use ghdf5
+    use gspci
+    implicit none
+    integer,intent(in)::imp
+
+    integer ival,nstates,i,j
+    complex(q),allocatable::rho(:,:)
+    type(dcoo_matrix)::npcoo(dmem%norb,dmem%norb)
+
+    call gh5_open_w('EMBED_HAMIL_VARRHO_'//trim(int_to_str(imp))//'.h5',f_id)
+    call switch_vbasis_order(dmem%v,dmem%nstates)
+    do ival=dmem%nval_bot,dmem%nval_top
+        nstates=dmem%idx(ival+1)-dmem%idx(ival)
+        allocate(rho(nstates,nstates))
+        call calc_reduced_rho_nblk(rho,nstates,ival)
+        ! rotate rho from particle basis to hole basis.
+        call transform_p2h(rho,nstates,ival)
+        if(maxval(abs(rho))>1.d-16)then
+            call gh5_create_group('/valence_block_'// &
+                    &trim(int_to_str(dmem%norb-ival)),f_id)
+            call gh5_write(rho,nstates,nstates,'/valence_block_'// &
+                    &trim(int_to_str(dmem%norb-ival))//'/VRHO',f_id)
+        endif
+        deallocate(rho)
+    enddo
+    call gh5_close(f_id)
+    return
+
+end subroutine calc_save_varrho_blks_slow
+
+
 subroutine calc_npcoo_nblk(npcoo,ival)
     use gprec
     use gspci
@@ -1341,4 +1410,107 @@ subroutine calc_reduced_rho_nblk(rho,n,ival)
 
 
 end subroutine calc_reduced_rho_nblk
+
+
+! rotate solution vector phy(x)var to var(x)phy.
+subroutine switch_vbasis_order(v,n)
+    use gprec
+    use gspci
+    implicit none
+    integer,intent(in)::n
+    complex(q),intent(inout)::v(n)
+
+    complex(q) vp(n)
+    integer ival,i,j,ij,ji,nstate1,nstate2
+
+    vp=0
+    do ival=dmem%nval_bot,dmem%nval_top
+        do i=dmem%idx(ival),dmem%idx(ival+1)-1
+            do j=dmem%idx_l(dmem%norb-ival),dmem%idx_l(dmem%norb-ival+1)-1
+                nstate1=dmem%i_phi(i)%i(j)
+                ij=dmem%ibs_l(ibits(not(dmem%bs(i)),0,dmem%norb))
+                ji=dmem%ibs(ibits(not(dmem%bs_l(j)),0,dmem%norb))
+                nstate2=dmem%i_phi(ji)%i(ij)
+                ! sanity check 
+                if((nstate1>0).neqv.(nstate2>0))then
+                    write(0,"('basis not consistent!')")
+                    stop 3
+                endif
+                if(nstate1>0)then
+                    vp(nstate2)=v(nstate1)
+                endif
+            enddo
+        enddo
+    enddo
+    v=vp
+    return
+    
+
+end subroutine switch_vbasis_order
+
+
+subroutine transform_p2h(rho,n,ival)
+    use gprec
+    use gspci
+    use gutil
+    implicit none
+    integer,intent(in)::n,ival
+    complex(q),intent(inout)::rho(n,n)
+
+    integer i,j,i_,j_
+    complex(q) u(n,n)
+
+    if(n<=0)return
+    u=0._q
+    do i=dmem%idx(ival),dmem%idx(ival+1)-1
+        i_=i-dmem%idx(ival)+1
+        j=dmem%ibs_l(ibits(not(dmem%bs(i)),0,dmem%norb))
+        j_=j-dmem%idx(dmem%norb-ival)+1
+        u(i_,j_)=1._q
+    enddo
+    call uhau(rho,u,n,n)
+    return
+
+end subroutine transform_p2h
+
+
+! Generate reduced variational manybody denity matrix in valence block n.
+subroutine calc_variational_reduced_rho_nblk(rho,n,ival)
+    use gprec
+    use gspci
+    implicit none
+    integer,intent(in)::n,ival
+    complex(q),intent(out)::rho(n,n)
+    
+    integer i,ip,ip_,j,jp,jp_,ndim,nfs_l,istate,jstate
+    real(q) sz
+    complex(q),external::zdotc
+
+    rho=0
+    nfs_l=dmem%idx_l(dmem%norb-ival+1)-dmem%idx_l(dmem%norb-ival)
+    if(nfs_l<=0)return
+
+    do i=dmem%idx(ival),dmem%idx(ival+1)-1
+        sz=dmem%bs_sz(i)
+        do ip=dmem%idx_l(dmem%norb-ival),dmem%idx_l(dmem%norb-ival+1)-1
+            istate=dmem%i_phi(i)%i(ip)
+            if(istate==0)then
+                cycle
+            endif
+            ip_=ip-dmem%idx_l(dmem%norb-ival)+1
+            do jp=dmem%idx_l(dmem%norb-ival),dmem%idx_l(dmem%norb-ival+1)-1
+                jstate=dmem%i_phi(i)%i(jp)
+                if(jstate==0)then
+                    cycle
+                endif
+                jp_=jp-dmem%idx_l(dmem%norb-ival)+1
+                rho(ip_,jp_)=rho(ip_,jp_)+dmem%v(istate) &
+                        &*conjg(dmem%v(jstate))
+            enddo
+        enddo
+    enddo
+    return
+
+
+end subroutine calc_variational_reduced_rho_nblk
 
