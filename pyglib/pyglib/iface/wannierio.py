@@ -50,3 +50,6 @@ def mpiget_wannier_data(path="./"):
     bnd_es = comm.bcast(bnd_es, root=0)
     return reals_lat, recip_lat, kpts, include_bands, wfwannier_list, bnd_es
 
+
+if __name__ == "__main__":
+    get_wannier_data()

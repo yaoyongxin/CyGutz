@@ -41,7 +41,7 @@ def h5generate_j2_basis(l="f"):
 
 def h5calc_dominant_config(l="f", fj2basis="j2evec.h5", \
         frho="EMBED_HAMIL_ANALYSIS_1.h5", fresult="mbbasis.h5", \
-        rcut=1.e-4, entry="RHO"):
+        rcut=1.e-3, entry="RHO"):
     if "-e" in sys.argv:
         entry = sys.argv[sys.argv.index("-e")+1]
     if "-f" in sys.argv:
@@ -104,10 +104,12 @@ def h5calc_dominant_config(l="f", fj2basis="j2evec.h5", \
                                         j_list.extend([j for w1 in w])
                         if evecs is not None:
                             path = "/valence_block_{}".format(val)
-                            fout[path+"/{}_evec".format(\
-                                    entry.lower())] = evecs
+                            fout[path+"/{}_EVEC".format(\
+                                    entry.upper())] = evecs.T
                             fout[path+"/{}_eval".format(\
                                     entry.lower())] = evals
+                            if path+"/nv" not in fout:
+                                fout[path+"/nv"] = len(evals)
                 if len(j_list) > 0:
                     fout["/{}_j_list".format(entry.lower())] = j_list
 

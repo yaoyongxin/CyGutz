@@ -385,7 +385,7 @@ end subroutine expval_gspci_mij
 
 
 ! |v2> += \sum_ij (dij^* f_i^\dagger c_j + dij c_j^\dagger f_i)|v1>
-subroutine av1_gspci_mij(v1,v2)
+subroutine av1_gspci_mij(v1,v2,i_val)
     use gprec
     use gspci
     use gutil
@@ -397,15 +397,23 @@ subroutine av1_gspci_mij(v1,v2)
     complex(q),intent(in)::v1(*)
     complex(q),intent(inout)::v2(*)
 #endif
+    integer,optional::i_val
 
     integer ival,istate,i1,i2,jstate,nbase,nnz,inz,nnz1, &
             &itmp,isgn2,ibs2,nfs1,nfs2,nfs_l1,nfs_l2
+    logical ido(dmem%nval_bot:dmem%nval_top)
     integer,allocatable::isgn1(:),is(:),js(:),ibs1(:),is1(:)
 #ifdef EmbReal
     real(q),allocatable::dij(:)
 #else
     complex(q),allocatable::dij(:)
 #endif
+
+    ido=.true.
+    if(present(i_val))then
+        ido=.false.
+        ido(i_val)=.true.
+    endif
 
     nnz=count(abs(dmem%daalpha)<1.d-10)
     allocate(isgn1(nnz),is(nnz),is1(nnz),js(nnz),ibs1(nnz),dij(nnz))
@@ -433,6 +441,11 @@ subroutine av1_gspci_mij(v1,v2)
             cycle
         endif
         if(nfs_l2<=0)then
+            nbase=nbase+nfs1*nfs_l1
+            cycle
+        endif
+        if(.not.ido(ival))then
+            istate=istate+nfs2*nfs_l2
             nbase=nbase+nfs1*nfs_l1
             cycle
         endif
@@ -1609,3 +1622,368 @@ subroutine calc_save_phi_matrix_blks(imp)
 
 end subroutine calc_save_phi_matrix_blks
 
+
+subroutine gh5_set_phi_basis()
+    use gprec
+    use gutil
+    use hdf5
+    use ghdf5_base
+    use gspci
+    implicit none
+
+    integer ival,nfs,nv
+    logical lexist
+
+    call gh5_open_r("mbbasis.h5", f_id)
+    allocate(dmem%phb(dmem%nval_bot:dmem%nval_top))
+    dmem%nemb=0
+    do ival=dmem%nval_bot,dmem%nval_top
+        call h5lexists_f(f_id,'/valence_block_'//trim(int_to_str(ival)),&
+                &lexist,gh5_err)
+        if(lexist)then
+            call h5lexists_f(f_id,'/valence_block_'//trim(int_to_str(ival))//&
+                    &"/RHO_EVEC",lexist,gh5_err)
+        endif
+        if(lexist)then
+            nfs=dmem%idx(ival+1)-dmem%idx(ival)
+            call gh5_read(nv,'/valence_block_'//trim(int_to_str(ival))//&
+                    &"/nv",f_id)
+            dmem%phb(ival)%nv=nv
+            allocate(dmem%phb(ival)%v(nfs,nv,2))
+            call gh5_read(dmem%phb(ival)%v(:,:,1),nfs,nv,&
+                    &'/valence_block_'//trim(int_to_str(ival))//"/RHO_EVEC", &
+                    &f_id)
+            call gh5_read(dmem%phb(ival)%v(:,:,2),nfs,nv,&
+                    &'/valence_block_'//trim(int_to_str(dmem%norb-ival))//&
+                    &"/VRHO_EVEC",f_id)
+            dmem%nemb=dmem%nemb+nv**2
+        endif
+    enddo 
+    call gh5_close(f_id)
+    return
+
+end subroutine gh5_set_phi_basis
+
+
+subroutine set_himp_hbath()
+    use gprec
+    use gspci
+    implicit none
+
+    integer ival,nfs
+
+    do ival=dmem%nval_bot,dmem%nval_top
+        nfs=dmem%idx(ival+1)-dmem%idx(ival)
+        if(dmem%phb(ival)%nv==0)cycle
+        allocate(dmem%phb(ival)%h(nfs,nfs,2))
+        call set_himp_blk1(ival,dmem%phb(ival)%h(:,:,1),nfs)
+        call set_hbath_blk1(ival,dmem%phb(ival)%h(:,:,2),nfs)
+    enddo
+    return
+
+end subroutine set_himp_hbath
+
+
+subroutine clean_phb(mode)
+    use gprec
+    use gspci
+    implicit none
+    integer,intent(in)::mode
+
+    integer ival
+
+    do ival=dmem%nval_bot,dmem%nval_top
+        if(dmem%phb(ival)%nv==0)cycle
+        if(mode==1)then
+            deallocate(dmem%phb(ival)%h)
+        else
+            deallocate(dmem%phb(ival)%v)
+            dmem%phb(ival)%nv=0
+        endif
+    enddo
+    if(mode>1)then
+        deallocate(dmem%phb)
+    endif
+    return
+
+end subroutine clean_phb
+
+
+subroutine set_himp_blk1(ival,h,nfs)
+    use gprec, only:dp=>q
+    use gutil
+    use ghdf5_base
+    use gspci
+    implicit none
+    integer,intent(in)::nfs,ival
+    complex(dp),intent(out)::h(nfs,nfs)
+
+    integer i,i1,j,j1,p,q,r,s,itmp(4),isgn(4)
+
+    h=0
+    do i=dmem%idx(ival),dmem%idx(ival+1)-1
+        i1=i-dmem%idx(ival)+1
+        do p=1,dmem%norb
+            ! <v|p^\dagger
+            isgn(1)=1
+            itmp(1)=dmem%bs(i)
+            call act_state(itmp(1),p-1,.false.,isgn(1))
+            if(isgn(1)==0)cycle
+
+            ! one-body part
+            do q=1,dmem%norb
+                if(abs(dmem%h1e(p,q))<1.d-10)cycle
+                ! <v|p^\dagger q
+                isgn(2)=isgn(1)
+                itmp(2)=itmp(1)
+                call act_state(itmp(2),q-1,.true.,isgn(2))
+                if(isgn(2)==0)cycle
+                j=dmem%ibs(itmp(2))
+                if(j>i)cycle
+                j1=j-dmem%idx(ival)+1
+                h(i1,j1)=h(i1,j1)+isgn(2)*dmem%h1e(p,q)
+            enddo
+
+            ! two-body
+            do q=1,p ! take care of factor 1/2
+                ! <v|p^\dagger q^\dagger
+                isgn(2)=isgn(1)
+                itmp(2)=itmp(1)
+                call act_state(itmp(2),q-1,.false.,isgn(2))
+                if(isgn(2)==0)cycle
+                do r=1,dmem%norb
+                    ! <v|p^\dagger q^\dagger r
+                    isgn(3)=isgn(2)
+                    itmp(3)=itmp(2)
+                    call act_state(itmp(3),r-1,.true.,isgn(3))
+                    if(isgn(3)==0)cycle
+                    do s=1,dmem%norb
+                        if(abs(dmem%v2e(p,s,q,r))<1.d-10)cycle
+                        ! <v|p^\dagger q^\dagger r s
+                        isgn(4)=isgn(3)
+                        itmp(4)=itmp(3)
+                        call act_state(itmp(4),s-1,.true.,isgn(4))
+                        if(isgn(4)==0)cycle
+                        j=dmem%ibs(itmp(4))
+                        ! lower trianglar part only
+                        if(j>i)cycle
+                        j1=j-dmem%idx(ival)+1
+                        h(i1,j1)=h(i1,j1)+isgn(4)*dmem%v2e(p,s,q,r)
+                    enddo
+                enddo
+            enddo
+        enddo
+    enddo
+    do i1=1,nfs
+        do j1=i1+1,nfs
+            h(i1,j1)=conjg(h(j1,i1))
+        enddo
+    enddo
+    return
+
+end subroutine set_himp_blk1
+
+
+subroutine set_hbath_blk1(ival,h,nfs)
+    use gprec, only: dp=>q
+    use gutil
+    use ghdf5_base
+    use gspci
+    implicit none
+    integer,intent(in)::nfs,ival
+    complex(dp),intent(out)::h(nfs,nfs)
+
+    integer i,i1,j,j1,p,q,itmp(2),isgn(2)
+
+    h=0
+    do i=dmem%idx_l(dmem%norb-ival),dmem%idx_l(dmem%norb-ival+1)-1
+        i1=i-dmem%idx_l(dmem%norb-ival)+1
+        do p=1,dmem%norb
+            ! <v|p 
+            isgn(1)=1
+            itmp(1)=dmem%bs_l(i)
+            call act_state(itmp(1),p-1,.true.,isgn(1))
+            if(isgn(1)==0)cycle
+            do q=1,dmem%norb
+                if(abs(dmem%lambdac(q,p))<1.d-10)cycle
+                ! <v|p q^\dagger
+                isgn(2)=isgn(1)
+                itmp(2)=itmp(1)
+                call act_state(itmp(2),q-1,.false.,isgn(2))
+                if(isgn(2)==0)cycle
+                j=dmem%ibs_l(itmp(2))
+                if(j>i)cycle
+                j1=j-dmem%idx_l(dmem%norb-ival)+1
+                h(i1,j1)=h(i1,j1)+isgn(2)*dmem%lambdac(q,p)
+            enddo
+        enddo
+    enddo
+    do i1=1,nfs
+        do j1=i1+1,nfs
+            h(i1,j1)=conjg(h(j1,i1))
+        enddo
+    enddo
+    return
+
+end subroutine set_hbath_blk1
+
+
+subroutine set_reduced_hembed()
+    use gprec
+    use gutil
+    use gconstant
+    use gspci
+    implicit none
+    
+    integer ival,ja,jb,isum,jsum,nfs
+    complex(q),allocatable::va(:),vb(:),v(:),vres(:)
+
+    allocate(dmem%hemb(dmem%nemb,dmem%nemb)); dmem%hemb=0
+    allocate(v(dmem%nstates),vres(dmem%nstates))
+    jsum=0
+    do ival=dmem%nval_bot,dmem%nval_top
+        nfs=dmem%idx(ival+1)-dmem%idx(ival)
+        allocate(va(nfs),vb(nfs))
+        do ja=1,dmem%phb(ival)%nv
+            call zgemv("n",nfs,nfs,z1,dmem%phb(ival)%h(1,1,1),nfs,&
+                    &dmem%phb(ival)%v(1,ja,1),1,z0,va,1)
+            do jb=1,dmem%phb(ival)%nv
+                call zgemv("n",nfs,nfs,z1,dmem%phb(ival)%h(1,1,2), &
+                        &nfs,dmem%phb(ival)%v(1,jb,2),1,z0,vb,1)
+                v=0
+                ! vector multiplication
+                call add_state_vec(v,dmem%phb(ival)%v(1,ja,1), &
+                        &dmem%phb(ival)%v(1,jb,2),nfs,ival)
+                vres=0
+                call av1_gspci_mij(v,vres,ival)
+                call add_state_vec(vres,va, &
+                        &dmem%phb(ival)%v(1,jb,2),nfs,ival)
+                call add_state_vec(vres,dmem%phb(ival)%v(1,ja,1), &
+                        &vb,nfs,ival)
+                jsum=jsum+1
+                call calc_reduced_hembed_1column(vres,jsum)
+            enddo
+        enddo
+        deallocate(va,vb)
+    enddo
+    deallocate(v,vres)
+    return
+
+end subroutine set_reduced_hembed
+
+
+subroutine add_state_vec(v,v1a,v1b,n1,ival)
+    use gprec
+    use gspci
+    implicit none
+    integer,intent(in)::n1,ival
+    complex(q),intent(in)::v1a(n1),v1b(n1)
+    complex(q),intent(inout)::v(dmem%nstates)
+
+    integer nbase,i,ia,ib
+
+    nbase=0
+    do i=dmem%nval_bot,ival-1
+        nbase=nbase+(dmem%idx(i+1)-dmem%idx(i))*(dmem%idx(dmem%norb-i+1)- &
+                &dmem%idx(dmem%norb-i))
+    enddo
+    do ia=1,n1
+        v(nbase+1:nbase+n1)=v(nbase+1:nbase+n1)+v1a(ia)*v1b
+        nbase=nbase+n1
+    enddo
+    return
+
+end subroutine add_state_vec
+
+
+subroutine calc_reduced_hembed_1column(v,j)
+    use gprec
+    use gspci
+    implicit none
+    integer,intent(in)::j
+    complex(q),intent(in)::v(dmem%nstates)
+
+    integer isum,ival,ia,ib,iva,nfs,ibase
+    complex(q) zes
+    complex(q),allocatable::v1(:)
+    complex(q),external::zdotc
+
+    ibase=0
+    isum=0
+    do ival=dmem%nval_bot,dmem%nval_top 
+        nfs=dmem%idx(ival+1)-dmem%idx(ival)
+        allocate(v1(nfs))
+        do ia=1,dmem%phb(ival)%nv
+            do ib=1,dmem%phb(ival)%nv
+                isum=isum+1
+                if(isum>j)return
+                zes=0
+                do iva=1,nfs
+                    v1=dmem%phb(ival)%v(iva,ia,1)* &
+                            &dmem%phb(ival)%v(:,ib,2)
+                    zes=zes+zdotc(nfs,v1,1,v(ibase+(iva-1)*nfs+1),1)
+                enddo
+                dmem%hemb(isum,j)=zes
+                if(isum<j)then
+                    dmem%hemb(j,isum)=conjg(zes)
+                endif
+            enddo
+        enddo
+        deallocate(v1)
+        ibase=ibase+nfs*nfs
+    enddo
+    return
+
+end subroutine calc_reduced_hembed_1column
+
+
+subroutine set_whole_vec(vred)
+    use gprec
+    use gspci
+    implicit none
+    complex(q),intent(in)::vred(dmem%nemb)
+
+    integer isum,ival,ia,ib,iva,nfs,ibase
+    complex(q) zes
+    complex(q),allocatable::v1(:)
+    complex(q),external::zdotc
+
+    allocate(dmem%v(dmem%nstates)); dmem%v=0
+    ibase=0
+    isum=0
+    do ival=dmem%nval_bot,dmem%nval_top 
+        nfs=dmem%idx(ival+1)-dmem%idx(ival)
+        allocate(v1(nfs))
+        do ia=1,dmem%phb(ival)%nv
+            do ib=1,dmem%phb(ival)%nv
+                isum=isum+1
+                do iva=1,nfs
+                    v1=dmem%phb(ival)%v(iva,ia,1)* &
+                            &dmem%phb(ival)%v(:,ib,2)
+                    dmem%v(ibase+(iva-1)*nfs+1:ibase+iva*nfs)=&
+                            &dmem%v(ibase+(iva-1)*nfs+1:ibase+iva*nfs)+&
+                            &vred(isum)*v1
+                enddo
+            enddo
+        enddo
+        deallocate(v1)
+        ibase=ibase+nfs*nfs
+    enddo
+    return
+
+end subroutine set_whole_vec
+
+
+subroutine solve_red_embed()
+    use gprec
+    use gspci
+    use gutil
+    implicit none
+    real(q) w(1)
+
+    call hermev("v","l",dmem%hemb,w,dmem%nemb,1,1)
+    dmem%etot=w(1)
+    call set_whole_vec(dmem%hemb(1,1))
+    return
+
+end subroutine solve_red_embed

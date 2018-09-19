@@ -149,7 +149,25 @@ module sparse
       
     end subroutine zcsr_syamux_sk
       
+
+    subroutine zcsr_amux_sk(a,x,ax)
+    type(zcsr_matrix),intent(in)::a
+    complex(q),intent(in)::x(*)
+    complex(q),intent(inout)::ax(*)
       
+    integer i,k,j
+      
+    do i=1,a%nrow
+        do k=a%i(i),a%i(i+1)-1
+            j=a%j(k)
+            ax(i)=ax(i)+a%a(k)*x(j)
+        enddo
+    enddo
+    return
+      
+    end subroutine zcsr_amux_sk
+
+
     subroutine alloc_zcsr(a,nnz,nrow,ncol)
     integer nnz,nrow,ncol
     type(zcsr_matrix)::a

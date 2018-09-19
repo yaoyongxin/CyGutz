@@ -291,6 +291,8 @@ module gkernel
         call system('exe_spci_s2_mott -i '//int_to_str(i))
     elseif(gkmem%iembeddiag==-4)then
         call system('exe_spci_sjz_mott -i '//int_to_str(i))
+    elseif(gkmem%iembeddiag==1)then
+        call system('exe_spci_phi_trunc '//int_to_str(i))
     elseif(gkmem%iembeddiag==-21)then
         call system('exe_spci_sz_mott '//int_to_str(i))
     elseif(gkmem%iembeddiag==-11)then
@@ -320,6 +322,12 @@ module gkernel
                 &int_to_str(i),exitstat=ierr)
         if(ierr/=0)then
             write(0,'(" Error in running exe_spci_sjz_mott!")')
+        endif
+    elseif(gkmem%iembeddiag==1)then
+        call execute_command_line('exe_spci_phi_trunc '// &
+                &int_to_str(i),exitstat=ierr)
+        if(ierr/=0)then
+            write(0,'(" Error in running exe_spci_phi_trunc!")')
         endif
     elseif(gkmem%iembeddiag==-21)then
         call execute_command_line('exe_spci_sz_mott '//int_to_str(i),  &

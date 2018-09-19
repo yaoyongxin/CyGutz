@@ -1,0 +1,13 @@
+include ../../../Makefile.in
+
+DCPP =
+
+#FFLAGS = -O0 -check bound -check pointer -check arg_temp_created \
+        -traceback
+#DCPP = -DDEBUG
+
+obj = GPREC.o GTIME.o GCONSTANT.o GHDF5_BASE.o GPRIMME.o \
+      UTIL.o SPARSE.o GHDF5.o GSPCI.o GSPCI_ONFLY2_LIB.o
+
+LIB = ../../lib/libprimme.a
+INCLUDE=-I../../include
