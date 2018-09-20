@@ -418,15 +418,15 @@ module warehouse
     end subroutine gh5_wrt_wh_matrix_list
 
 
-    subroutine calc_isimix(io)
-    integer,intent(in)::io
+    subroutine calc_isimix(io,mode)
+    integer,intent(in)::io,mode
 
     integer i,imap
 
     do i=1,wh%num_imp
         imap=wh%imap_imp(i)
         if(imap==i)then
-            call calc_co_isimix(wh%co(i))
+            call calc_co_isimix(wh%co(i),mode)
         else
             wh%co(i)%isimix=wh%co(imap)%isimix
         endif

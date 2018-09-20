@@ -153,12 +153,18 @@ module corrorb
     !*************************************************************************
     ! isimix = (nks(1-nks))^(-1/2)
     !*************************************************************************
-    subroutine calc_co_isimix(co)
+    subroutine calc_co_isimix(co,mode)
+    integer,intent(in)::mode
     type(corr_orb),intent(inout)::co
 
     complex(q) xn(co%dim2,co%dim2)
       
-    xn=co%nks; xn=xn-matmul(xn,xn)
+    if(mode==1)then
+        xn=co%nks
+    else
+        xn=co%nc_var
+    endif
+    xn=xn-matmul(xn,xn)
     call atofa(xn,co%isimix,co%dim2,-12,d1,.true.)
     return
       
