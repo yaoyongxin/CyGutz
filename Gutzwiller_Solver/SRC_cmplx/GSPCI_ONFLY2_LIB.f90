@@ -415,7 +415,7 @@ subroutine av1_gspci_mij(v1,v2,i_val)
         ido(i_val)=.true.
     endif
 
-    nnz=count(abs(dmem%daalpha)<1.d-10)
+    nnz=count(abs(dmem%daalpha)>=1.d-10)
     allocate(isgn1(nnz),is(nnz),is1(nnz),js(nnz),ibs1(nnz),dij(nnz))
     nnz=0
     do i1=1,dmem%norb; do i2=1,dmem%norb
@@ -1979,6 +1979,7 @@ subroutine solve_red_embed()
     use gspci
     use gutil
     implicit none
+    integer iu
     real(q) w(1)
 
     call hermev("v","l",dmem%hemb,w,dmem%nemb,1,1)
