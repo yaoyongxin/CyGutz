@@ -1623,6 +1623,8 @@ subroutine calc_save_phi_matrix_blks(imp)
 end subroutine calc_save_phi_matrix_blks
 
 
+#ifdef phitrunc
+
 subroutine gh5_set_phi_basis()
     use gprec
     use gutil
@@ -1988,3 +1990,5 @@ subroutine solve_red_embed()
     return
 
 end subroutine solve_red_embed
+
+#endif
