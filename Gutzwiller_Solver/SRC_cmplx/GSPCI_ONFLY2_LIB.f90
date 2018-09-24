@@ -1565,7 +1565,7 @@ subroutine calc_reduced_rho_nblk(rho,n,ival)
                     &zdotc( &
 #endif
                     &nfs_l,dmem%v(nbase+(j-dmem%idx(ival))*nfs_l+1), &
-                    &dmem%v(nbase+(i-dmem%idx(ival))*nfs_l+1),1)
+                    &1,dmem%v(nbase+(i-dmem%idx(ival))*nfs_l+1),1)
             if(i==j)cycle
 #ifdef EmbReal
             rho(j_,i_)=rho(i_,j_)

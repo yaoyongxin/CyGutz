@@ -160,7 +160,6 @@ module gspci
     call set_fock_state_indices(dmem%norb,dmem%mem_binom,dmem%idx,dmem%bs, &
             &dmem%ibs)
     call set_full_fock_states_l_spci()
-    call calc_ucsr_spci()
     return
 
     end subroutine init_gspci_mem
