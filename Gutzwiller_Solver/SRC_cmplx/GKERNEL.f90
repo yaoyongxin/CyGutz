@@ -64,7 +64,7 @@ module gkernel
     implicit none
     
     type gk_mem
-        integer::imix,iembeddiag,nx,nx1,nx2
+        integer::imix,iembeddiag,nx,nx1,nx2,crmode=0
         integer::iter=0,nbreset=0,max_iter,giter=-1
         real(8)::amix,rtol=1.e-6_q
         real(8)::maxerr=1.e4_q,etot
@@ -195,6 +195,9 @@ module gkernel
     endif
     if(g_imix/=-100)then
         gkmem%imix=g_imix
+    endif
+    if(g_crmode/=0)then
+        gkmem%crmode=g_crmode
     endif
     return
 
@@ -527,7 +530,9 @@ subroutine g_rl_onecycle()
     call calc_lambdac(io)
     call solve_hembed_list(io)
     call calc_ncvar_pp(io)
-    call calc_isimix(io,2)
+    if(gkmem%crmode>0)then
+        call calc_isimix(io,2)
+    endif
     call calc_r01_pp(io)
     call calc_ncphy_pp(io)
     call eval_sl_vec_all(2,io)

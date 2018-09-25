@@ -51,7 +51,7 @@ def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
                 # some information outside of the frozen energy window
                 # will be lost.
                 hmat = wfwannier_list[isp][ik].T.conj().dot( \
-                        np.diag(bnd_es[isp][ik])).dot(
+                        np.diag(bnd_es[isp][ik])).dot( \
                         wfwannier_list[isp][ik])
                 # from wannier basis to correlated orbital-ordered
                 # complex spherical harmonics basis,

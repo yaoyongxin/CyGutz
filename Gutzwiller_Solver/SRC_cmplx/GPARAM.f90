@@ -3,7 +3,7 @@ module gparam
     implicit none
 
     integer::g_write=-100, g_maxiter=-100, g_iembeddiag=-1000, &
-            &g_updaterho=1, g_imix=-100
+            &g_updaterho=1, g_imix=-100, g_crmode=0
 
     contains
 
@@ -54,6 +54,16 @@ module gparam
             write(io,'(" command argument g_updaterho = ",i2)')g_updaterho
         endif
     endif
+
+    idx=index(cmd,'-cr ')
+    if(idx>0)then
+        read(cmd(idx+3:),*)g_crmode
+        if(io>0)then
+            write(io,'(" command argument g_crmode = ",i2)')g_crmode
+        endif
+    endif
+   
+
     return
 
     end subroutine

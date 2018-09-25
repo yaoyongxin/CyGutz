@@ -1,11 +1,10 @@
-import numpy
+import numpy, h5py
 from mpi4py import MPI
 from scipy.io import FortranFile
 
 
-
-def get_wannier_data(path="./"):
-    with FortranFile("{}/wannier.dat".format(path), "r") as f:
+def get_wannier_data_binary(fname):
+    with FortranFile(fname, "r") as f:
         # real space lattice vectors
         reals_lat = f.read_reals().reshape((3, 3))
         # reciprocal space lattice vectors
@@ -29,6 +28,49 @@ def get_wannier_data(path="./"):
         bnd_es = f.read_reals().reshape((1, nqdiv, num_bands))
     return reals_lat, recip_lat, kpts, include_bands, wfwannier_list, bnd_es
 
+
+def h5get_wannier_data(fname):
+    with h5py.File(fname, "r") as f:
+        # real space lattice vectors
+        reals_lat = f["/rbas"][()]
+        # reciprocal space lattice vectors
+        recip_lat = f["/gbas"][()]
+        # maximal number of bands
+        num_bands = f["/num_bands"][0]
+        # number of wannier orbitals
+        num_wann = f["/num_wann"][0]
+        # k-point mesh
+        ndiv = f["/ndiv"][()]
+        # total number of k-points
+        nqdiv = ndiv[0]*ndiv[1]*ndiv[2]
+        # k-points
+        kpts = f["/kpt_latt"][()]
+        # low energy band indices included in the wannier construction
+        include_bands = f["/include_bands"][()]
+        # list of overlap between band wavefunctions and wannier orbitals
+        wfwannier_list = f["/v_matrix"][()].reshape(\
+                (1, nqdiv, num_wann, num_bands)).swapaxes(2, 3)
+        # list of band energies
+        bnd_es = f["/eigenvalues"][()].reshape((1, nqdiv, num_bands))
+    return reals_lat, recip_lat, kpts, include_bands, wfwannier_list, bnd_es
+
+
+def get_wannier_data(path="./"):
+    fname = "{}/wannier.dat".format(path)
+    try:
+        f = h5py.File(fname, "r")
+        f.close()
+        h5input = True
+    except:
+        h5input = False
+        pass
+    if h5input:
+        reals_lat, recip_lat, kpts, include_bands, wfwannier_list, bnd_es = \
+                h5get_wannier_data(fname)
+    else:
+        reals_lat, recip_lat, kpts, include_bands, wfwannier_list, bnd_es = \
+                get_wannier_data_binary(fname)
+    return reals_lat, recip_lat, kpts, include_bands, wfwannier_list, bnd_es
 
 
 def mpiget_wannier_data(path="./"):
