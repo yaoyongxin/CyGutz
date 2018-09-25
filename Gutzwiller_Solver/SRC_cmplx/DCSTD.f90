@@ -231,12 +231,18 @@ module dcstd
         enddo
     endif
     do i=1,wh%num_imp
-        ntot=sum(dc%nelf(:,i))
-        dc%e(i)=dc%u_avg(i)*ntot*(ntot-1)/2
-        do isp=1,2
-            dc%e(i)=dc%e(i)-dc%j_avg(i)*dc%nelf(isp,i)*(dc%nelf(isp,i)-1)/2+ &
-                    &+dc%vpot(isp,i)*(wh%co(i)%net(isp)-dc%nelf(isp,i))
-        enddo
+        if(dc%mode==2)then
+            do isp=1,2
+                dc%e(i)=dc%vpot(isp,i)*wh%co(i)%net(isp)
+            enddo
+        else
+            ntot=sum(dc%nelf(:,i))
+            dc%e(i)=dc%u_avg(i)*ntot*(ntot-1)/2
+            do isp=1,2
+                dc%e(i)=dc%e(i)-dc%j_avg(i)*dc%nelf(isp,i)*(dc%nelf(isp,i)-1)/2+ &
+                        &+dc%vpot(isp,i)*(wh%co(i)%net(isp)-dc%nelf(isp,i))
+            enddo
+        endif
     enddo
     return
     
