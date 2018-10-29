@@ -12,6 +12,16 @@ from pyglib.estructure.fermi import get_fermi_weight, get_fermi_level
 from pyglib.iface.wannierio import mpiget_wannier_data
 
 
+def luse_h5(fname):
+    try:
+        f = h5py.File(fname, "r")
+        f.close()
+        use_h5 = True
+    except:
+        use_h5 = False
+    return use_h5
+
+
 def if_gwannier(corbs_list, delta_charge=0., wpath="../wannier",
         lpath="../lattice", wprefix="wannier", lprefix="mdl",
         lrot_list=None, iso=1, ispin=1, ismear=0, delta=0.0258,
@@ -372,7 +382,8 @@ def wannier_den_matrix(wannier_path="./"):
     # calculate wannier_den_matrix
     wan_den = get_wannier_den_matrix_risb(bnd_vs, ferwes, wklist, nktot)
     if rank == 0:
-        fwrt_wan_den(wan_den, wfwannier_list, include_bands)
+        wrt_wan_den(wan_den, wfwannier_list, include_bands,
+                lh5="{}/wannier.dat".format(wannier_path))
 
 
 def wannier_den_matrix_lda_chk(wannier_path="./"):
@@ -404,7 +415,8 @@ def wannier_den_matrix_lda_chk(wannier_path="./"):
         wan_den[0].append(np.diag(ferwes[0][ik]*nktot/(2+0.j)))
     wan_den = np.asarray(wan_den)
     wfwannier_list = np.asarray(wfwannier_list)
-    fwrt_wan_den(wan_den, wfwannier_list, include_bands)
+    wrt_wan_den(wan_den, wfwannier_list, include_bands,
+            lh5="{}/wannier.dat".format(wannier_path))
 
 
 def wannier_den_matrix_lda_chk2(wannier_path="./"):
@@ -428,7 +440,8 @@ def wannier_den_matrix_lda_chk2(wannier_path="./"):
         wan_den[0].append(wfwannier_list[0][ik].T.conj().dot(dm).dot(
             wfwannier_list[0][ik]))
     wan_den = np.asarray(wan_den)
-    fwrt_wan_den(wan_den, wfwannier_list, include_bands)
+    wrt_wan_den(wan_den, wfwannier_list, include_bands,
+            lh5="{}/wannier.dat".format(wannier_path))
 
 
 def wannier_den_matrix_lda_chk3(wannier_path="./"):
@@ -465,7 +478,15 @@ def wannier_den_matrix_lda_chk3(wannier_path="./"):
         wan_den[0].append(bnd_ev2[0][ik].dot(dm).dot(
             bnd_ev2[0][ik].T.conj()))
     wan_den = np.asarray(wan_den)
-    fwrt_wan_den(wan_den, wfwannier_list, include_bands)
+    wrt_wan_den(wan_den, wfwannier_list, include_bands,
+            lh5="{}/wannier.dat".format(wannier_path))
+
+
+def wrt_wan_den(wan_den, wfwannier_list, include_bands, lh5=True):
+    if lh5:
+        h5wrt_wan_den(wan_den, wfwannier_list, include_bands)
+    else:
+        fwrt_wan_den(wan_den, wfwannier_list, include_bands)
 
 
 def fwrt_wan_den(wan_den, wfwannier_list, include_bands):
@@ -485,6 +506,25 @@ def fwrt_wan_den(wan_den, wfwannier_list, include_bands):
         f.write_record([include_bands for k in range(nktot)])
         f.write_record(wfwannier_list[0])
         f.write_record(wan_den[0].swapaxes(1, 2))
+
+
+def h5wrt_wan_den(wan_den, wfwannier_list, include_bands):
+    """write wannier_den_matrix.dat file in hdf5 format.
+    for spin-restricted case only as of now.
+    note the index order wfwannier_list[isp, ibnd, iwann].
+    """
+    nktot = wan_den.shape[1]
+    wfwannier_list = wfwannier_list.swapaxes(2, 3)
+    nband = wfwannier_list.shape[3]
+    nwann = wfwannier_list.shape[2]
+    with h5py.File('wannier_den_matrix.dat', 'w') as f:
+        f["/temperature"] = [300.0]
+        f["/nqdiv"] = [nktot]
+        f["/num_band_in"] = [nband for k in range(nktot)]
+        f["/n_dmft_wan"] = [nwann for k in range(nktot)]
+        f["/include_band_new"] = [include_bands for k in range(nktot)]
+        f["/vw_matrix_new"] = wfwannier_list[0]
+        f["/n_matrix_new"] = wan_den[0].swapaxes(1, 2)
 
 
 def get_risb_bndes(path="./"):
