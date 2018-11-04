@@ -120,7 +120,8 @@ module gkernel
     external::av
 
     integer imore
-    real(q),parameter :: rtol=1.e-10_q,epsfcn=1.e-10_q,nitmin=1000
+    !! epsfcn controls step to eval jacobian.
+    real(q),parameter :: rtol=1.e-10_q,epsfcn=1.e-6_q,nitmin=1000
 
     !! If {n} as the variables like lda+u
     if(gkmem%iembeddiag==10)then

@@ -1,7 +1,7 @@
 from __future__ import print_function
 #Gutzwiller embedding Hamiltonian solver using machine learning.
 
-import h5py, time, pickle, sys, numpy, warnings
+import h5py, time, pickle, os, sys, numpy, warnings
 import pyglib.gsolver as gsolver
 
 
@@ -54,6 +54,9 @@ def driver_gs_ml(l=3,valence=5):
         l = int(sys.argv[sys.argv.index('-l')+1])
     if "-v" in sys.argv:
         valence = int(sys.argv[sys.argv.index('-v')+1])
+    if os.path.isfile("GVALENCE.INP"):
+        valence = numpy.loadtxt("GVALENCE.INP", dtype=numpy.int)[i-1]
+
     if l == 3:
         subd = 'f_so_v3'
     else:
@@ -62,7 +65,8 @@ def driver_gs_ml(l=3,valence=5):
         raise ValueError(' valence = {} not supported!'.format(valence))
 
     print(' solving emb. hamil. for impurity {}\n'.format(imp) +\
-            ' with l = {} based on machine learning.'.format(l))
+            ' with l = {} based on machine learning'.format(l) +\
+            " at valence = {}.".format(valence))
 
     dpath = gsolver.__path__[0]
     inp, eshft, phase = get_input_soc_only(imp=imp, l=l)
