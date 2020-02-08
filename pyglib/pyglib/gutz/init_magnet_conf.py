@@ -84,9 +84,10 @@ def get_vext_list(bvec_list):
             vext_sym, sym_err = get_sym_2darray(vext, imp+1)
             max_sym_err = max(max_sym_err, sym_err)
             vext_list.append(vext_sym)
-    if max_sym_err > 1.e-5:
-        print(" Warning:")
-    print(' maximal symmetrization error of vext = {}'.format(max_sym_err))
+    # if max_sym_err > 1.e-5:
+    #     print(" Warning:")
+    #     print(' maximal symmetrization error of vext = {}'. \
+    #             format(max_sym_err))
     return vext_list
 
 
@@ -168,7 +169,7 @@ def init_magnet_conf():
     if bvec_list is None:
         return
     vext_list = get_vext_list(bvec_list)
-    chk_local_one_body(vext_list)
+    # chk_local_one_body(vext_list)
     h5wrt_gmagnet(vext_list, g_ivext)
 
 
@@ -178,7 +179,7 @@ def init_magnet_conf_with_init_dm(dm_list):
     based on given initial one-particle density-matrix.
     '''
     vext_list = get_vext_given_1pdm_list(dm_list)
-    chk_local_one_body(vext_list)
+    # chk_local_one_body(vext_list)
     h5wrt_gmagnet(vext_list, g_ivext=0)
 
 

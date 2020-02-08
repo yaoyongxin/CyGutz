@@ -224,7 +224,7 @@ def h5save_usr_qa_setup(material, log=sys.stdout):
             else:
                 vec = get_direction(log=usr_input)
         else:
-            vec = [1., 0., 0.]
+            vec = [0., 0., 1.]
         unique_magmom_direction_list.append(vec)
 
     f['/usrqa/unique_corr_symbol_list'] = unique_corr_symbol_list
