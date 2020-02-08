@@ -153,12 +153,6 @@ def chk_rot_keep(mol, rot, tol=1.e-5):
                 return False
             if mol.equivalent_indices[i] != mol.equivalent_indices[ind[0]]:
                 return False
-# not correct!
-    if mol.fm_direction is not None:
-        vec = numpy.dot(rot, mol.fm_direction)
-# ok if in the same direction.
-        if not numpy.allclose(vec, mol.fm_direction, rtol=tol):
-            return False
     return True
 
 
