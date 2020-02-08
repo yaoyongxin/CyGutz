@@ -77,17 +77,18 @@ def get_vext_list(bvec_list):
             sy = f[prepath+'/SY'][()].T
             sz = f[prepath+'/SZ'][()].T
             vext = (bvec[0]*sx + bvec[1]*sy + bvec[2]*sz)*2
-            lx = f[prepath+'/LX'][()].T
-            ly = f[prepath+'/LY'][()].T
-            lz = f[prepath+'/LZ'][()].T
-            vext += bvec[0]*lx + bvec[1]*ly + bvec[2]*lz
+            # add orbital contribution i the case of soc.
+            # lx = f[prepath+'/LX'][()].T
+            # ly = f[prepath+'/LY'][()].T
+            # lz = f[prepath+'/LZ'][()].T
+            # vext += bvec[0]*lx + bvec[1]*ly + bvec[2]*lz
             vext_sym, sym_err = get_sym_2darray(vext, imp+1)
             max_sym_err = max(max_sym_err, sym_err)
             vext_list.append(vext_sym)
-    # if max_sym_err > 1.e-5:
-    #     print(" Warning:")
-    #     print(' maximal symmetrization error of vext = {}'. \
-    #             format(max_sym_err))
+    if max_sym_err > 1.e-5:
+        print(" Warning:")
+    print(' maximal symmetrization error of vext = {}'. \
+            format(max_sym_err))
     return vext_list
 
 
