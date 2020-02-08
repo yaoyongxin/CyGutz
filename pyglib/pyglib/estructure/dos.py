@@ -146,6 +146,7 @@ def get_bands(coherentonly=False):
     for fname in glob.glob('GBANDS_*h5'):
         with h5py.File(fname, 'r') as f:
             for isp in range(nspin):
+                ispp = min(isp, len(bnd_ne)-1)
                 for k in range(f['/IKP_START'][0]-1,f['/IKP_END'][0]):
                     e_n = f['/ISPIN_{}/IKP_{}/ek'.format(isp+1,k+1)][...]
                     e_n = e_n - e_fermi
@@ -161,17 +162,17 @@ def get_bands(coherentonly=False):
                         if not coherentonly:
                             v = f['/ISPIN_{}/IKP_{}/ISYM_{}/EVEC'.format( \
                                     isp+1,k+1,isym+1)][:,:nasotot]
-                            psi_sksna[isp,k,isym,bnd_ne[isp][k,1]-1: \
-                                    bnd_ne[isp][k,1]+v.shape[0]-1,:] = v
+                            psi_sksna[isp,k,isym,bnd_ne[ispp][k,1]-1: \
+                                    bnd_ne[ispp][k,1]+v.shape[0]-1,:] = v
                         else:
                             v = f['/ISPIN_{}/IKP_{}/ISYM_{}/EVEC'.format( \
                                     isp+1,k+1,isym+1)][()].T
                             v[:nasotot,:] = rmat[isp].T.conj().dot(
                                     v[:nasotot,:])
-                            psi_sksna[isp,k,isym,bnd_ne[isp][k,1]-1: \
-                                    bnd_ne[isp][k,1]+v.shape[1]-1, \
-                                    bnd_ne[isp][k,1]-1: \
-                                    bnd_ne[isp][k,1]+v.shape[1]-1] = v.T
+                            psi_sksna[isp,k,isym,bnd_ne[ispp][k,1]-1: \
+                                    bnd_ne[ispp][k,1]+v.shape[1]-1, \
+                                    bnd_ne[ispp][k,1]-1: \
+                                    bnd_ne[ispp][k,1]+v.shape[1]-1] = v.T
 
     return e_skn, psi_sksna
 
