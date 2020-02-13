@@ -23,7 +23,7 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     integer,parameter :: iu=90
 
     allocate(bnd_ek(nume,nkpt,isospin))
-    bnd_ek=3.d0 ! Rydberg
+    bnd_ek=0.d0 ! Rydberg
     allocate(bnd_ne(3,nkpt,isospin)); bnd_ne=0
       
     ! Use only one spin-channel
@@ -70,6 +70,13 @@ subroutine gutz_set_ef_lda(nume,nkpt,projector)
     call dsum_all_mpi(bnd_ek,nume*nkpt*isospin)
     call isum_all_mpi(bnd_ne,3*nkpt*isospin)
 #endif
+    do is = 1,isospin; do ikp = 1,nkpt
+        nen = bnd_ne(1,ikp,is)
+        if(nen<nume)then
+            bnd_ek(nen+1:,ikp,is) = 3.d0
+        endif
+    enddo; enddo
+
     inquire(file='EFLDA.INP',exist=linef)
     if(linef)then
         call gutz_read_fermi(ef,iu)
