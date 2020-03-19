@@ -9,6 +9,7 @@ def initialize():
     Store all the relevant information in GPARAM.5 file.
     '''
     log_file = open("init_ga.slog", 'w')
+    print(" pyglib version 1.0.")
     print(" The executed commant line is:", file=log_file)
     print("    "+" ".join(sys.argv[:]), file=log_file)
 
